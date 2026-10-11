@@ -45,3 +45,5 @@ node_modules/
 .next/
 .turbo/
 .vercel/
+.tmp/
+pnpm-lock.yaml.tmp

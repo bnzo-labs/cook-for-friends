@@ -1,0 +1,25 @@
+{
+  "common": {
+    "site_name": "Cook for Friends",
+    "tagline": "Pastry and baking classes in Montreal",
+    "nav_home": "Home",
+    "nav_courses": "Courses",
+    "nav_products": "Products",
+    "nav_account": "My account",
+    "nav_login": "Sign in",
+    "nav_logout": "Sign out",
+    "loading": "Loading…",
+    "error_generic": "An error occurred.",
+    "error_not_found": "Page not found.",
+    "back": "Back"
+  },
+  "errors": {
+    "NOT_FOUND": "Resource not found.",
+    "FORBIDDEN": "Access denied.",
+    "SOLD_OUT": "This session is sold out.",
+    "HOLD_EXPIRED": "Your reservation has expired.",
+    "VALIDATION": "Please check the information you entered.",
+    "CONFLICT": "A conflict error occurred.",
+    "UPSTREAM": "An external service error occurred."
+  }
+}

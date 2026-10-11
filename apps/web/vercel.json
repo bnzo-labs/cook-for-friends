@@ -1,0 +1,19 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm payload migrate && pnpm next build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "crons": [
+    {
+      "path": "/api/cron/expire-holds",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/jobs",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

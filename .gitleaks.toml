@@ -1,0 +1,15 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for known safe patterns"
+regexes = [
+  # Placeholder values in .env.example (empty values are fine)
+  '''^\s*[A-Z_]+=\s*$''',
+]
+paths = [
+  # Example env file — values are intentionally empty
+  "apps/web/.env.example",
+  # Test fixtures — uses fictional data (@example.com)
+  "apps/web/test/**",
+]

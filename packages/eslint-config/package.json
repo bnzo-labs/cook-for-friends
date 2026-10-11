@@ -1,0 +1,13 @@
+{
+  "name": "@cff/eslint-config",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./next": "./next.js"
+  },
+  "peerDependencies": {
+    "eslint": ">=9"
+  }
+}

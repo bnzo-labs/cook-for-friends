@@ -1,0 +1,25 @@
+{
+  "common": {
+    "site_name": "Cook for Friends",
+    "tagline": "Cours de pâtisserie à Montréal",
+    "nav_home": "Accueil",
+    "nav_courses": "Cours",
+    "nav_products": "Produits",
+    "nav_account": "Mon compte",
+    "nav_login": "Se connecter",
+    "nav_logout": "Se déconnecter",
+    "loading": "Chargement…",
+    "error_generic": "Une erreur est survenue.",
+    "error_not_found": "Page introuvable.",
+    "back": "Retour"
+  },
+  "errors": {
+    "NOT_FOUND": "Ressource introuvable.",
+    "FORBIDDEN": "Accès refusé.",
+    "SOLD_OUT": "Cette session est complète.",
+    "HOLD_EXPIRED": "Votre réservation a expiré.",
+    "VALIDATION": "Veuillez vérifier les informations saisies.",
+    "CONFLICT": "Une erreur de conflit est survenue.",
+    "UPSTREAM": "Une erreur de service externe est survenue."
+  }
+}
