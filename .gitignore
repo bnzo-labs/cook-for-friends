@@ -34,3 +34,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Cook for Friends
+.DS_Store
+
+# Cook for Friends
+.env*
+!.env.example
+node_modules/
+.next/
+.turbo/
+.vercel/
