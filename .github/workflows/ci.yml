@@ -9,6 +9,8 @@ on:
 env:
   # Skip env.ts validation during CI builds (real values not available)
   SKIP_ENV_VALIDATION: "1"
+  # NEXT_PUBLIC_* vars are inlined at build time — provide safe CI defaults
+  NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
   # Turbo remote caching via Vercel (optional — set secrets to enable)
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
