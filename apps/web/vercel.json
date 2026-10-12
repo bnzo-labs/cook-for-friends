@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "pnpm payload migrate && pnpm next build",
+  "buildCommand": "pnpm next build",
   "installCommand": "pnpm install --frozen-lockfile",
   "crons": [
     {
