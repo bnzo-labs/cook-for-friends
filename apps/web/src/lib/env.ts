@@ -120,8 +120,9 @@ const clientSchema = z.object({
  * On the client, only client-safe vars are available.
  */
 function parseEnv() {
-  // Skip validation in the Next.js type-check build that runs with no env
-  if (process.env.SKIP_ENV_VALIDATION === "1") {
+  // Skip validation in CI builds — Turbopack workers only forward NEXT_PUBLIC_*
+  // vars, so we use NEXT_PUBLIC_SKIP_ENV_VALIDATION instead of SKIP_ENV_VALIDATION.
+  if (process.env.NEXT_PUBLIC_SKIP_ENV_VALIDATION === "1") {
     return {
       server: {} as z.infer<typeof serverSchema>,
       client: {} as z.infer<typeof clientSchema>,
