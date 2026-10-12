@@ -2,14 +2,12 @@
 useDefault = true
 
 [allowlist]
-description = "Allowlist for known safe patterns"
-regexes = [
-  # Placeholder values in .env.example (empty values are fine)
-  '''^\s*[A-Z_]+=\s*$''',
-]
+description = "Known safe patterns"
 paths = [
-  # Example env file — values are intentionally empty
+  # Example env file — all values are intentionally empty
   "apps/web/.env.example",
   # Test fixtures — uses fictional data (@example.com)
-  "apps/web/test/**",
+  "apps/web/test/lint-fixtures/.*",
+  # Lockfile — no secrets, just package hashes
+  "pnpm-lock.yaml",
 ]
