@@ -6,6 +6,25 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-12 — W1-01 scaffold complete, CI green, Vercel setup blocked (devops-agent)
+
+**Done**
+- Full Turborepo + pnpm monorepo scaffold built and pushed.
+- Next 16.3.8 + Payload 3.90.2 + next-intl 4.14.9 — exact pinned versions.
+- `pnpm build` green locally and in CI (commit `046c50b`).
+- GitHub Actions CI: secret-scan (gitleaks) → lint → typecheck → test → build. All green.
+- Root cause of Turbopack worker env isolation fixed: `NEXT_PUBLIC_SKIP_ENV_VALIDATION` instead of `SKIP_ENV_VALIDATION` (Turbopack workers only forward `NEXT_PUBLIC_*` vars).
+- Vercel project `cook-for-friends` linked (prj_I1oEe1ZzCbRbFHYcpwlxiGvcNSrW, team ericks-projects-960ce4f0). No deployments yet — GitHub not connected, root dir not configured.
+
+**Blocked**
+- Vercel staging deploy requires Erick to complete 3 steps (see task file + below).
+
+**Next step**
+- Erick completes Vercel configuration (instructions below), then devops-agent verifies staging URL and ticks final criterion.
+- After criterion 14 verified → W1-01 complete → W1-02/03/04 can run in parallel.
+
+---
+
 ## 2026-10-11 — Wave 0 approved, Wave 1 starting (orchestrator)
 
 **Done**
