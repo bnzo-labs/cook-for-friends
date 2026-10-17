@@ -21,5 +21,41 @@
     "VALIDATION": "Please check the information you entered.",
     "CONFLICT": "A conflict error occurred.",
     "UPSTREAM": "An external service error occurred."
+  },
+  "layout": {
+    "skip_to_content": "Skip to main content",
+    "brand": "Cook for Friends",
+    "brand_home": "Cook for Friends — back to home",
+    "main_nav_label": "Main navigation",
+    "mobile_nav_label": "Mobile navigation",
+    "nav": {
+      "courses": "Courses",
+      "products": "Products",
+      "account": "My account"
+    },
+    "open_menu": "Open menu",
+    "menu_title": "Menu",
+    "menu_description": "Site navigation and language choice",
+    "locale": {
+      "label": "Language",
+      "switch_fr": "Passer en français",
+      "switch_en": "Switch to English",
+      "current": "Current language"
+    },
+    "footer": {
+      "label": "Footer",
+      "nav_label": "Footer links",
+      "tagline": "Pastry classes for cooking with friends, in person in Montreal or online.",
+      "explore": "Explore",
+      "place": "Montreal, Quebec",
+      "rights": "© {year} Cook for Friends. All rights reserved."
+    }
+  },
+  "ui": {
+    "close": "Close",
+    "loading": "Loading…",
+    "select_placeholder": "Choose an option",
+    "empty_title": "Nothing here yet",
+    "notifications": "Notifications"
   }
 }

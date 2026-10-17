@@ -1,0 +1,72 @@
+/* apps/web/src/styles/tokens.css — PLACEHOLDER VALUES */
+:root {
+  /* ── Brand primitives (swap here) ───────────────────────── */
+  --brand-ink: oklch(22% 0.01 60);        /* near-black, warm */
+  --brand-paper: oklch(98.5% 0.005 80);   /* off-white, warm */
+  --brand-stone-100: oklch(95% 0.006 70);
+  --brand-stone-200: oklch(90% 0.008 70);
+  --brand-stone-400: oklch(72% 0.01 70);
+  --brand-stone-600: oklch(50% 0.012 70);
+  --brand-accent: oklch(55% 0.12 45);     /* placeholder terracotta — swap with brand */
+  --brand-accent-ink: oklch(98% 0 0);
+  --brand-font-display: var(--font-fraunces, "Fraunces"), Georgia, "Times New Roman", serif;
+  --brand-font-body: var(--font-inter, "Inter"), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* ── Semantic: color ────────────────────────────────────── */
+  --color-bg: var(--brand-paper);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-muted: var(--brand-stone-100);
+  --color-border: var(--brand-stone-200);
+  --color-fg: var(--brand-ink);
+  --color-fg-muted: var(--brand-stone-600);
+  --color-fg-subtle: var(--brand-stone-400);
+  --color-primary: var(--brand-accent);
+  --color-primary-fg: var(--brand-accent-ink);
+  --color-focus: var(--brand-accent);
+  --color-success: oklch(55% 0.12 150);
+  --color-warning: oklch(70% 0.14 80);
+  --color-danger: oklch(55% 0.18 27);
+  --color-info: oklch(55% 0.1 240);
+
+  /* ── Semantic: domain states ───────────────────────────── */
+  --color-seats-ok: var(--color-success);
+  --color-seats-low: var(--color-warning);     /* ≤ 3 seats left */
+  --color-seats-full: var(--color-fg-subtle);  /* sold out → waitlist */
+
+  /* ── Typography ────────────────────────────────────────── */
+  --font-display: var(--brand-font-display);
+  --font-body: var(--brand-font-body);
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --text-lg: 1.25rem;
+  --text-xl: clamp(1.5rem, 1.3rem + 0.8vw, 1.875rem);
+  --text-2xl: clamp(2rem, 1.6rem + 1.6vw, 2.75rem);
+  --text-hero: clamp(2.5rem, 1.6rem + 4vw, 4.75rem);
+  --leading-tight: 1.1;
+  --leading-body: 1.6;
+
+  /* ── Space & layout ────────────────────────────────────── */
+  --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+  --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem; --space-16: 4rem;
+  --space-section: clamp(3rem, 2rem + 5vw, 7rem);
+  --container-max: 72rem;
+  --container-prose: 42rem;
+
+  /* ── Shape & depth ─────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-control: 8px;
+  --radius-card: 14px;
+  --radius-full: 9999px;
+  --shadow-card: 0 1px 2px oklch(0% 0 0 / 0.04), 0 8px 24px oklch(0% 0 0 / 0.06);
+  --shadow-raised: 0 2px 4px oklch(0% 0 0 / 0.06), 0 16px 40px oklch(0% 0 0 / 0.1);
+
+  /* ── Motion ────────────────────────────────────────────── */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --duration-fast: 0ms; --duration-normal: 0ms; }
+}

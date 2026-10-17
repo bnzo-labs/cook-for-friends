@@ -16,7 +16,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // Local override for machines Playwright no longer ships Chromium for (e.g. PW_CHANNEL=chrome)
+        ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}),
+      },
     },
   ],
   // Start the dev server before running tests in local development

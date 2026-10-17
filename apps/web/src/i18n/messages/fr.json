@@ -21,5 +21,41 @@
     "VALIDATION": "Veuillez vérifier les informations saisies.",
     "CONFLICT": "Une erreur de conflit est survenue.",
     "UPSTREAM": "Une erreur de service externe est survenue."
+  },
+  "layout": {
+    "skip_to_content": "Aller au contenu principal",
+    "brand": "Cook for Friends",
+    "brand_home": "Cook for Friends — retour à l'accueil",
+    "main_nav_label": "Navigation principale",
+    "mobile_nav_label": "Navigation mobile",
+    "nav": {
+      "courses": "Cours",
+      "products": "Produits",
+      "account": "Mon compte"
+    },
+    "open_menu": "Ouvrir le menu",
+    "menu_title": "Menu",
+    "menu_description": "Navigation du site et choix de la langue",
+    "locale": {
+      "label": "Langue",
+      "switch_fr": "Passer en français",
+      "switch_en": "Switch to English",
+      "current": "Langue actuelle"
+    },
+    "footer": {
+      "label": "Pied de page",
+      "nav_label": "Liens du pied de page",
+      "tagline": "Des cours de pâtisserie pour cuisiner entre amis, en personne à Montréal ou en ligne.",
+      "explore": "Explorer",
+      "place": "Montréal, Québec",
+      "rights": "© {year} Cook for Friends. Tous droits réservés."
+    }
+  },
+  "ui": {
+    "close": "Fermer",
+    "loading": "Chargement…",
+    "select_placeholder": "Choisir une option",
+    "empty_title": "Rien à voir pour l'instant",
+    "notifications": "Notifications"
   }
 }
