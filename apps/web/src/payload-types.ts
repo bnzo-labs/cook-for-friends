@@ -64,10 +64,30 @@ export type SupportedTimezones =
 export interface Config {
   auth: {
     users: UserAuthOperations;
+    customers: CustomerAuthOperations;
   };
   blocks: {};
   collections: {
+    courses: Course;
+    sessions: Session;
+    lessons: Lesson;
+    materials: Material;
+    products: Product;
+    pages: Page;
+    media: Media;
     users: User;
+    customers: Customer;
+    'magic-link-tokens': MagicLinkToken;
+    entitlements: Entitlement;
+    orders: Order;
+    'seat-holds': SeatHold;
+    enrollments: Enrollment;
+    'discount-codes': DiscountCode;
+    'processed-stripe-events': ProcessedStripeEvent;
+    'waitlist-entries': WaitlistEntry;
+    'lesson-progress': LessonProgress;
+    certificates: Certificate;
+    comments: Comment;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -75,7 +95,26 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
+    courses: CoursesSelect<false> | CoursesSelect<true>;
+    sessions: SessionsSelect<false> | SessionsSelect<true>;
+    lessons: LessonsSelect<false> | LessonsSelect<true>;
+    materials: MaterialsSelect<false> | MaterialsSelect<true>;
+    products: ProductsSelect<false> | ProductsSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
+    customers: CustomersSelect<false> | CustomersSelect<true>;
+    'magic-link-tokens': MagicLinkTokensSelect<false> | MagicLinkTokensSelect<true>;
+    entitlements: EntitlementsSelect<false> | EntitlementsSelect<true>;
+    orders: OrdersSelect<false> | OrdersSelect<true>;
+    'seat-holds': SeatHoldsSelect<false> | SeatHoldsSelect<true>;
+    enrollments: EnrollmentsSelect<false> | EnrollmentsSelect<true>;
+    'discount-codes': DiscountCodesSelect<false> | DiscountCodesSelect<true>;
+    'processed-stripe-events': ProcessedStripeEventsSelect<false> | ProcessedStripeEventsSelect<true>;
+    'waitlist-entries': WaitlistEntriesSelect<false> | WaitlistEntriesSelect<true>;
+    'lesson-progress': LessonProgressSelect<false> | LessonProgressSelect<true>;
+    certificates: CertificatesSelect<false> | CertificatesSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -85,13 +124,19 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('fr' | 'en') | ('fr' | 'en')[];
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'site-settings': SiteSetting;
+    'cancellation-policy': CancellationPolicy;
+  };
+  globalsSelect: {
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    'cancellation-policy': CancellationPolicySelect<false> | CancellationPolicySelect<true>;
+  };
   locale: 'fr' | 'en';
   widgets: {
     collections: CollectionsWidget;
   };
-  user: User;
+  user: User | Customer;
   jobs: {
     tasks: unknown;
     workflows: unknown;
@@ -115,12 +160,287 @@ export interface UserAuthOperations {
     password: string;
   };
 }
+export interface CustomerAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "courses".
+ */
+export interface Course {
+  id: number;
+  title: string;
+  slug: string;
+  format: 'in_person' | 'online';
+  summary?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  level?: ('beginner' | 'intermediate' | 'advanced') | null;
+  durationMinutes?: number | null;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  price: number;
+  heroImage?: (number | null) | Media;
+  gallery?: (number | Media)[] | null;
+  lessons?: (number | Lesson)[] | null;
+  materials?: (number | Material)[] | null;
+  status: 'draft' | 'published' | 'archived';
+  stripeProductId?: string | null;
+  stripePriceId?: string | null;
+  stripeSyncStatus?: ('pending' | 'synced' | 'error') | null;
+  stripeSyncError?: string | null;
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    image?: (number | null) | Media;
+  };
+  certificateEnabled?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  alt?: string | null;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lessons".
+ */
+export interface Lesson {
+  id: number;
+  course: number | Course;
+  title: string;
+  order: number;
+  body?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  video?: {
+    provider?: ('mux' | 'bunny') | null;
+    assetId?: string | null;
+    playbackId?: string | null;
+    durationSec?: number | null;
+  };
+  materials?: (number | Material)[] | null;
+  isPreview?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "materials".
+ */
+export interface Material {
+  id: number;
+  title: string;
+  file: number | Media;
+  kind: 'recipe' | 'pdf' | 'other';
+  locale?: ('fr' | 'en') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessions".
+ */
+export interface Session {
+  id: number;
+  course: number | Course;
+  startsAt: string;
+  endsAt: string;
+  location?: {
+    name?: string | null;
+    address?: string | null;
+    city?: string | null;
+    postalCode?: string | null;
+    mapsUrl?: string | null;
+  };
+  level?: ('beginner' | 'intermediate' | 'advanced') | null;
+  capacity: number;
+  status: 'scheduled' | 'cancelled' | 'completed';
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "products".
+ */
+export interface Product {
+  id: number;
+  title: string;
+  slug: string;
+  description?: string | null;
+  images?: (number | Media)[] | null;
+  priceDisplay?: string | null;
+  externalUrl?: string | null;
+  status: 'draft' | 'published' | 'archived';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  slug: string;
+  layout?: (HeroBlock | GalleryBlock | TestimonialsBlock | CtaBlock | RichTextBlock)[] | null;
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    image?: (number | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HeroBlock".
+ */
+export interface HeroBlock {
+  heading: string;
+  subheading?: string | null;
+  image?: (number | null) | Media;
+  ctaLabel?: string | null;
+  ctaHref?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'hero';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "GalleryBlock".
+ */
+export interface GalleryBlock {
+  heading?: string | null;
+  images?: (number | Media)[] | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'gallery';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TestimonialsBlock".
+ */
+export interface TestimonialsBlock {
+  heading?: string | null;
+  items?:
+    | {
+        quote: string;
+        author: string;
+        role?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'testimonials';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CtaBlock".
+ */
+export interface CtaBlock {
+  heading: string;
+  body?: string | null;
+  buttonLabel: string;
+  buttonHref: string;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'cta';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "RichTextBlock".
+ */
+export interface RichTextBlock {
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'richText';
+}
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
   id: number;
+  name?: string | null;
+  role: 'admin' | 'staff';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -140,6 +460,269 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "customers".
+ */
+export interface Customer {
+  id: number;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  preferredLocale: 'fr' | 'en';
+  stripeCustomerId?: string | null;
+  marketingConsent?: boolean | null;
+  dietaryNotes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  collection: 'customers';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "magic-link-tokens".
+ */
+export interface MagicLinkToken {
+  id: number;
+  customer: number | Customer;
+  tokenHash: string;
+  expiresAt: string;
+  usedAt?: string | null;
+  requestIp: string;
+  next?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "entitlements".
+ */
+export interface Entitlement {
+  id: number;
+  customer: number | Customer;
+  course: number | Course;
+  source: 'purchase' | 'gift' | 'manual' | 'membership';
+  /**
+   * Order, user, gift or membership ID
+   */
+  sourceRef: string;
+  validFrom: string;
+  /**
+   * Empty = no expiry
+   */
+  validUntil?: string | null;
+  revokedAt?: string | null;
+  revokedReason?: string | null;
+  grantedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders".
+ */
+export interface Order {
+  id: number;
+  /**
+   * CFF-000123
+   */
+  number: string;
+  customer?: (number | null) | Customer;
+  email: string;
+  locale: 'fr' | 'en';
+  status: 'pending' | 'paid' | 'refunded' | 'partially_refunded' | 'cancelled';
+  items?:
+    | {
+        course: number | Course;
+        session?: (number | null) | Session;
+        quantity: number;
+        /**
+         * Amount in cents (CAD). E.g. 4500 = $45.00
+         */
+        unitAmount: number;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  subtotal: number;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  discountTotal: number;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  taxGst: number;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  taxQst: number;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  total: number;
+  currency: 'cad';
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  stripeInvoiceId?: string | null;
+  invoicePdfUrl?: string | null;
+  promotionCode?: string | null;
+  paidAt?: string | null;
+  refunds?:
+    | {
+        stripeRefundId: string;
+        /**
+         * Amount in cents (CAD). E.g. 4500 = $45.00
+         */
+        amount: number;
+        reason?: string | null;
+        at: string;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "seat-holds".
+ */
+export interface SeatHold {
+  id: number;
+  session: number | Session;
+  quantity: number;
+  cartToken: string;
+  customerEmail?: string | null;
+  stripeCheckoutSessionId?: string | null;
+  status: 'active' | 'converted' | 'expired' | 'released';
+  expiresAt: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enrollments".
+ */
+export interface Enrollment {
+  id: number;
+  session: number | Session;
+  customer: number | Customer;
+  order: number | Order;
+  attendeeIndex: number;
+  attendeeName?: string | null;
+  status: 'confirmed' | 'cancelled' | 'refunded';
+  attendance: 'unknown' | 'present' | 'absent';
+  cancelledAt?: string | null;
+  cancellationOutcome?: ('refund' | 'credit' | 'none') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "discount-codes".
+ */
+export interface DiscountCode {
+  id: number;
+  code: string;
+  kind: 'percent' | 'amount';
+  /**
+   * Percent (1–100) or amount in cents
+   */
+  value: number;
+  maxRedemptions?: number | null;
+  expiresAt?: string | null;
+  appliesTo?: (number | Course)[] | null;
+  active?: boolean | null;
+  stripeCouponId?: string | null;
+  stripePromotionCodeId?: string | null;
+  /**
+   * Personal credit (single use)
+   */
+  personalFor?: (number | null) | Customer;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "processed-stripe-events".
+ */
+export interface ProcessedStripeEvent {
+  id: number;
+  eventId: string;
+  type: string;
+  processedAt: string;
+  outcome: 'applied' | 'skipped' | 'refunded' | 'error';
+  note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "waitlist-entries".
+ */
+export interface WaitlistEntry {
+  id: number;
+  session: number | Session;
+  customer?: (number | null) | Customer;
+  email: string;
+  locale: 'fr' | 'en';
+  status: 'waiting' | 'notified' | 'converted' | 'expired' | 'removed';
+  notifiedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lesson-progress".
+ */
+export interface LessonProgress {
+  id: number;
+  customer: number | Customer;
+  lesson: number | Lesson;
+  course: number | Course;
+  completed?: boolean | null;
+  completedAt?: string | null;
+  positionSec?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "certificates".
+ */
+export interface Certificate {
+  id: number;
+  customer: number | Customer;
+  course: number | Course;
+  verificationCode: string;
+  issuedAt: string;
+  locale: 'fr' | 'en';
+  customerNameSnapshot: string;
+  courseTitleSnapshot: {
+    fr: string;
+    en: string;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments".
+ */
+export interface Comment {
+  id: number;
+  lesson: number | Lesson;
+  customer: number | Customer;
+  body: string;
+  status: 'pending' | 'approved' | 'rejected';
+  moderatedBy?: (number | null) | User;
+  parent?: (number | null) | Comment;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -164,15 +747,97 @@ export interface PayloadKv {
  */
 export interface PayloadLockedDocument {
   id: number;
-  document?: {
-    relationTo: 'users';
-    value: number | User;
-  } | null;
+  document?:
+    | ({
+        relationTo: 'courses';
+        value: number | Course;
+      } | null)
+    | ({
+        relationTo: 'sessions';
+        value: number | Session;
+      } | null)
+    | ({
+        relationTo: 'lessons';
+        value: number | Lesson;
+      } | null)
+    | ({
+        relationTo: 'materials';
+        value: number | Material;
+      } | null)
+    | ({
+        relationTo: 'products';
+        value: number | Product;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'media';
+        value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'users';
+        value: number | User;
+      } | null)
+    | ({
+        relationTo: 'customers';
+        value: number | Customer;
+      } | null)
+    | ({
+        relationTo: 'magic-link-tokens';
+        value: number | MagicLinkToken;
+      } | null)
+    | ({
+        relationTo: 'entitlements';
+        value: number | Entitlement;
+      } | null)
+    | ({
+        relationTo: 'orders';
+        value: number | Order;
+      } | null)
+    | ({
+        relationTo: 'seat-holds';
+        value: number | SeatHold;
+      } | null)
+    | ({
+        relationTo: 'enrollments';
+        value: number | Enrollment;
+      } | null)
+    | ({
+        relationTo: 'discount-codes';
+        value: number | DiscountCode;
+      } | null)
+    | ({
+        relationTo: 'processed-stripe-events';
+        value: number | ProcessedStripeEvent;
+      } | null)
+    | ({
+        relationTo: 'waitlist-entries';
+        value: number | WaitlistEntry;
+      } | null)
+    | ({
+        relationTo: 'lesson-progress';
+        value: number | LessonProgress;
+      } | null)
+    | ({
+        relationTo: 'certificates';
+        value: number | Certificate;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
+      } | null);
   globalSlug?: string | null;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: number | User;
+      }
+    | {
+        relationTo: 'customers';
+        value: number | Customer;
+      };
   updatedAt: string;
   createdAt: string;
 }
@@ -182,10 +847,15 @@ export interface PayloadLockedDocument {
  */
 export interface PayloadPreference {
   id: number;
-  user: {
-    relationTo: 'users';
-    value: number | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: number | User;
+      }
+    | {
+        relationTo: 'customers';
+        value: number | Customer;
+      };
   key?: string | null;
   value?:
     | {
@@ -212,9 +882,225 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "courses_select".
+ */
+export interface CoursesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  format?: T;
+  summary?: T;
+  description?: T;
+  level?: T;
+  durationMinutes?: T;
+  price?: T;
+  heroImage?: T;
+  gallery?: T;
+  lessons?: T;
+  materials?: T;
+  status?: T;
+  stripeProductId?: T;
+  stripePriceId?: T;
+  stripeSyncStatus?: T;
+  stripeSyncError?: T;
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  certificateEnabled?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessions_select".
+ */
+export interface SessionsSelect<T extends boolean = true> {
+  course?: T;
+  startsAt?: T;
+  endsAt?: T;
+  location?:
+    | T
+    | {
+        name?: T;
+        address?: T;
+        city?: T;
+        postalCode?: T;
+        mapsUrl?: T;
+      };
+  level?: T;
+  capacity?: T;
+  status?: T;
+  notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lessons_select".
+ */
+export interface LessonsSelect<T extends boolean = true> {
+  course?: T;
+  title?: T;
+  order?: T;
+  body?: T;
+  video?:
+    | T
+    | {
+        provider?: T;
+        assetId?: T;
+        playbackId?: T;
+        durationSec?: T;
+      };
+  materials?: T;
+  isPreview?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "materials_select".
+ */
+export interface MaterialsSelect<T extends boolean = true> {
+  title?: T;
+  file?: T;
+  kind?: T;
+  locale?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "products_select".
+ */
+export interface ProductsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  description?: T;
+  images?: T;
+  priceDisplay?: T;
+  externalUrl?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  layout?:
+    | T
+    | {
+        hero?: T | HeroBlockSelect<T>;
+        gallery?: T | GalleryBlockSelect<T>;
+        testimonials?: T | TestimonialsBlockSelect<T>;
+        cta?: T | CtaBlockSelect<T>;
+        richText?: T | RichTextBlockSelect<T>;
+      };
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "HeroBlock_select".
+ */
+export interface HeroBlockSelect<T extends boolean = true> {
+  heading?: T;
+  subheading?: T;
+  image?: T;
+  ctaLabel?: T;
+  ctaHref?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "GalleryBlock_select".
+ */
+export interface GalleryBlockSelect<T extends boolean = true> {
+  heading?: T;
+  images?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TestimonialsBlock_select".
+ */
+export interface TestimonialsBlockSelect<T extends boolean = true> {
+  heading?: T;
+  items?:
+    | T
+    | {
+        quote?: T;
+        author?: T;
+        role?: T;
+        id?: T;
+      };
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "CtaBlock_select".
+ */
+export interface CtaBlockSelect<T extends boolean = true> {
+  heading?: T;
+  body?: T;
+  buttonLabel?: T;
+  buttonHref?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "RichTextBlock_select".
+ */
+export interface RichTextBlockSelect<T extends boolean = true> {
+  content?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  _objectKey?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -232,6 +1118,222 @@ export interface UsersSelect<T extends boolean = true> {
         createdAt?: T;
         expiresAt?: T;
       };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "customers_select".
+ */
+export interface CustomersSelect<T extends boolean = true> {
+  email?: T;
+  firstName?: T;
+  lastName?: T;
+  phone?: T;
+  preferredLocale?: T;
+  stripeCustomerId?: T;
+  marketingConsent?: T;
+  dietaryNotes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "magic-link-tokens_select".
+ */
+export interface MagicLinkTokensSelect<T extends boolean = true> {
+  customer?: T;
+  tokenHash?: T;
+  expiresAt?: T;
+  usedAt?: T;
+  requestIp?: T;
+  next?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "entitlements_select".
+ */
+export interface EntitlementsSelect<T extends boolean = true> {
+  customer?: T;
+  course?: T;
+  source?: T;
+  sourceRef?: T;
+  validFrom?: T;
+  validUntil?: T;
+  revokedAt?: T;
+  revokedReason?: T;
+  grantedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "orders_select".
+ */
+export interface OrdersSelect<T extends boolean = true> {
+  number?: T;
+  customer?: T;
+  email?: T;
+  locale?: T;
+  status?: T;
+  items?:
+    | T
+    | {
+        course?: T;
+        session?: T;
+        quantity?: T;
+        unitAmount?: T;
+        description?: T;
+        id?: T;
+      };
+  subtotal?: T;
+  discountTotal?: T;
+  taxGst?: T;
+  taxQst?: T;
+  total?: T;
+  currency?: T;
+  stripeCheckoutSessionId?: T;
+  stripePaymentIntentId?: T;
+  stripeInvoiceId?: T;
+  invoicePdfUrl?: T;
+  promotionCode?: T;
+  paidAt?: T;
+  refunds?:
+    | T
+    | {
+        stripeRefundId?: T;
+        amount?: T;
+        reason?: T;
+        at?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "seat-holds_select".
+ */
+export interface SeatHoldsSelect<T extends boolean = true> {
+  session?: T;
+  quantity?: T;
+  cartToken?: T;
+  customerEmail?: T;
+  stripeCheckoutSessionId?: T;
+  status?: T;
+  expiresAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enrollments_select".
+ */
+export interface EnrollmentsSelect<T extends boolean = true> {
+  session?: T;
+  customer?: T;
+  order?: T;
+  attendeeIndex?: T;
+  attendeeName?: T;
+  status?: T;
+  attendance?: T;
+  cancelledAt?: T;
+  cancellationOutcome?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "discount-codes_select".
+ */
+export interface DiscountCodesSelect<T extends boolean = true> {
+  code?: T;
+  kind?: T;
+  value?: T;
+  maxRedemptions?: T;
+  expiresAt?: T;
+  appliesTo?: T;
+  active?: T;
+  stripeCouponId?: T;
+  stripePromotionCodeId?: T;
+  personalFor?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "processed-stripe-events_select".
+ */
+export interface ProcessedStripeEventsSelect<T extends boolean = true> {
+  eventId?: T;
+  type?: T;
+  processedAt?: T;
+  outcome?: T;
+  note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "waitlist-entries_select".
+ */
+export interface WaitlistEntriesSelect<T extends boolean = true> {
+  session?: T;
+  customer?: T;
+  email?: T;
+  locale?: T;
+  status?: T;
+  notifiedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lesson-progress_select".
+ */
+export interface LessonProgressSelect<T extends boolean = true> {
+  customer?: T;
+  lesson?: T;
+  course?: T;
+  completed?: T;
+  completedAt?: T;
+  positionSec?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "certificates_select".
+ */
+export interface CertificatesSelect<T extends boolean = true> {
+  customer?: T;
+  course?: T;
+  verificationCode?: T;
+  issuedAt?: T;
+  locale?: T;
+  customerNameSnapshot?: T;
+  courseTitleSnapshot?:
+    | T
+    | {
+        fr?: T;
+        en?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  lesson?: T;
+  customer?: T;
+  body?: T;
+  status?: T;
+  moderatedBy?: T;
+  parent?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -272,6 +1374,84 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  communityUrl?: string | null;
+  maxSeatsPerPurchase: number;
+  holdMinutes: number;
+  waitlistNotifyCount: number;
+  reminderOffsetsHours?: number[] | null;
+  contactEmail?: string | null;
+  legal?: {
+    termsPage?: (number | null) | Page;
+    privacyPage?: (number | null) | Page;
+    cancellationPage?: (number | null) | Page;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cancellation-policy".
+ */
+export interface CancellationPolicy {
+  id: number;
+  tiers?:
+    | {
+        minHoursBefore: number;
+        outcome: 'refund' | 'credit' | 'none';
+        percent: number;
+        id?: string | null;
+      }[]
+    | null;
+  customerCanSelfCancel?: boolean | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  communityUrl?: T;
+  maxSeatsPerPurchase?: T;
+  holdMinutes?: T;
+  waitlistNotifyCount?: T;
+  reminderOffsetsHours?: T;
+  contactEmail?: T;
+  legal?:
+    | T
+    | {
+        termsPage?: T;
+        privacyPage?: T;
+        cancellationPage?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cancellation-policy_select".
+ */
+export interface CancellationPolicySelect<T extends boolean = true> {
+  tiers?:
+    | T
+    | {
+        minHoursBefore?: T;
+        outcome?: T;
+        percent?: T;
+        id?: T;
+      };
+  customerCanSelfCancel?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "payload": "payload"
+    "payload": "payload",
+    "seed": "payload run src/seed/index.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.90.2",
