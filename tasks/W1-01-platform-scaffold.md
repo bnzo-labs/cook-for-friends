@@ -24,7 +24,7 @@ Create the Turborepo + pnpm monorepo with `apps/web` running Next.js + Payload C
 ## Acceptance criteria
 - [x] `pnpm install && pnpm build` succeeds from the repo root with **exactly** the pinned versions (DISCOVERY §2). `packageManager: "pnpm@11.28.5"`, `engines.node: ">=22 <23"`.
 - [x] `pnpm dev` serves `/fr` and `/en` (placeholder page using `getTranslations`). `/` redirects to `/fr` when there is no `Accept-Language: en`.
-- [x] `/admin` loads the Payload admin (French UI by default) and is **not** caught by `proxy.ts`.
+- [x] `/admin` loads the Payload admin (French UI by default) and is **not** caught by `proxy.ts`. *(Re-verified 2026-10-17 after fix 64a63b6: `/admin/create-first-user` and `/admin/login` return 200 on staging. The original tick counted a 307 and the page was 500; Playwright `e2e/admin.test.ts` now guards it.)*
 - [x] `src/i18n/locales.ts` is the only place locales are declared. Payload `localization` and next-intl `routing` both import it.
 - [x] `src/lib/env.ts` validates every env var in MASTER_BUILD_SPEC §7 with zod (optional groups for Mux/Bunny based on `VIDEO_PROVIDER`). The app fails fast with a readable error when a required var is missing.
 - [x] Empty module folders exist: `src/modules/{catalog,identity,access,commerce,scheduling,learning,video,notifications,_shared}/index.ts`. Each exports an empty `<name>Collections: CollectionConfig[] = []`, wired into `payload.config.ts`.
