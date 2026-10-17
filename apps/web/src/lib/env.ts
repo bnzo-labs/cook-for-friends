@@ -12,7 +12,8 @@ import { z } from "zod"
 // Schema
 // ---------------------------------------------------------------------------
 
-const videoProviderEnum = z.enum(["mux", "bunny"])
+// "none" = video not yet configured (Wave 1–2); Wave 3 sets mux or bunny.
+const videoProviderEnum = z.enum(["mux", "bunny", "none"])
 
 const serverSchema = z.object({
   // Database
