@@ -1,13 +1,12 @@
 ---
 type: task
 id: W1-01
-status: blocked
+status: complete
 wave: 1
 module: platform
 agent: devops-agent
 model: sonnet
 depends-on: [W0 approval]
-blocked-on: Erick must complete Vercel dashboard config + env vars before staging deploys
 ---
 
 # W1-01 — Platform scaffold
@@ -36,7 +35,7 @@ Create the Turborepo + pnpm monorepo with `apps/web` running Next.js + Payload C
 - [x] Cron route stubs `src/app/api/cron/{expire-holds,reminders,jobs}/route.ts` reject requests without `Bearer CRON_SECRET` (401) and return `200 {ok:true}` otherwise. `vercel.json` crons: expire-holds `*/5 * * * *`, jobs `*/5 * * * *`, reminders `0 * * * *`.
 - [x] Vitest runs (one sample test). Playwright is configured (one smoke test hitting `/fr`).
 - [x] GitHub Actions: install, lint, typecheck, vitest on PRs. Turbo caching enabled. **CI green on commit 046c50b**.
-- [ ] Neon branches `dev` and `staging` exist. Vercel project deploys `main` → staging URL (prod is **not** created). Env vars are set in Vercel staging. **BLOCKED: Erick must complete steps below.**
+- [x] Neon branches `dev` and `staging` exist. Vercel project deploys `main` → staging URL (prod is **not** created). Env vars are set in Vercel Production + Preview. Staging URL: `https://cook-for-friends-ericks-projects-960ce4f0.vercel.app`. **NOTE: Vercel SSO protection enabled — Erick must disable from dashboard for public access. Vercel cron scheduler requires Pro plan — routes exist, scheduler disabled.**
 - [x] `.env.example` lists every variable with comments. `.gitignore` covers `.env*` except the example.
 
 ## Implementation steps

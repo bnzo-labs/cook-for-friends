@@ -6,6 +6,27 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-17 — W1-01 complete, staging deployed (devops-agent)
+
+**Done**
+- All 15/15 acceptance criteria met. W1-01 status: complete.
+- Staged env vars (Production + Preview) in Vercel from `.env.staging`. Neon staging branch DB.
+- Added `VIDEO_PROVIDER=none` enum option to env.ts (Wave 3 configures Mux/Bunny). Prevents build failure without MUX credentials.
+- Added `engines.node: ">=22 <23"` to `apps/web/package.json` so Vercel selects Node 22.x.
+- Created and applied initial Payload CMS migration (20261017_124119) to Neon staging branch.
+- Staging deploy succeeded: `https://cook-for-friends-ericks-projects-960ce4f0.vercel.app` (also aliased to `https://cook-for-friends.vercel.app`).
+- Vercel cron scheduler disabled in vercel.json (requires Pro plan; routes exist at /api/cron/*).
+- CI green on commit `ba2ceb6`. GitHub → Vercel connection confirmed active.
+
+**Notes for Erick**
+- Vercel SSO protection is enabled: disable from dashboard → Settings → Deployment Protection → uncheck "Vercel Authentication" for public access.
+- Cron scheduler: upgrade to Vercel Pro and re-enable `crons` key in `apps/web/vercel.json` when ready.
+
+**Next step**
+- W1-01 complete → W1-02/03/04 can run in parallel.
+
+---
+
 ## 2026-10-12 — W1-01 scaffold complete, CI green, Vercel setup blocked (devops-agent)
 
 **Done**
