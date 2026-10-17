@@ -6,8 +6,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts")
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Keep sharp as an external package for Payload image resizing
-  serverExternalPackages: ["sharp", "@payloadcms/richtext-lexical"],
+  // Keep sharp as an external package for Payload image resizing.
+  // @payloadcms/richtext-lexical must stay bundled: its RSC entry imports CSS,
+  // which Node cannot load when the package is externalized (W1-02).
+  serverExternalPackages: ["sharp"],
   experimental: {},
   // NEXT_PUBLIC_* vars are automatically forwarded to all Turbopack workers
   // by Next.js — no explicit env block needed for them.
