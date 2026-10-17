@@ -1,5 +1,7 @@
 import type { CollectionConfig } from "payload"
 
-// This module's collections are registered here.
-// W1-02 (data-model) will populate this file with real collections.
-export const learningCollections: CollectionConfig[] = []
+import { Certificates } from "./collections/certificates"
+import { Comments } from "./collections/comments"
+import { LessonProgress } from "./collections/lesson-progress"
+
+export const learningCollections: CollectionConfig[] = [LessonProgress, Certificates, Comments]

@@ -1,5 +1,5 @@
 import type { CollectionConfig } from "payload"
 
-// This module's collections are registered here.
-// W1-02 (data-model) will populate this file with real collections.
-export const accessCollections: CollectionConfig[] = []
+import { Entitlements } from "./collections/entitlements"
+
+export const accessCollections: CollectionConfig[] = [Entitlements]

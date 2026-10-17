@@ -1,5 +1,15 @@
 import type { CollectionConfig } from "payload"
 
-// This module's collections are registered here.
-// W1-02 (data-model) will populate this file with real collections.
-export const commerceCollections: CollectionConfig[] = []
+import { DiscountCodes } from "./collections/discount-codes"
+import { Enrollments } from "./collections/enrollments"
+import { Orders } from "./collections/orders"
+import { ProcessedStripeEvents } from "./collections/processed-stripe-events"
+import { SeatHolds } from "./collections/seat-holds"
+
+export const commerceCollections: CollectionConfig[] = [
+  Orders,
+  SeatHolds,
+  Enrollments,
+  DiscountCodes,
+  ProcessedStripeEvents,
+]
