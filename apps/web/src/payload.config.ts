@@ -1,4 +1,4 @@
-import { buildConfig, type CollectionConfig } from "payload"
+import { buildConfig } from "payload"
 import { postgresAdapter } from "@payloadcms/db-postgres"
 import { resendAdapter } from "@payloadcms/email-resend"
 import { s3Storage } from "@payloadcms/storage-s3"
@@ -10,7 +10,7 @@ import { locales, defaultLocale } from "./i18n/locales"
 import { env } from "./lib/env"
 
 // Module collections — W1-02 populates these
-import { catalogCollections } from "./modules/catalog"
+import { catalogCollections, catalogGlobals } from "./modules/catalog"
 import { identityCollections } from "./modules/identity"
 import { accessCollections } from "./modules/access"
 import { commerceCollections } from "./modules/commerce"
@@ -19,29 +19,12 @@ import { learningCollections } from "./modules/learning"
 import { videoCollections } from "./modules/video"
 import { notificationsCollections } from "./modules/notifications"
 
-/**
- * Temporary stub users collection.
- * MUST be deleted by W1-02 (identity agent owns the real `users` collection).
- * W1-03 (identity-auth) wires `admin.user` to the real `users` collection.
- */
-const _tempUsersCollection: CollectionConfig = {
-  slug: "users",
-  auth: true,
-  admin: {
-    useAsTitle: "email",
-  },
-  fields: [],
-}
-
 export default buildConfig({
   // -------------------------------------------------------------------------
   // Admin
   // -------------------------------------------------------------------------
   admin: {
-    /**
-     * Temporary: uses the stub users collection.
-     * W1-02 will replace this with the real users collection.
-     */
+    /** Staff auth collection — owned by the identity module (CONTRACT §3.2). */
     user: "users",
     meta: {
       titleSuffix: "— Cook for Friends Admin",
@@ -52,7 +35,6 @@ export default buildConfig({
   // Collections (all modules)
   // -------------------------------------------------------------------------
   collections: [
-    _tempUsersCollection,
     ...catalogCollections,
     ...identityCollections,
     ...accessCollections,
@@ -62,6 +44,9 @@ export default buildConfig({
     ...videoCollections,
     ...notificationsCollections,
   ],
+
+  // Globals (catalog owns site-settings + cancellation-policy)
+  globals: [...catalogGlobals],
 
   // -------------------------------------------------------------------------
   // Editor
@@ -117,10 +102,8 @@ export default buildConfig({
   plugins: [
     s3Storage({
       collections: {
-        // The media collection is added by the catalog module (W1-02).
-        // The adapter config is ready here; just add the slug to this object
-        // when the collection is defined.
-        // Example:  media: { disableLocalStorage: true }
+        // `media` is owned by the catalog module (W1-02).
+        media: { disableLocalStorage: true },
       },
       bucket: env.R2_BUCKET,
       config: {
