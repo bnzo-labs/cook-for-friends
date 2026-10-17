@@ -1,3 +1,5 @@
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { buildConfig } from "payload"
 import { postgresAdapter } from "@payloadcms/db-postgres"
 import { resendAdapter } from "@payloadcms/email-resend"
@@ -19,11 +21,15 @@ import { learningCollections } from "./modules/learning"
 import { videoCollections } from "./modules/video"
 import { notificationsCollections } from "./modules/notifications"
 
+const dirname = path.dirname(fileURLToPath(import.meta.url))
+
 export default buildConfig({
   // -------------------------------------------------------------------------
   // Admin
   // -------------------------------------------------------------------------
   admin: {
+    // Generator writes app/(payload)/admin/importMap.js (Payload default); baseDir resolves custom component paths like "/modules/...".
+    importMap: { baseDir: path.resolve(dirname) },
     /** Staff auth collection — owned by the identity module (CONTRACT §3.2). */
     user: "users",
     meta: {
