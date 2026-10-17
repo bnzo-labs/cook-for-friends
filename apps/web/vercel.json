@@ -1,6 +1,5 @@
 {
   "framework": "nextjs",
   "buildCommand": "pnpm next build",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "_note_crons": "Vercel cron scheduler requires Pro plan. Routes exist at /api/cron/* and accept Bearer auth. Re-enable 'crons' key when upgrading to Vercel Pro (W2 milestone)."
+  "installCommand": "pnpm install --frozen-lockfile"
 }
