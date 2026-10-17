@@ -6,6 +6,24 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-17 — W1-04 UI foundation complete (frontend-architect)
+
+**Done**
+- `src/styles/{tokens,globals,fonts}`: tokens per DESIGN_SPEC §1, Tailwind v4 `@theme inline`, shadcn variable aliases, reduced-motion guard.
+- 13 shadcn components in `src/components/ui/` restyled via tokens (Button variants primary/secondary/ghost/link, sizes, loading keeps width).
+- `src/components/layout/`: Container, Section, SiteHeader, SiteFooter, LocaleSwitcher (keeps path), NavLinks, MobileNav (Sheet), Logo placeholder.
+- Locale layout: `<html lang>`, skip link, landmarks, Toaster, fonts. `ui.*` + `layout.*` messages FR/EN.
+- Playwright `e2e/w1-04-shell.test.ts`: 17 tests pass (landmarks, skip link, axe 0 serious/critical at 320 and 1440 both locales, mobile menu, overflow). Screenshots committed.
+- 9/9 acceptance criteria ticked. Details and deviations in `tasks/W1-04-ui-foundation.md`.
+
+**Blocked**
+- Nothing. Nav targets 404 until storefront/portal pages and translated pathnames exist (W2-05).
+
+**Next step**
+- Storefront (W2-05) builds on layout + ui. Brand swap (D4) = edit `tokens.css` + `fonts.ts`, then re-verify contrast.
+
+---
+
 ## 2026-10-17 — W1-01 complete, staging deployed (devops-agent)
 
 **Done**
