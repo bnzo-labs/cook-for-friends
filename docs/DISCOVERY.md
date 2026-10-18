@@ -177,7 +177,7 @@ export interface VideoProvider {
 | R7 | Payload admin plus storefront in one Next app hurts Lighthouse. | Medium | Separate route groups `(payload)` and `(frontend)`. Storefront pages are statically generated (ISR) and revalidated by Payload `afterChange` hooks. No Payload client bundles on public pages. Lighthouse CI on staging in Wave 4. |
 | R8 | Vercel function size and cold starts with Payload. | Medium | Node runtime (not Edge) for Payload routes. Keep `sharp` external. Neon pooled URL. Measure in the Wave 1 deploy to staging. |
 | R9 | The cancellation policy is undefined. | Medium | A configurable `cancellation-policy` global with tiers `[{ minHoursBefore, outcome: 'refund' \| 'credit' \| 'none', percent }]`. Credit is issued as a **single-use personal Stripe promotion code** for the paid amount, so there is no balance ledger in MVP. **D1.** |
-| R10 | Seats per purchase (can one customer book 2 seats for a friend?) is not specified. It changes the seat logic, attendee list and certificates. | High | The design supports `quantity` per session line (max set in `site-settings`, default **1**). Extra attendee names are collected only if quantity > 1. **D9** must be decided before Wave 2. |
+| R10 | Seats per purchase (can one customer book 2 seats for a friend?) is not specified. It changes the seat logic, attendee list and certificates. | High | The design supports `quantity` per session line (max set in `site-settings`, default **1**). Extra attendee names are collected only if quantity > 1. **D9** resolved 2026-10-18: 1 seat per purchase for Wave 2. |
 | R11 | Waitlist fairness: notify one person or everyone? | Low | MVP: when a seat frees, email the next **N** waitlisters (N configurable, default 3), FIFO. First to pay wins. No reserved hold for waitlisters. **D10.** |
 | R12 | Stripe Tax registrations and the tax code are not confirmed. A small supplier under $30k is **not required** to collect GST/QST. | High | **D6:** client confirms GST and QST registration numbers before Wave 2 ends. If not registered, `automatic_tax` stays off behind `STRIPE_TAX_ENABLED`. |
 | R13 | Many agents run in parallel on one Next app. | Medium | Strict module folders under `apps/web/src/modules/*` with a public `index.ts`. ESLint `no-restricted-imports` blocks deep imports across modules. CONTRACT.md lists ownership. |
@@ -198,7 +198,7 @@ export interface VideoProvider {
 | D6 | GST/QST registration numbers, tax code | `STRIPE_TAX_ENABLED=false` until confirmed | Wave 2 acceptance for receipts |
 | D7 | Hub integration of platform orders | None in MVP | Nothing (post-MVP) |
 | D8 | Domain layout vs Shopify; sending domain | `*.vercel.app` staging | Production deploy, email deliverability |
-| D9 | Seats per purchase | 1 | **Wave 2 checkout** |
+| D9 | Seats per purchase | 1 | **Resolved 2026-10-18 (Erick): 1 seat per purchase for Wave 2.** `site-settings` max stays 1, no guest-name fields, no partial cancellation. Multi-seat with guest emails (option 3) open for client as post-Wave 2 task; data model already supports `quantity`. |
 | D10 | Waitlist notification strategy | Next 3, FIFO, first to pay wins | Wave 3 waitlist task |
 | D11 | Vercel Pro plan (cron frequency) | **Resolved 2026-10-18: Cloudflare Workers Cron (staging).** Revisit Vercel Pro at launch. | Wave 2 staging |
 
