@@ -14,8 +14,24 @@ test("smoke: /fr loads and renders site heading", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Cook for Friends" })).toBeVisible()
 })
 
-test("smoke: / redirects to /fr", async ({ page }) => {
-  const response = await page.goto("/")
-  // After redirect, should land on /fr
-  expect(page.url()).toMatch(/\/fr/)
+// Locale redirect depends on Accept-Language; pin it so the result never
+// depends on the runner/browser default locale.
+test.describe("smoke: / locale redirect", () => {
+  test.describe("fr-CA browser", () => {
+    test.use({ locale: "fr-CA", extraHTTPHeaders: { "Accept-Language": "fr-CA,fr;q=0.9" } })
+
+    test("/ redirects to /fr", async ({ page }) => {
+      await page.goto("/")
+      await expect(page).toHaveURL(/\/fr(\/|$|\?)/)
+    })
+  })
+
+  test.describe("en browser", () => {
+    test.use({ locale: "en-US", extraHTTPHeaders: { "Accept-Language": "en-US,en;q=0.9" } })
+
+    test("/ redirects to /en", async ({ page }) => {
+      await page.goto("/")
+      await expect(page).toHaveURL(/\/en(\/|$|\?)/)
+    })
+  })
 })

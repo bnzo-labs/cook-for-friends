@@ -1,0 +1,57 @@
+name: Neon stale CI branches
+
+# Deletes ci-* Neon branches older than 1 day (leftovers from killed runs).
+# Neon caps branches per project; this keeps the quota free.
+# Skips (green) when NEON_API_KEY is not set.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neon-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Delete stale ci-* branches
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+    steps:
+      - name: Check Neon credentials
+        id: gate
+        run: |
+          if [ -z "$NEON_API_KEY" ] || [ -z "$NEON_PROJECT_ID" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Cleanup skipped::NEON_API_KEY not set — cleanup skipped"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Delete ci-* branches older than 1 day
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          cutoff="$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)"
+          npx --yes neonctl@8.8.0 branches list --project-id "$NEON_PROJECT_ID" --output json > branches.json
+          # Only names matching ci-<run_id>-<attempt>; never default/protected branches.
+          jq -r --arg cutoff "$cutoff" '
+            (if type=="object" then .branches else . end)[]
+            | select(.name | test("^ci-[0-9]+-[0-9]+$"))
+            | select((.default // false) | not)
+            | select((.protected // false) | not)
+            | select(.created_at < $cutoff)
+            | .id' branches.json > stale.txt
+          echo "Stale branches: $(wc -l < stale.txt)"
+          while read -r id; do
+            [ -n "$id" ] || continue
+            echo "Deleting $id"
+            npx --yes neonctl@8.8.0 branches delete "$id" --project-id "$NEON_PROJECT_ID"
+          done < stale.txt

@@ -6,6 +6,23 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-18 — CI integration tests on throwaway Neon branch + smoke fix (devops-agent)
+- **CI `integration` job** (needs `verify`): gate step checks `NEON_API_KEY` secret + `NEON_PROJECT_ID` repo variable. Missing -> notice "NEON_API_KEY not set — integration tests skipped", job green. Present -> `neondatabase/create-branch-action` (SHA-pinned, v6.3.1) creates `ci-<run_id>-<attempt>` from `dev` (2h `expires_at` safety net), `pnpm payload migrate` (tests PR migrations), `pnpm test` with `TEST_DATABASE_URL` (all 92 tests), `delete-branch-action` (SHA-pinned, v3.2.1) with `if: always()`.
+- Env: dummy non-secret placeholders only (`VIDEO_PROVIDER=none`, `sk_test_ci_placeholder`, R2/Resend placeholders), random `PAYLOAD_SECRET`/`CRON_SECRET` per run, `NEXT_PUBLIC_SKIP_ENV_VALIDATION=0` for this job (Payload config needs real env parsing). No real Stripe/Resend keys.
+- Fork PRs get no secrets -> job skips. No `pull_request_target`.
+- **`neon-cleanup.yml`**: daily 03:17 UTC + `workflow_dispatch`; deletes `ci-<n>-<n>` branches older than 1 day (never default/protected). Same gating.
+- Repo variable `NEON_PROJECT_ID=empty-rain-36048098` set.
+- Verified locally on a throwaway branch from `dev` (deleted after): migrate no-op OK, 92/92 tests pass. actionlint clean.
+- **Smoke fix:** `/` redirect test pinned with `locale: fr-CA` + Accept-Language; added companion en-US -> `/en`. Both pass locally (3/3).
+
+**HANDOFF for Erick (3 steps) to enable integration tests in CI**
+1. Neon console -> Account/Org settings -> API keys -> create key named `github-ci`.
+2. `gh secret set NEON_API_KEY -R bnzo-labs/cook-for-friends` (paste key when prompted).
+3. `gh workflow run ci.yml -R bnzo-labs/cook-for-friends --ref main` then `gh run watch`, to confirm. The Integration job should run 92 tests instead of the skip notice. Optionally `gh workflow run neon-cleanup.yml -R bnzo-labs/cook-for-friends`.
+- Key rotation: depends on CI + cleanup only; rotate yearly or on suspected leak (revoke in Neon console, re-run step 2).
+
+---
+
 ## 2026-10-17 — W1-01 follow-up: Payload admin 500 fixed (devops-agent)
 - **Root cause:** `src/app/(payload)/` had no `layout.tsx` (Payload `RootLayout` + `serverFunction` + importMap) and no `custom.scss`, so `@payloadcms/ui` client code got no config context: `Cannot destructure property 'config'` -> 500 on `/admin/create-first-user`. Previous "admin loads" tick counted a 307.
 - **Fix (64a63b6):** added Payload 3.90.2 blank-template `layout.tsx` + `custom.scss`; importMap now `(payload)/admin/importMap.js` (generator default) with `admin.importMap.baseDir = src` in `payload.config.ts`; removed `(payload)/importMap.ts`; `e2e/admin.test.ts` asserts 200 + form; `.env.example` gains commented `SEED_PASSWORD`, `TEST_DATABASE_URL`; `.gitignore` ignores Playwright artifacts.

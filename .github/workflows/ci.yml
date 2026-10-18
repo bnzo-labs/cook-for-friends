@@ -79,3 +79,107 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # ---------------------------------------------------------------------------
+  # Integration tests — real Postgres on a throwaway Neon branch per run.
+  # Skipped (green) when NEON_API_KEY is not set, and always on fork PRs
+  # (GitHub withholds secrets from forks; we never use pull_request_target).
+  # ---------------------------------------------------------------------------
+  integration:
+    name: Integration (Neon branch)
+    runs-on: ubuntu-latest
+    needs: [verify]
+    timeout-minutes: 20
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      BRANCH_NAME: ci-${{ github.run_id }}-${{ github.run_attempt }}
+      # Payload CLI + config need REAL env parsing (override the workflow-level skip).
+      NEXT_PUBLIC_SKIP_ENV_VALIDATION: "0"
+    steps:
+      - name: Check Neon credentials
+        id: gate
+        run: |
+          if [ -z "$NEON_API_KEY" ] || [ -z "$NEON_PROJECT_ID" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Integration tests skipped::NEON_API_KEY not set — integration tests skipped"
+            echo "### Integration tests skipped" >> "$GITHUB_STEP_SUMMARY"
+            echo "NEON_API_KEY (secret) or NEON_PROJECT_ID (variable) not set, or this is a fork PR." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          version: "11.28.5"
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Compute branch expiry
+        id: expiry
+        if: steps.gate.outputs.enabled == 'true'
+        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      # neondatabase/create-branch-action v6.3.1
+      - name: Create Neon branch
+        id: branch
+        if: steps.gate.outputs.enabled == 'true'
+        uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          api_key: ${{ env.NEON_API_KEY }}
+          parent_branch: dev
+          branch_name: ${{ env.BRANCH_NAME }}
+          database: neondb
+          role: neondb_owner
+          # Safety net if the delete step never runs (runner killed).
+          expires_at: ${{ steps.expiry.outputs.at }}
+
+      - name: Migrate and run all tests
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/web
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url }}
+          # Non-secret placeholders. No real Stripe/Resend/R2 keys; email is mocked.
+          VIDEO_PROVIDER: none
+          STRIPE_SECRET_KEY: sk_test_ci_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
+          RESEND_API_KEY: re_ci_placeholder
+          EMAIL_FROM: ci@example.com
+          R2_ACCOUNT_ID: ci
+          R2_ACCESS_KEY_ID: ci
+          R2_SECRET_ACCESS_KEY: ci
+          R2_BUCKET: ci
+          R2_PUBLIC_URL: https://example.com
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+        run: |
+          echo "::add-mask::$DB_URL"
+          export PAYLOAD_SECRET="$(openssl rand -hex 32)"
+          export CRON_SECRET="$(openssl rand -hex 32)"
+          export TEST_DATABASE_URL="$DB_URL"
+          export DATABASE_URL="$DB_URL"
+          export DATABASE_URL_DIRECT="$DB_URL"
+          pnpm payload migrate
+          pnpm test
+
+      # neondatabase/delete-branch-action v3.2.1
+      - name: Delete Neon branch
+        if: always() && steps.gate.outputs.enabled == 'true' && steps.branch.outcome != 'skipped'
+        continue-on-error: true
+        uses: neondatabase/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          api_key: ${{ env.NEON_API_KEY }}
+          branch: ${{ env.BRANCH_NAME }}
