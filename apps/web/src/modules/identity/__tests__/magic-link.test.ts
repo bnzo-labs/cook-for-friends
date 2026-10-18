@@ -328,6 +328,57 @@ describe.skipIf(!hasTestDb)("identity magic-link (integration)", () => {
     expect(new Date(expires ?? "").getTime()).toBeLessThanOrEqual(Date.now())
   })
 
+  it("revocation: logout rejects the old cookie and every other cookie of the same customer; new login works", async () => {
+    const email = `ml-${uid()}@example.com`
+    const login = async () => {
+      expect((await requestLink(email)).status).toBe(200)
+      return cookieOf(await doVerify(tokenFor(email)))
+    }
+    const deviceA = await login()
+    const deviceB = await login()
+    const resolve = async (cookie: string) => (await payload.auth({ headers: new Headers({ cookie }) })).user
+    expect((await resolve(deviceA))?.collection).toBe("customers")
+    expect((await resolve(deviceB))?.collection).toBe("customers")
+
+    const res = await logout.POST(post("/api/auth/logout", {}, { cookie: deviceA }))
+    expect(res.status).toBe(303)
+
+    expect(await resolve(deviceA)).toBeNull()
+    expect(await resolve(deviceB)).toBeNull()
+    expect(await identity.getCurrentCustomer(new Headers({ cookie: deviceB }))).toBeNull()
+
+    const fresh = await login()
+    expect((await resolve(fresh))?.collection).toBe("customers")
+    const stored = await payload.find({ collection: "customers", where: { email: { equals: email } }, overrideAccess: true })
+    expect(stored.docs[0]?.sessionVersion).toBe(1)
+  })
+
+  it("revocation: another customer is unaffected; a replayed logout with a stale cookie changes nothing", async () => {
+    const a = await signIn()
+    const b = await signIn()
+    await logout.POST(post("/api/auth/logout", {}, { cookie: a.cookie }))
+    const again = await logout.POST(post("/api/auth/logout", {}, { cookie: a.cookie }))
+    expect(again.status).toBe(303)
+    expect((await payload.auth({ headers: new Headers({ cookie: b.cookie }) })).user?.collection).toBe("customers")
+    const stored = await payload.find({ collection: "customers", where: { email: { equals: a.email } }, overrideAccess: true })
+    expect(stored.docs[0]?.sessionVersion).toBe(1)
+  })
+
+  it("revocation: sessionVersion is not writable through a customer-level update", async () => {
+    const { email } = await signIn()
+    const found = await payload.find({ collection: "customers", where: { email: { equals: email } }, overrideAccess: true })
+    const customer = found.docs[0]!
+    await payload.update({
+      collection: "customers",
+      id: customer.id,
+      data: { sessionVersion: 99 },
+      user: { ...customer, collection: "customers" },
+      overrideAccess: false,
+    })
+    const after = await payload.findByID({ collection: "customers", id: customer.id, overrideAccess: true })
+    expect(after.sessionVersion).toBe(0)
+  })
+
   it("logout: anonymous is a harmless 303; a staff cookie is left untouched", async () => {
     const anon = await logout.POST(post("/api/auth/logout", {}))
     expect(anon.status).toBe(303)

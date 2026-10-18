@@ -1,5 +1,5 @@
 ---
-version: 1.0
+version: 1.1
 status: draft — frozen on Wave 0 approval
 owner: orchestrator
 ---
@@ -24,7 +24,7 @@ All app code lives in `apps/web/src/`. A module = one folder in `apps/web/src/mo
 |--------|----------------------------|------------------------------|---------------|
 | `platform` | — | `/` root configs, `turbo.json`, `pnpm-workspace.yaml`, `packages/*`, `apps/web/{package.json,next.config.ts,tsconfig.json,vercel.json,.env.example}`, `apps/web/src/payload.config.ts`, `apps/web/src/proxy.ts`, `apps/web/src/i18n/*` (except `messages/`), `apps/web/src/lib/{env,db,payload}.ts`, `apps/web/src/app/(payload)/**`, `apps/web/src/app/api/cron/**`, `.github/**` | devops-agent / Sonnet |
 | `catalog` | `products`, `courses`, `sessions`, `lessons`, `materials`, `pages`, `media`, globals `site-settings`, `cancellation-policy`, page blocks | `src/modules/catalog/**` | backend-engineer / Sonnet (schema reviewed by Opus) |
-| `identity` | `users` (staff), `customers`, `magic-link-tokens` | `src/modules/identity/**`, `src/app/api/auth/**` | backend-engineer / Sonnet |
+| `identity` | `users` (staff), `customers`, `magic-link-tokens`, `auth-rate-limits` | `src/modules/identity/**`, `src/app/api/auth/**` | backend-engineer / Sonnet |
 | `access` | `entitlements` | `src/modules/access/**` | backend-engineer / Sonnet |
 | `commerce` | `orders`, `seat-holds`, `enrollments`, `discount-codes`, `processed-stripe-events` | `src/modules/commerce/**`, `src/app/api/{cart,checkout,stripe}/**`, `src/lib/stripe.ts` | backend-engineer / **Opus** for seat + webhook logic |
 | `scheduling` | `waitlist-entries` | `src/modules/scheduling/**`, `src/app/api/{waitlist,enrollments}/**` | backend-engineer / Sonnet |
@@ -100,8 +100,9 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: Module
 | Collection | Key fields |
 |------------|-----------|
 | `users` (auth, local strategy) | `name`, `role: 'admin'\|'staff'`. `admin.user` collection |
-| `customers` (auth, `disableLocalStrategy: true`, custom strategy) | `email` unique, `firstName`, `lastName`, `phone?`, `preferredLocale: Locale` (default `fr`), `stripeCustomerId?`, `marketingConsent: boolean` (Law 25), `dietaryNotes?` |
+| `customers` (auth, `disableLocalStrategy: true`, custom strategy) | `email` unique, `firstName`, `lastName`, `phone?`, `preferredLocale: Locale` (default `fr`), `stripeCustomerId?`, `marketingConsent: boolean` (Law 25), `dietaryNotes?`, `sessionVersion: number` (default 0, `saveToJWT`, admin-hidden, no client write access; incremented by logout) |
 | `magic-link-tokens` | `customer → customers`, `tokenHash` unique, `expiresAt`, `usedAt?`, `requestIp`, `next?`. Admin-hidden |
+| `auth-rate-limits` | `scope: 'email'\|'ip'`, `keyHash` (SHA-256 of email or IP). Index `(scope, keyHash, createdAt)`. No relations. Admin-hidden, Local API only (create/update/delete denied; read admin). One row per magic-link request; rows older than 24 h are pruned |
 
 ### 3.3 access
 | Collection | Key fields |
@@ -163,6 +164,8 @@ export function requestMagicLink(i: { email: string; locale: Locale; next?: stri
 export function verifyMagicLink(token: string): Promise<Result<{ customerId: ID; setCookie: string; next: string }>>
 export function getCurrentCustomer(headers: Headers): Promise<CustomerView | null>
 export function requireCustomer(headers: Headers): Promise<CustomerView>              // throws → redirect to /{locale}/auth/login
+// Sessions: the customers JWT carries `sessionVersion`; the strategy rejects a token whose version != customer.sessionVersion.
+// `POST /api/auth/logout` increments it, revoking every device of that customer (no per-device sessions).
 export function upsertCustomerByEmail(i: { email: string; locale: Locale; firstName?: string; lastName?: string }): Promise<CustomerView>
 export function isStaff(user: unknown): boolean
 
@@ -227,7 +230,7 @@ export function buildIcs(i: { uid: string; title: string; description: string; l
 |---------------|-------|------|--------------------------|
 | `POST /api/auth/magic-link/request` | identity | public, rate-limited (5/email/h, 20/IP/h) | `{ email, locale, next? }` → `200 { ok: true }` always |
 | `POST /api/auth/magic-link/verify` | identity | public | `{ token }` → `303` + `Set-Cookie` → `next` |
-| `POST /api/auth/logout` | identity | customer | → `303 /{locale}` |
+| `POST /api/auth/logout` | identity | customer | → `303 /{locale}`; clears cookie and revokes all of the customer's sessions (`sessionVersion + 1`) |
 | `POST /api/checkout` | commerce | public (cart token cookie) | `{ lines: CartLine[], locale, email? }` → `{ checkoutUrl, holdExpiresAt }` \| `409 SOLD_OUT` |
 | `POST /api/stripe/webhook` | commerce | Stripe signature | raw body → `200` (also on duplicate) |
 | `POST /api/waitlist` | scheduling | public | `{ sessionId, email, locale }` → `200` |
@@ -297,3 +300,4 @@ Internal jobs (Payload Jobs Queue, task slugs): `stripe-sync-course`, `stripe-sy
 | Date | Version | Change | By |
 |------|---------|--------|----|
 | 2026-10-07 | 1.0-draft | Initial contract from Wave 0 discovery | orchestrator |
+| 2026-10-18 | 1.1 | CCR approved by Erick: (1) `auth-rate-limits` collection added to identity (§1, §3.2); (2) `customers.sessionVersion` for revocable sessions, logout revokes all devices (§3.2, §4, §5.1) | backend-engineer |

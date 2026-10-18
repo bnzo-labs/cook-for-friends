@@ -476,6 +476,7 @@ export interface Customer {
   preferredLocale: 'fr' | 'en';
   stripeCustomerId?: string | null;
   marketingConsent?: boolean | null;
+  sessionVersion?: number | null;
   dietaryNotes?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -1148,6 +1149,7 @@ export interface CustomersSelect<T extends boolean = true> {
   preferredLocale?: T;
   stripeCustomerId?: T;
   marketingConsent?: T;
+  sessionVersion?: T;
   dietaryNotes?: T;
   updatedAt?: T;
   createdAt?: T;

@@ -15,8 +15,7 @@ export const Customers: CollectionConfig = {
     disableLocalStrategy: true,
     strategies: [magicLinkStrategy],
     // With the local strategy disabled Payload omits the `sessions` field, so
-    // server-side sessions are unavailable without a customers field change
-    // (needs a Contract Change Request). The JWT alone carries the session.
+    // revocation uses `sessionVersion` (a field on this collection) instead.
     useSessions: false,
     // Customer sessions last 7 days; the cookie is HttpOnly + SameSite=Lax.
     tokenExpiration: 60 * 60 * 24 * 7,
@@ -73,6 +72,18 @@ export const Customers: CollectionConfig = {
       type: "checkbox",
       defaultValue: false,
       label: { fr: "Consentement marketing (Loi 25)", en: "Marketing consent (Law 25)" },
+    },
+    {
+      // Revocable sessions (CCR 2026-10-18). Carried in the JWT (`saveToJWT`);
+      // the strategy rejects tokens whose version differs. Logout increments it
+      // (all devices). Only the Local API with overrideAccess may write it.
+      name: "sessionVersion",
+      type: "number",
+      defaultValue: 0,
+      min: 0,
+      saveToJWT: true,
+      admin: { hidden: true },
+      access: { create: () => false, update: () => false },
     },
     {
       name: "dietaryNotes",

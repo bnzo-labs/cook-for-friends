@@ -3,7 +3,7 @@ import { JWT_AUTH_VERSION } from "payload"
 import type { AuthStrategy } from "payload"
 import { parseCookies } from "payload/shared"
 
-type JwtClaims = { id?: unknown; collection?: unknown; exp?: unknown }
+type JwtClaims = { id?: unknown; collection?: unknown; exp?: unknown; sessionVersion?: unknown }
 
 function decodeSegment<T>(segment: string): T | null {
   try {
@@ -33,7 +33,10 @@ export function verifyCustomerJwt(token: string, secret: string, nowSeconds = Ma
   if (!claims || typeof claims.exp !== "number" || claims.exp <= nowSeconds) return null
   if (claims.collection !== "customers") return null
   if (typeof claims.id !== "number" && typeof claims.id !== "string") return null
-  return { id: claims.id }
+  // Cookies minted before sessionVersion existed carry no claim: version 0.
+  const sessionVersion = claims.sessionVersion === undefined ? 0 : claims.sessionVersion
+  if (typeof sessionVersion !== "number" || !Number.isInteger(sessionVersion)) return null
+  return { id: claims.id, sessionVersion }
 }
 
 /**
@@ -57,6 +60,8 @@ export const magicLinkStrategy: AuthStrategy = {
         depth: 0,
         overrideAccess: true,
       })
+      // Revoked session: logout bumped the customer's version past the token's.
+      if ((customer.sessionVersion ?? 0) !== claims.sessionVersion) return { user: null }
       return {
         user: { ...customer, collection: "customers", _strategy: "magic-link" },
       }

@@ -11,7 +11,14 @@ const sign = (fieldsToSign: Record<string, unknown>, key = secret, tokenExpirati
 describe("verifyCustomerJwt", () => {
   it("accepts a Payload-format customers token", async () => {
     const token = await sign({ id: 7, collection: "customers", email: "a@example.com" })
-    expect(verifyCustomerJwt(token, secret)).toEqual({ id: 7 })
+    expect(verifyCustomerJwt(token, secret)).toEqual({ id: 7, sessionVersion: 0 })
+  })
+
+  it("returns the sessionVersion claim; missing claim means 0; bad claim is rejected", async () => {
+    const v3 = await sign({ id: 7, collection: "customers", sessionVersion: 3 })
+    expect(verifyCustomerJwt(v3, secret)).toEqual({ id: 7, sessionVersion: 3 })
+    const bad = await sign({ id: 7, collection: "customers", sessionVersion: "3" })
+    expect(verifyCustomerJwt(bad, secret)).toBeNull()
   })
 
   it("rejects a token signed with another secret", async () => {

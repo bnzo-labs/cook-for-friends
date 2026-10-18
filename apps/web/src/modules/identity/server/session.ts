@@ -31,8 +31,8 @@ export async function requireCustomer(headers: Headers): Promise<CustomerView> {
  * Identify the signed-in customer (for the redirect locale) and return the
  * cookie that clears the session. Staff cookies are left alone.
  *
- * Sessions are stateless (`useSessions: false`, see customers.ts), so logout
- * clears the cookie; there is no server-side session to revoke.
+ * Logout also increments `sessionVersion`, revoking every cookie of this
+ * customer (all devices). The strategy rejects tokens with a stale version.
  */
 export async function endCustomerSession(
   headers: Headers,
@@ -46,6 +46,16 @@ export async function endCustomerSession(
     collectionAuthConfig: collectionConfig.auth,
     cookiePrefix: payload.config.cookiePrefix,
   })
+  if (user) {
+    const current = (user as { sessionVersion?: number | null }).sessionVersion ?? 0
+    await payload.update({
+      collection: "customers",
+      id: user.id,
+      data: { sessionVersion: current + 1 },
+      overrideAccess: true,
+      depth: 0,
+    })
+  }
   const customer = user ? toCustomerView(user as Parameters<typeof toCustomerView>[0]) : null
   return { customer, clearCookie }
 }
