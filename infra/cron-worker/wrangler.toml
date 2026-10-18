@@ -1,0 +1,14 @@
+name = "cff-cron-staging"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# One */5 trigger fires both expire-holds and jobs; hourly fires reminders.
+# Mapping lives in src/index.ts (CRON_ROUTES) - keep both in sync.
+[triggers]
+crons = ["*/5 * * * *", "0 * * * *"]
+
+[vars]
+TARGET_URL = "https://cook-for-friends.vercel.app"
+
+# Secrets (NOT here) - set with `wrangler secret put <NAME>`:
+#   CRON_SECRET, VERCEL_BYPASS_SECRET

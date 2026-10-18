@@ -1,0 +1,22 @@
+{
+  "name": "@cff/cron-worker",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cloudflare Worker (Cron Triggers) that calls the app's /api/cron/* routes on staging",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "wrangler dev --test-scheduled",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261004.1",
+    "typescript": "5.9.3",
+    "vitest": "5.0.3",
+    "wrangler": "4.144.0"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  }
+}

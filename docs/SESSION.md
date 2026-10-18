@@ -172,3 +172,21 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 **Next step**
 - On approval: delegate `tasks/W1-01-platform-scaffold.md` → devops-agent (Sonnet) via delegate-task.
+
+---
+
+## 2026-10-18 — D11 resolved: Cloudflare cron worker (devops, Opus)
+
+**Done**
+- `infra/cron-worker/` (pnpm workspace pkg `@cff/cron-worker`): Worker `cff-cron-staging`. `*/5` -> expire-holds + jobs, hourly -> reminders. Sends `Authorization: Bearer CRON_SECRET` + `x-vercel-protection-bypass`. 12 vitest tests. Runs in root `pnpm typecheck` / `pnpm test` (CI).
+- wrangler 4.144.0 and @cloudflare/workers-types 5.20261004.1 pinned. `workerd` added to pnpm `allowBuilds`.
+- DISCOVERY D11 + F7 updated. `apps/web/vercel.json` untouched (no crons key).
+- Local check with `wrangler dev --test-scheduled` against local `next dev`: all 3 routes 200; wrong secret -> 401 -> worker 500.
+
+**Needs from Erick (not done, credentials are yours)**
+1. Vercel -> Settings -> Deployment Protection -> Protection Bypass for Automation -> create secret.
+2. `cd infra/cron-worker && pnpm exec wrangler login`
+3. `pnpm exec wrangler secret put CRON_SECRET` (staging value from `apps/web/.env.staging`), then `pnpm exec wrangler secret put VERCEL_BYPASS_SECRET`.
+4. `pnpm exec wrangler deploy`; `pnpm exec wrangler tail` at next `*/5` tick -> expect 200s.
+Details + rollback + rotation: `infra/cron-worker/README.md`.
+

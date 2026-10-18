@@ -155,7 +155,7 @@ export interface VideoProvider {
 | F4 | Stripe Prices are immutable. | Course price change → create a new Price, set it as `default_price`, archive the old one. Store `stripePriceId` on the Course. Orders keep the price they paid. |
 | F5 | Stripe Tax for Québec | Needs the client's **GST and QST registrations** added in Stripe Tax settings (a one-time onboarding task, see D6). Use `automatic_tax: { enabled: true }`, `tax_behavior: 'exclusive'` and a tax code for educational or recreational instruction, confirmed with the client's accountant. Receipts showing GST and QST: use `invoice_creation.enabled: true` in Checkout. The Stripe invoice PDF itemizes GST 5% and QST 9.975% and shows the account's tax registration numbers. |
 | F6 | Discount codes | Stripe Promotion Codes with `allow_promotion_codes: true`. Staff manage codes in a Payload `discount-codes` collection that syncs one-way to Stripe Coupons and Promotion Codes. Stripe stays out of the admin's day-to-day. |
-| F7 | Vercel Cron | Hobby plans run cron once per day. Hold cleanup (every 5 min) and reminders (hourly) need **Vercel Pro**. Jobs run through Payload's Jobs Queue, triggered by `/api/cron/*` with `CRON_SECRET`. |
+| F7 | Vercel Cron | Hobby plans run cron once per day. Hold cleanup (every 5 min) and reminders (hourly) need **Vercel Pro**. *Staging (2026-10-18, D11): a Cloudflare Worker with Cron Triggers calls the routes instead; see `infra/cron-worker/`. Revisit Vercel Pro at launch.* Jobs run through Payload's Jobs Queue, triggered by `/api/cron/*` with `CRON_SECRET`. |
 | F8 | PWA on Next 16 | `next build` defaults to Turbopack. Webpack-plugin PWA libraries are a risk. Use `app/manifest.ts` and a small hand-written service worker: static shell cache only, **never** cache entitlement-gated responses or video. |
 | F9 | Certificates as PDF on Vercel | No headless Chromium. Use `@react-pdf/renderer` (pure JS). Each certificate has a `verificationCode` (10 chars, Crockford base32) and a public page `/{locale}/certificates/verify/{code}`. |
 | F10 | Calendar invites | Generate `.ics` (RFC 5545, `METHOD:PUBLISH`, `TZID=America/Toronto`) and attach it to confirmation and reminder emails, plus "Add to Google Calendar" links. |
@@ -200,7 +200,7 @@ export interface VideoProvider {
 | D8 | Domain layout vs Shopify; sending domain | `*.vercel.app` staging | Production deploy, email deliverability |
 | D9 | Seats per purchase | 1 | **Wave 2 checkout** |
 | D10 | Waitlist notification strategy | Next 3, FIFO, first to pay wins | Wave 3 waitlist task |
-| D11 | Vercel Pro plan (cron frequency) | Required | Wave 2 staging |
+| D11 | Vercel Pro plan (cron frequency) | **Resolved 2026-10-18: Cloudflare Workers Cron (staging).** Revisit Vercel Pro at launch. | Wave 2 staging |
 
 ---
 
