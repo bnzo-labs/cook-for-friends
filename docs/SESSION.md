@@ -2,7 +2,78 @@
 
 Newest first. Each entry: what was done, what is blocked, next step.
 
-**Current wave:** 1 — Foundation · **Gate:** Wave 0 approved 2026-10-11
+**Current wave:** 2 — Commerce core (planned, awaiting Erick review) · **Gate:** Wave 0 approved 2026-10-11; Wave 1 complete 2026-10-18
+
+---
+
+## 2026-10-18 — Wave 2 plan (Commerce core) — AWAITING ERICK REVIEW (architect, Opus)
+Planning only. No build agent starts before Erick approves this plan and the CCRs below. Briefs: `tasks/W2-01` … `tasks/W2-12`.
+
+**Tasks**
+| ID | Task | Agent · model | Depends on | Batch |
+|----|------|---------------|------------|-------|
+| W2-01 | platform-prep: jobs queue wiring (empty module task arrays), `/api/cron/jobs`, next-intl `pathnames`, `@react-email/components@1.0.12` | devops-agent · Sonnet | — | 2a |
+| W2-02 | catalog-read-api: CONTRACT catalog functions + CCR-W2-1 | backend-engineer · Sonnet | — | 2a |
+| W2-03 | access entitlements, `identity.consumeRateLimit` (CCR-W2-2), `scheduling.onSeatReleased` seam, `_shared.TxContext` | backend-engineer · Sonnet | — | 2a |
+| W2-04 | seat-holds-checkout: availability, holds, `createCheckout`, `expireStaleHolds`, `/api/checkout(+/release)`, cron wiring, commerce skeleton, **R5 race test** | backend-engineer · **Opus** | W2-01, W2-02, W2-03 | 2b |
+| W2-05 | notifications: React Email FR/EN, `.ics`, `enqueueEmail`, `send-email` job (CCR-W2-3); **2b migration owner** | backend-engineer · Sonnet | W2-01, W2-03 | 2b |
+| W2-06 | storefront-content: home/pages blocks, course list/detail (read-only sessions), products | frontend-architect · Sonnet | W2-01, W2-02 | 2b |
+| W2-07 | stripe-webhook-orders: idempotent envelope, orders, enrollments, entitlements, auto-refund, receipts, **R6 replay test** | backend-engineer · **Opus** | W2-03, W2-04, W2-05 | 2c |
+| W2-08 | stripe-catalog-sync: courses + discount codes → Stripe, jobs, backfill; **2c migration owner** | backend-engineer · Sonnet | W2-02, W2-04, W2-05 | 2c |
+| W2-09 | admin-attendees: `listAttendees`, CSV (Excel FR), session admin panel | backend-engineer · Sonnet | W2-04 | 2c |
+| W2-10 | storefront-booking: availability, cart, Checkout redirect, success/cancel | frontend-architect · Sonnet | W2-04, W2-06 | 2c |
+| W2-11 | security + correctness review of money paths | security-reviewer · **Opus** | W2-03, W2-04, W2-05, W2-07, W2-08, W2-09 | 2d |
+| W2-12 | acceptance on staging (Stripe test): purchase, email+.ics, attendee list, hold expiry, oversell refund | e2e-runner · Sonnet | W2-06, W2-07, W2-08, W2-09, W2-10 | 2d |
+
+**Parallel batches** (each batch starts when its deps are merged on `main`)
+- 2a: W2-01 ∥ W2-02 ∥ W2-03 — no migrations.
+- 2b: W2-04 ∥ W2-05 ∥ W2-06 — only W2-05 migrates (jobs table).
+- 2c: W2-07 ∥ W2-08 ∥ W2-09 ∥ W2-10 — only W2-08 migrates (sync task slugs).
+- 2d: W2-11 ∥ W2-12. CRITICAL/HIGH findings or acceptance bugs → `tasks/W2-2N-fix-*.md`, then re-run the affected criteria.
+
+**Critical path:** W2-03 (or W2-02) → W2-04 (Opus) → W2-07 (Opus) → W2-12. W2-05 must also land before W2-07; W2-08 before W2-12 (Stripe Price needed for real checkout).
+
+**Ownership rules for this wave (no two parallel tasks write the same path)**
+- Commerce is split by sub-barrel: W2-04 owns `commerce/index.ts`, `commerce/server/**`, `src/lib/stripe.ts` and creates empty `commerce/{sync,webhook,attendees}/index.ts`; W2-08 owns `sync/**`, W2-07 `webhook/**`, W2-09 `attendees/**`.
+- Adding a Payload job task slug changes a Postgres enum = migration. One migration owner per batch (2b W2-05, 2c W2-08); they also regenerate `payload-types.ts`. Nobody else migrates or regenerates types in Wave 2.
+- `errors.*` message keys: W2-04 only. Others: own namespace (`storefront.*`, `storefront.booking.*`, `notifications.*`, `commerce.checkout.*`, `commerce.webhook.*`, `commerce.receipt.*`).
+- Approved one-off exceptions (single writer each): W2-01 → one-line `*JobTasks` scaffolds in commerce/notifications `index.ts`, `nav-items.ts` if types require; W2-03 → `_shared/types.ts` (TxContext); W2-04 → `api/cron/expire-holds/route.ts`; W2-05 → `identity/server/ports.ts`; W2-06 → delete `[locale]/page.tsx`; W2-08 → `catalog/collections/courses.ts` hook; W2-09 → `catalog/collections/sessions.ts` ui field + `importMap.js`.
+
+**Contract Change Requests (Erick approves at review; CONTRACT.md bumped to 1.2 by orchestrator after approval)**
+- CCR-W2-1 (catalog, W2-02): add `getCourseCommerceRecord`, `getSessionView`, `recordCourseStripeSync`; **replace** `getSessionWithAvailability` (storefront composes `getSessionView` + `commerce.getAvailableSeats`) to remove a catalog ↔ commerce import cycle.
+- CCR-W2-2 (identity, W2-03): add `consumeRateLimit({ scope, namespace, key, limit, windowSeconds })` on the existing `auth-rate-limits` table (no schema change). Checkout uses 10/IP/h.
+- CCR-W2-3 (notifications, W2-05): add `enqueueEmail` (in-transaction job), `notificationsJobTasks`, `IcsInput`, `Attachment`, and `EmailData` for `magic-link`, `order-confirmation`, `oversell-refund`, `refund-issued`.
+- CCR-W2-4 (commerce, W2-04/W2-09): (1) route `POST /api/checkout/release` + export `releaseCartHolds`; (2) export `commerceJobTasks`; (3) commerce owns `src/app/api/{sessions,orders}/**` (routes already in §5.1); (4) §7 clarification: commerce reads `sessions` capacity/status/course/starts_at inside the locked raw-SQL SELECT (F3); (5) commerce reads `customers` name/email/phone/dietaryNotes read-only for attendee rows/CSV.
+- CCR-W2-5 (platform, W2-01): modules export `<module>JobTasks: TaskConfig[]`; `payload.config.ts` composes `jobs.tasks` like collections.
+
+**Decisions baked into briefs** — D9: exactly one line, quantity 1 per Checkout (data model keeps arrays/quantity). D11: Cloudflare cron worker; `vercel.json` untouched. D6: `automatic_tax` only if `STRIPE_TAX_ENABLED=true`; `invoice_creation` always; GST/QST receipt check deferred. F1–F3: 15-min hold, Checkout `expires_at` now+31 min, availability from live holds, `FOR UPDATE`, cron expires sessions, webhook re-checks + auto-refunds. Stripe 22.6.2 / `2026-08-26.dahlia`, no plugin-stripe. Tests swap Stripe and Resend only at the network port (same pattern as identity's email sender); production paths always real.
+
+**Erick handoffs (consolidated)**
+1. Approve this plan + CCR-W2-1…5 (before any build agent).
+2. Stripe test webhook endpoint: `https://cook-for-friends.vercel.app/api/stripe/webhook?x-vercel-protection-bypass=<automation bypass secret>`, API version `2026-08-26.dahlia`, events `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`, `invoice.finalized`. Put its signing secret in Vercel `STRIPE_WEBHOOK_SECRET` (Production + Preview) and redeploy. Needed before W2-12 (ideally during 2c).
+3. Cloudflare cron worker deploy if not done yet (`infra/cron-worker/README.md`, 6 steps; uses the same automation bypass secret). Needed for automatic hold expiry + email jobs on staging.
+4. Add `W2_TEST_EMAIL=<address the Resend test sender can deliver to>` to `apps/web/.env.local` (before W2-05 live smoke / W2-12).
+5. Optional: `brew install stripe/stripe-cli/stripe` for local webhook forwarding (agents use `--api-key`, no login). Not blocking.
+6. Client (D6): GST/QST numbers + tax code → then `STRIPE_TAX_CODE`, `STRIPE_TAX_ENABLED=true` in Vercel, re-run sync backfill. Only blocks the receipts criterion.
+
+**Risks**
+- Vercel Deployment Protection blocks Stripe webhooks → endpoint URL carries the bypass query param (handoff 2). Without it every staging webhook is a 401/SSO redirect.
+- Neon pooled endpoint (PgBouncer) + `FOR UPDATE`: F3 says OK; W2-04 must run the race test against the pooled URL too.
+- Jobs enum migrations collide if two parallel tasks add task slugs → one migration owner per batch (above).
+- Email latency: jobs run inline via `after()` post-commit; cron `*/5` is the fallback. If the worker is not deployed, emails wait for the next manual run.
+- Seat hoarding (scripted holds) → per-IP checkout limit + one active hold per cart token. Residual risk accepted for MVP.
+- Resend test domain only delivers to the account owner (D8) → acceptance email checks may be partial.
+- Shared `messages/{fr,en}.json` merge conflicts in 2b/2c → own namespaces, rebase keeps both.
+- Receipts without GST/QST until D6.
+
+**Open questions for Erick (default applies if no answer)**
+- Q1 One item per purchase (single-line cart) for Wave 2? Default **yes** (follows D9; removes partial refunds).
+- Q2 Card only at Checkout (no Interac/ACSS debit, which outlast a 15-min hold)? Default **yes**.
+- Q3 Order confirmation email without a portal magic link until W3-01 builds the login/verify pages? Default **yes**; W3-01 adds an identity CCR to mint links for emails.
+- Q4 Checkout rate limit 10 per IP per hour? Default **yes**.
+- Q5 Storefront pages revalidate every 5 min (no on-demand revalidation hooks in Wave 2)? Default **yes**; W3-06 adds on-demand revalidation.
+
+**Next step:** Erick reviews this plan → orchestrator applies approved CCRs to CONTRACT 1.2 → delegate batch 2a (W2-01, W2-02, W2-03) in parallel.
 
 ---
 
