@@ -1,10 +1,11 @@
 import type { CollectionConfig } from "payload"
 
 import { locales, defaultLocale } from "@/i18n/locales"
+import { magicLinkStrategy } from "../strategies/magic-link"
 import { isAdmin, isSelfCustomer, isStaffField, isStaffOrAdmin } from "../access"
 
 /**
- * `customers` — storefront customers. Magic-link only (strategy added by W1-03).
+ * `customers` — storefront customers. Magic-link only (custom strategy, W1-03).
  * CONTRACT §3.2. Access §3.7: read/update self (no email change), staff read +
  * update, admin CRUD. Never allowed into /admin.
  */
@@ -12,6 +13,14 @@ export const Customers: CollectionConfig = {
   slug: "customers",
   auth: {
     disableLocalStrategy: true,
+    strategies: [magicLinkStrategy],
+    // With the local strategy disabled Payload omits the `sessions` field, so
+    // server-side sessions are unavailable without a customers field change
+    // (needs a Contract Change Request). The JWT alone carries the session.
+    useSessions: false,
+    // Customer sessions last 7 days; the cookie is HttpOnly + SameSite=Lax.
+    tokenExpiration: 60 * 60 * 24 * 7,
+    cookies: { sameSite: "Lax", secure: process.env.NODE_ENV === "production" },
   },
   labels: {
     singular: { fr: "Client", en: "Customer" },

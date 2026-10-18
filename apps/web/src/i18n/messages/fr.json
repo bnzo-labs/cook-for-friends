@@ -20,7 +20,9 @@
     "HOLD_EXPIRED": "Votre réservation a expiré.",
     "VALIDATION": "Veuillez vérifier les informations saisies.",
     "CONFLICT": "Une erreur de conflit est survenue.",
-    "UPSTREAM": "Une erreur de service externe est survenue."
+    "UPSTREAM": "Une erreur de service externe est survenue.",
+    "MAGIC_LINK_INVALID": "Ce lien de connexion est invalide ou a expiré. Veuillez en demander un nouveau.",
+    "MAGIC_LINK_RATE_LIMITED": "Trop de demandes de connexion. Veuillez réessayer plus tard."
   },
   "layout": {
     "skip_to_content": "Aller au contenu principal",
@@ -57,5 +59,15 @@
     "select_placeholder": "Choisir une option",
     "empty_title": "Rien à voir pour l'instant",
     "notifications": "Notifications"
+  },
+  "identity": {
+    "email": {
+      "subject": "Votre lien de connexion Cook for Friends",
+      "hello": "Bonjour,",
+      "intro": "Utilisez le lien ci-dessous pour vous connecter à votre compte Cook for Friends.",
+      "cta": "Se connecter",
+      "expiry": "Ce lien expire dans {minutes} minutes et ne peut être utilisé qu'une seule fois.",
+      "ignore": "Si vous n'avez pas demandé ce courriel, vous pouvez l'ignorer en toute sécurité."
+    }
   }
 }

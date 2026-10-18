@@ -78,6 +78,7 @@ export interface Config {
     users: User;
     customers: Customer;
     'magic-link-tokens': MagicLinkToken;
+    'auth-rate-limits': AuthRateLimit;
     entitlements: Entitlement;
     orders: Order;
     'seat-holds': SeatHold;
@@ -105,6 +106,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     customers: CustomersSelect<false> | CustomersSelect<true>;
     'magic-link-tokens': MagicLinkTokensSelect<false> | MagicLinkTokensSelect<true>;
+    'auth-rate-limits': AuthRateLimitsSelect<false> | AuthRateLimitsSelect<true>;
     entitlements: EntitlementsSelect<false> | EntitlementsSelect<true>;
     orders: OrdersSelect<false> | OrdersSelect<true>;
     'seat-holds': SeatHoldsSelect<false> | SeatHoldsSelect<true>;
@@ -496,6 +498,17 @@ export interface MagicLinkToken {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "auth-rate-limits".
+ */
+export interface AuthRateLimit {
+  id: number;
+  scope: 'email' | 'ip';
+  keyHash: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "entitlements".
  */
 export interface Entitlement {
@@ -787,6 +800,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'magic-link-tokens';
         value: number | MagicLinkToken;
+      } | null)
+    | ({
+        relationTo: 'auth-rate-limits';
+        value: number | AuthRateLimit;
       } | null)
     | ({
         relationTo: 'entitlements';
@@ -1146,6 +1163,16 @@ export interface MagicLinkTokensSelect<T extends boolean = true> {
   usedAt?: T;
   requestIp?: T;
   next?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "auth-rate-limits_select".
+ */
+export interface AuthRateLimitsSelect<T extends boolean = true> {
+  scope?: T;
+  keyHash?: T;
   updatedAt?: T;
   createdAt?: T;
 }
