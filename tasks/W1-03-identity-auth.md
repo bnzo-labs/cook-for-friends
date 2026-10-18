@@ -22,7 +22,7 @@ Make staff password login work in `/admin` and implement the customer magic-link
 5. `docs/MASTER_BUILD_SPEC.md` §8 (security)
 
 ## Acceptance criteria
-- [ ] Staff log in at `/admin` with email + password. A `customers` JWT/cookie gets 403 at `/admin`. **Pending Erick: create first admin on staging.** Proven in integration tests (login, `canAccessAdmin`, customer cookie refused); staging `/admin/login` = 200, new auth routes live on staging, but staging has 0 users and none were created.
+- [x] Staff log in at `/admin` with email + password. A `customers` JWT/cookie gets 403 at `/admin`. Proven in integration tests (login, `canAccessAdmin`, customer cookie refused); staging `/admin/login` = 200, new auth routes live on staging. First admin created by Erick 2026-10-18; init verified (`/api/users/init` → `initialized:true`).
 - [x] `POST /api/auth/magic-link/request` returns `200 {ok:true}` for both existing and new emails (same body and similar timing). It upserts the customer and stores **only** a SHA-256 token hash with a 15-min expiry. The token is 32 random bytes, base64url.
 - [x] Rate limits: 5 requests per email per hour and 20 per IP per hour. Excess requests return `429` with a localized message key. The store is a Postgres table (not in-memory), since serverless instances do not share memory.
 - [x] `notifications` is not built yet. Call an internal `sendMagicLinkEmail` port defined in `identity/server/ports.ts`; W2-04 wires the real template. Until then the port sends a plain FR/EN Resend email (subject + link). **Not a mock:** it really sends.
@@ -73,3 +73,9 @@ Caveman. English only.
 **Where the migration ran.** Throwaway branch `w1-03-verify` (deleted), Neon `dev`, Neon `staging`. Never `production`.
 
 **Env.** `RESEND_API_KEY`/`EMAIL_FROM` already in env schema. `NEXT_PUBLIC_SITE_URL` builds the link. No new variables.
+
+## Contract Change Requests: resolved (2026-10-18, backend-engineer)
+Both approved by Erick 2026-10-18. CONTRACT bumped to 1.1.
+1. **`auth-rate-limits`**: added to CONTRACT §1 (identity ownership) and §3.2 exactly as built. No code change.
+2. **Revocable sessions**: `customers.sessionVersion` (number, default 0, `saveToJWT`, admin-hidden, field access `create/update: () => false`; only Local API with `overrideAccess` writes it). The JWT carries it via `getFieldsToSign`. `magicLinkStrategy` rejects a token whose version != `customer.sessionVersion` (a token with no claim, minted before this change, counts as 0). `POST /api/auth/logout` increments it: **all devices are revoked** (task proposal was `sessions`/`sessionVersion`; no per-device semantics, so no `sessions` table). Migration `20261018_114002_sessions_version` (`ADD COLUMN session_version numeric DEFAULT 0`, reversible). Supersedes the earlier note that a copied cookie stays valid until expiry.
+3. Tests: +3 integration (logout rejects old cookie and the customer's other cookie, new login works; other customer unaffected, replayed logout is a no-op; `sessionVersion` not client-writable) and +1 unit. Full suite 96/96 on a throwaway Neon branch from `dev` (deleted). Migration applied to Neon `dev` and `staging`, never `production`.

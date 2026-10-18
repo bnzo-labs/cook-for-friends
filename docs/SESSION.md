@@ -6,6 +6,13 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-18 — W1-03 follow-up: CCRs applied, W1-03 closed (backend-engineer)
+- **CONTRACT 1.0 -> 1.1** ("2026-10-18 CCR approved by Erick"): `auth-rate-limits` added to identity (§1, §3.2); `customers.sessionVersion` (§3.2), session note (§4), logout semantics (§5.1).
+- **Revocable customer sessions**: JWT carries `sessionVersion`; `magicLinkStrategy` rejects a mismatch; logout increments it (all devices revoked). Migration `20261018_114002_sessions_version`.
+- **Tests**: 96/96 on a throwaway Neon branch from `dev` (deleted). New: logout rejects old + sibling cookie, new login works; other customer unaffected; field not client-writable.
+- **Migration applied**: Neon `dev`, `staging`. Never `production`. Production will pick it up with the normal release migrate.
+- **W1-03 complete**: first staging admin created by Erick, `/api/users/init` verified.
+
 ## 2026-10-18 — CI integration tests on throwaway Neon branch + smoke fix (devops-agent)
 - **CI `integration` job** (needs `verify`): gate step checks `NEON_API_KEY` secret + `NEON_PROJECT_ID` repo variable. Missing -> notice "NEON_API_KEY not set — integration tests skipped", job green. Present -> `neondatabase/create-branch-action` (SHA-pinned, v6.3.1) creates `ci-<run_id>-<attempt>` from `dev` (2h `expires_at` safety net), `pnpm payload migrate` (tests PR migrations), `pnpm test` with `TEST_DATABASE_URL` (all 92 tests), `delete-branch-action` (SHA-pinned, v3.2.1) with `if: always()`.
 - Env: dummy non-secret placeholders only (`VIDEO_PROVIDER=none`, `sk_test_ci_placeholder`, R2/Resend placeholders), random `PAYLOAD_SECRET`/`CRON_SECRET` per run, `NEXT_PUBLIC_SKIP_ENV_VALIDATION=0` for this job (Payload config needs real env parsing). No real Stripe/Resend keys.
