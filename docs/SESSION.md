@@ -24,7 +24,7 @@ Newest first. Each entry: what was done, what is blocked, next step.
 - Tests: 21 integration + 25 unit new; 92/92 on a throwaway DB; CI (no DB) 42 pass / 50 skipped.
 
 **Blocked / notes**
-- Staging staff login: see task file note (first admin must be created by Erick).
+- **Pending Erick:** create the first admin on staging (`/admin/create-first-user`). Staging has 0 users, so the "staff login works on staging" criterion could not be verified live. `/admin/login` = 200 and the new auth routes respond on staging (checked 2026-10-17).
 - Contract Change Request (informational): internal collection `auth-rate-limits`; optional `customers.sessions` for revocable sessions. Details in `tasks/W1-03-identity-auth.md`.
 - Integration tests still need a DB in CI (Neon branch per run) to stop being skipped.
 

@@ -22,7 +22,7 @@ Make staff password login work in `/admin` and implement the customer magic-link
 5. `docs/MASTER_BUILD_SPEC.md` §8 (security)
 
 ## Acceptance criteria
-- [x] Staff log in at `/admin` with email + password. A `customers` JWT/cookie gets 403 at `/admin`.
+- [ ] Staff log in at `/admin` with email + password. A `customers` JWT/cookie gets 403 at `/admin`. **Pending Erick: create first admin on staging.** Proven in integration tests (login, `canAccessAdmin`, customer cookie refused); staging `/admin/login` = 200, new auth routes live on staging, but staging has 0 users and none were created.
 - [x] `POST /api/auth/magic-link/request` returns `200 {ok:true}` for both existing and new emails (same body and similar timing). It upserts the customer and stores **only** a SHA-256 token hash with a 15-min expiry. The token is 32 random bytes, base64url.
 - [x] Rate limits: 5 requests per email per hour and 20 per IP per hour. Excess requests return `429` with a localized message key. The store is a Postgres table (not in-memory), since serverless instances do not share memory.
 - [x] `notifications` is not built yet. Call an internal `sendMagicLinkEmail` port defined in `identity/server/ports.ts`; W2-04 wires the real template. Until then the port sends a plain FR/EN Resend email (subject + link). **Not a mock:** it really sends.
