@@ -132,7 +132,7 @@ Build so these can be decided late without rework. List them in `docs/SESSION.md
 | D6 | GST/QST registration numbers + tax code | `STRIPE_TAX_ENABLED` flag |
 | D7 | Hub (cff-hub) integration | None in MVP |
 | D8 | Domain layout vs Shopify store, email sending domain | Env `NEXT_PUBLIC_SITE_URL`, `EMAIL_FROM` |
-| D9 | Seats per purchase | `site-settings.maxSeatsPerPurchase` (default 1) |
+| D9 | Seats per purchase | `site-settings.maxSeatsPerPurchase` (default 4; resolved 2026-10-19, guests by name + email — DISCOVERY D9) |
 | D10 | Waitlist notification strategy | `site-settings.waitlistNotifyCount` |
 | D11 | Vercel Pro (cron frequency) | — |
 

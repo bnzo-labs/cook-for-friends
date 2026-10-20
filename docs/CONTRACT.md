@@ -1,5 +1,5 @@
 ---
-version: 1.1
+version: 1.2
 status: draft — frozen on Wave 0 approval
 owner: orchestrator
 ---
@@ -26,7 +26,7 @@ All app code lives in `apps/web/src/`. A module = one folder in `apps/web/src/mo
 | `catalog` | `products`, `courses`, `sessions`, `lessons`, `materials`, `pages`, `media`, globals `site-settings`, `cancellation-policy`, page blocks | `src/modules/catalog/**` | backend-engineer / Sonnet (schema reviewed by Opus) |
 | `identity` | `users` (staff), `customers`, `magic-link-tokens`, `auth-rate-limits` | `src/modules/identity/**`, `src/app/api/auth/**` | backend-engineer / Sonnet |
 | `access` | `entitlements` | `src/modules/access/**` | backend-engineer / Sonnet |
-| `commerce` | `orders`, `seat-holds`, `enrollments`, `discount-codes`, `processed-stripe-events` | `src/modules/commerce/**`, `src/app/api/{cart,checkout,stripe}/**`, `src/lib/stripe.ts` | backend-engineer / **Opus** for seat + webhook logic |
+| `commerce` | `orders`, `seat-holds`, `enrollments`, `discount-codes`, `processed-stripe-events` | `src/modules/commerce/**`, `src/app/api/{cart,checkout,stripe,sessions,orders}/**`, `src/lib/stripe.ts` | backend-engineer / **Opus** for seat + webhook logic |
 | `scheduling` | `waitlist-entries` | `src/modules/scheduling/**`, `src/app/api/{waitlist,enrollments}/**` | backend-engineer / Sonnet |
 | `learning` | `lesson-progress`, `certificates`, `comments` | `src/modules/learning/**`, `src/app/api/{progress,certificates,comments}/**` | backend-engineer / Sonnet |
 | `video` | — | `src/modules/video/**`, `src/app/api/video/**` | backend-engineer / Sonnet |
@@ -40,6 +40,8 @@ All app code lives in `apps/web/src/`. A module = one folder in `apps/web/src/mo
 
 `payload.config.ts` (owned by `platform`) imports collections **only** through each module's exported array:
 `import { catalogCollections, catalogGlobals } from '@/modules/catalog'`. Adding a collection to your own module does not require touching `payload.config.ts`.
+
+Job tasks follow the same pattern (CCR-W2-5): a module that runs Payload jobs exports `<module>JobTasks: TaskConfig[]` from its `index.ts` (e.g. `commerceJobTasks`, `notificationsJobTasks`), and `payload.config.ts` composes `jobs.tasks` from those arrays. Adding a task slug to your array changes the jobs enum → it is a migration (§7, one migration owner per batch).
 
 Routine lint, format or rename fixes in any path → Haiku, after an orchestrator OK.
 
@@ -93,7 +95,7 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: Module
 | `products` | `title` L, `slug` L, `description` L, `images[] → media`, `priceDisplay` L (text), `externalUrl?`, `status` — **display only** |
 | `pages` | `title` L, `slug` L, `layout: Block[]` (blocks: `hero`, `gallery`, `testimonials`, `cta`, `richText`), `seo` |
 | `media` | upload to R2. `alt` L. `access.read`: public for images; `materials` files are served via the signed route `/api/materials/:id` (access-checked) |
-| global `site-settings` | `communityUrl?`, `maxSeatsPerPurchase` (default 1), `holdMinutes` (default 15), `waitlistNotifyCount` (default 3), `reminderOffsetsHours` (default `[48, 24]`), `contactEmail`, `legal { termsPage, privacyPage, cancellationPage }` |
+| global `site-settings` | `communityUrl?`, `maxSeatsPerPurchase` (int, default **4**, min 1, max 10 hard cap — staff-editable; D9 / CCR-W2-6), `holdMinutes` (default 15), `waitlistNotifyCount` (default 3), `reminderOffsetsHours` (default `[48, 24]`), `contactEmail`, `legal { termsPage, privacyPage, cancellationPage }` |
 | global `cancellation-policy` | `tiers: { minHoursBefore: number; outcome: 'refund'\|'credit'\|'none'; percent: number }[]` sorted desc, `customerCanSelfCancel: boolean` |
 
 ### 3.2 identity
@@ -107,14 +109,14 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: Module
 ### 3.3 access
 | Collection | Key fields |
 |------------|-----------|
-| `entitlements` | `customer → customers`, `course → courses`, `source: EntitlementSource`, `sourceRef: string` (orderId \| userId \| giftId \| membershipId), `validFrom`, `validUntil?` (null = no expiry), `revokedAt?`, `revokedReason?`, `grantedBy → users?`. **UNIQUE `(customer, course, source, sourceRef)`** |
+| `entitlements` | `customer → customers`, `course → courses`, `source: EntitlementSource`, `sourceRef: string` (orderId \| userId \| giftId \| membershipId), `validFrom`, `validUntil?` (null = no expiry), `revokedAt?`, `revokedReason?`, `grantedBy → users?`. **UNIQUE `(customer, course, source, sourceRef)`**. Multi-seat purchase: one `purchase` entitlement **per attendee customer** (same `sourceRef` = orderId); per-seat cancellation revokes only that attendee's row |
 
 ### 3.4 commerce
 | Collection | Key fields |
 |------------|-----------|
-| `orders` | `number` (human, `CFF-000123`), `customer → customers`, `email`, `locale`, `status: 'pending'\|'paid'\|'refunded'\|'partially_refunded'\|'cancelled'`, `items: { course, session?, quantity, unitAmount, description }[]`, `subtotal`, `discountTotal`, `taxGst`, `taxQst`, `total`, `currency: 'cad'`, `stripeCheckoutSessionId` **UNIQUE**, `stripePaymentIntentId?`, `stripeInvoiceId?`, `invoicePdfUrl?`, `promotionCode?`, `paidAt?`, `refunds: { stripeRefundId, amount, reason, at }[]` |
-| `seat-holds` | `session → sessions`, `quantity`, `cartToken`, `customerEmail?`, `stripeCheckoutSessionId?`, `status: 'active'\|'converted'\|'expired'\|'released'`, `expiresAt`. Index `(session, status, expiresAt)` |
-| `enrollments` | `session → sessions`, `customer → customers`, `order → orders`, `attendeeIndex: int` (0..quantity-1), `attendeeName?`, `status: 'confirmed'\|'cancelled'\|'refunded'`, `attendance: 'unknown'\|'present'\|'absent'`, `cancelledAt?`, `cancellationOutcome?`. **UNIQUE `(order, session, attendeeIndex)`** |
+| `orders` | `number` (human, `CFF-000123`), `customer → customers`, `email`, `locale`, `status: 'pending'\|'paid'\|'refunded'\|'partially_refunded'\|'cancelled'`, `items: { course, session?, quantity, unitAmount, description }[]` (Wave 2: exactly one item; `quantity` 1..`maxSeatsPerPurchase` for in-person, 1 for online), `subtotal`, `discountTotal`, `taxGst`, `taxQst`, `total`, `currency: 'cad'`, `stripeCheckoutSessionId` **UNIQUE**, `stripePaymentIntentId?`, `stripeInvoiceId?`, `invoicePdfUrl?`, `promotionCode?`, `paidAt?`, `refunds: { stripeRefundId, amount, reason, at, enrollment? → enrollments }[]` (`enrollment` set when the refund is for one seat — copied from Stripe refund `metadata.enrollmentId`; CCR-W2-6). `customer` = the **buyer** |
+| `seat-holds` | `session → sessions`, `quantity` (= seats held, N ≥ 1, one row per cart), `cartToken`, `customerEmail?` (buyer; **required when quantity > 1**), `attendees: { firstName, lastName, email }[]` (guests only, length = quantity − 1, position i ↔ `attendeeIndex` i+1; CCR-W2-6), `stripeCheckoutSessionId?`, `status: 'active'\|'converted'\|'expired'\|'released'`, `expiresAt`. Index `(session, status, expiresAt)`. PII retention: `attendees` emptied on non-active holds whose `expiresAt` < now − 7 days (by `expireStaleHolds`) |
+| `enrollments` | One row **per attendee seat**. `session → sessions`, `customer → customers` (the **attendee**: buyer at index 0, each guest's own light customer at 1..N−1), `order → orders`, `attendeeIndex: int` (0..quantity-1; 0 = buyer), `attendeeName?` (snapshot of the name entered/known at purchase; set for every row), `seatAmount?: int` (cents, this seat's share of `order.total` incl. tax and discount: `floor(total / N)`, remainder cents on index 0; Σ = `order.total`; basis for per-seat partial refund/credit under D1; CCR-W2-6), `status: 'confirmed'\|'cancelled'\|'refunded'` (per seat), `attendance: 'unknown'\|'present'\|'absent'`, `cancelledAt?`, `cancellationOutcome?`. **UNIQUE `(order, session, attendeeIndex)`**. Attendee email = `customer.email` (no email snapshot; customer email immutable in MVP) |
 | `discount-codes` | `code` unique, `kind: 'percent'\|'amount'`, `value`, `maxRedemptions?`, `expiresAt?`, `appliesTo[] → courses?`, `active`, `stripeCouponId`, `stripePromotionCodeId`, `personalFor → customers?` (credits) |
 | `processed-stripe-events` | `eventId` **UNIQUE**, `type`, `processedAt`, `outcome: 'applied'\|'skipped'\|'refunded'\|'error'`, `note?` |
 
@@ -137,7 +139,7 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: Module
 | users | — | — | read self | CRUD |
 | entitlements | — | read own | read, create `manual` | CRUD |
 | orders | — | read own | read | read, update |
-| enrollments | — | read own | read, update attendance | CRUD |
+| enrollments | — | read own (`customer = self`; buyer read of guest seats via `order.customer` added by the W3 cancellation task) | read, update attendance | CRUD |
 | seat-holds, processed-stripe-events, magic-link-tokens | — | — | read | read |
 | comments | read `approved` | create, read approved + own | moderate | CRUD |
 | lesson-progress, certificates | — | read own (writes only via module) | read | CRUD |
@@ -154,8 +156,16 @@ export const catalogCollections: CollectionConfig[]
 export const catalogGlobals: GlobalConfig[]
 export function getPublishedCourse(slug: string, locale: Locale): Promise<CourseView | null>
 export function listPublishedCourses(locale: Locale, filter?: { format?: CourseFormat }): Promise<CourseCard[]>
-export function getSessionWithAvailability(sessionId: ID): Promise<SessionView | null>  // uses commerce.getAvailableSeats
-export function getSiteSettings(): Promise<SiteSettings>
+export function getSessionView(sessionId: ID, locale: Locale): Promise<SessionView | null>   // CCR-W2-1; no availability
+//   { id, courseId, courseSlug, courseTitle, startsAt, endsAt, location {name,address,city,postalCode?,mapsUrl?}, capacity, status }
+// getSessionWithAvailability — REMOVED (CCR-W2-1): storefront composes getSessionView / CourseView.upcomingSessions
+// with commerce.getAvailableSeats(sessionId). Catalog never imports commerce.
+export function getCourseCommerceRecord(courseId: ID): Promise<CourseCommerceRecord | null>  // CCR-W2-1; PUBLISHED version only
+//   { id, format, status, price /*cents*/, title: {fr,en}, summary: {fr,en}, slug: {fr,en},
+//     stripeProductId: string|null, stripePriceId: string|null, stripeSyncStatus, heroImageUrl?: string }
+export function recordCourseStripeSync(courseId: ID, patch: { status: 'pending'|'synced'|'error'; productId?: string; priceId?: string; error?: string | null }): Promise<void>
+//   CCR-W2-1; writes only the 4 sync fields with context { skipStripeSync: true }; never publishes drafts
+export function getSiteSettings(): Promise<SiteSettings>   // empty global → defaults of §3.1 (maxSeatsPerPurchase 4)
 export function getCancellationPolicy(): Promise<CancellationPolicy>
 
 // @/modules/identity
@@ -167,6 +177,10 @@ export function requireCustomer(headers: Headers): Promise<CustomerView>        
 // Sessions: the customers JWT carries `sessionVersion`; the strategy rejects a token whose version != customer.sessionVersion.
 // `POST /api/auth/logout` increments it, revoking every device of that customer (no per-device sessions).
 export function upsertCustomerByEmail(i: { email: string; locale: Locale; firstName?: string; lastName?: string }): Promise<CustomerView>
+//   existing customer (normalized email) → returned UNCHANGED (names/locale never overwritten); else created. Race-safe.
+//   Used for buyers AND guest attendees ("light accounts": no password, log in via magic link).
+export function consumeRateLimit(i: { scope: 'ip' | 'email'; namespace: string; key: string; limit: number; windowSeconds: number }):
+  Promise<{ allowed: boolean; retryAfterSeconds: number }>   // CCR-W2-2; reuses auth-rate-limits, keyHash = sha256(`${namespace}:${normalizedKey}`), no schema change
 export function isStaff(user: unknown): boolean
 
 // @/modules/access
@@ -179,14 +193,26 @@ export function revokeEntitlement(i: { customerId: ID; courseId: ID; source: Ent
 // @/modules/commerce
 export const commerceCollections: CollectionConfig[]
 export function getAvailableSeats(sessionId: ID, tx?: TxContext): Promise<number>
+//   capacity − confirmed enrollments − Σ quantity of holds (status 'active' AND expiresAt > now())
 export function createCheckout(i: { cart: CartLine[]; locale: Locale; customerEmail?: string; cartToken: string }): Promise<Result<{ checkoutUrl: string; holdIds: ID[]; holdExpiresAt: ISODate }>>
+//   Wave 2: exactly one line. quantity 1..maxSeatsPerPurchase (in-person), 1 (online). quantity > 1 ⇒ customerEmail required,
+//   attendees.length === quantity − 1, guest emails distinct from each other and from customerEmail (case-insensitive) → else VALIDATION.
+//   One hold row with quantity N, all-or-nothing in the locked tx: available < N → SOLD_OUT (no partial hold).
+export function releaseCartHolds(cartToken: string): Promise<{ released: number }>   // CCR-W2-4
 export function handleStripeEvent(rawBody: string, signature: string): Promise<Result<{ outcome: 'applied' | 'skipped' | 'refunded' }>>
-export function refundOrder(i: { orderId: ID; amount?: number; reason: string }): Promise<Result<void>>
+export function refundOrder(i: { orderId: ID; amount?: number; reason: string; enrollmentId?: ID }): Promise<Result<void>>
+//   enrollmentId (CCR-W2-6): per-seat refund; sent as Stripe refund metadata so charge.refunded links refunds[].enrollment.
+//   Wave 2 never passes it; W3 cancellation does.
 export function issueCreditCode(i: { customerId: ID; amount: number; reason: string }): Promise<Result<{ code: string }>>
 export function expireStaleHolds(now?: Date): Promise<{ expired: number; checkoutSessionsExpired: number }>
 export function listAttendees(sessionId: ID): Promise<AttendeeRow[]>
 export function syncCourseToStripe(courseId: ID): Promise<Result<{ productId: string; priceId: string }>>  // called by catalog afterChange hook via job
-export type CartLine = { courseId: ID; sessionId?: ID; quantity: number }
+export const commerceJobTasks: TaskConfig[]   // CCR-W2-4/5; = [...syncJobTasks]
+export type AttendeeInput = { firstName: string; lastName: string; email: string }   // CCR-W2-6; guest seat (index ≥ 1)
+export type CartLine = { courseId: ID; sessionId?: ID; quantity: number; attendees?: AttendeeInput[] }  // attendees = guests only, buyer is always attendee #0
+export type AttendeeRow = { enrollmentId: ID; attendeeIndex: number; isBuyer: boolean; firstName: string; lastName: string; email: string;
+  phone?: string; dietaryNotes?: string; bookedBy: { name: string; email: string }; orderNumber: string;
+  enrollmentStatus: 'confirmed' | 'cancelled' | 'refunded'; attendance: 'unknown' | 'present' | 'absent'; paidAt: ISODate }
 
 // @/modules/scheduling
 export const schedulingCollections: CollectionConfig[]
@@ -217,6 +243,27 @@ export type EmailTemplate =
   | 'oversell-refund' | 'certificate-issued' | 'comment-approved'
 export function sendEmail<T extends EmailTemplate>(i: { template: T; to: string; locale: Locale; data: EmailData[T]; attachments?: Attachment[]; idempotencyKey: string }): Promise<Result<{ id: string }>>
 export function buildIcs(i: { uid: string; title: string; description: string; location: string; startsAt: Date; endsAt: Date; url: string }): string
+// CCR-W2-3 (additive):
+export type IcsInput = { uid: string; title: string; description: string; location: string; startsAt: ISODate; endsAt: ISODate; url: string }
+export type Attachment = { filename: string; content: string /* utf-8 or base64 */; contentType: string }
+export function enqueueEmail<T extends EmailTemplate>(i: { template: T; to: string; locale: Locale; data: EmailData[T]; idempotencyKey: string; ics?: IcsInput[]; tx?: TxContext }): Promise<void>
+//   queues Payload job 'send-email' with req = tx?.req → rolled back with the caller's transaction
+export const notificationsJobTasks: TaskConfig[]   // contains 'send-email'
+type Location = { name: string; address: string; city: string; postalCode?: string; mapsUrl?: string }
+export type EmailData = {
+  'magic-link': { link: string; expiresInMinutes: number }
+  'order-confirmation': { orderNumber: string; customerFirstName?: string
+    items: { title: string; quantity: number /* CCR-W2-6 */; sessionStartsAt?: ISODate; sessionEndsAt?: ISODate; location?: Location; amount: number
+             attendees?: { name: string; email: string }[] /* CCR-W2-6: guests (index ≥ 1) the buyer booked for */ }[]
+    subtotal: number; discountTotal: number; taxTotal: number; total: number; currency: 'cad'
+    receiptUrl?: string; contactEmail?: string }
+  'enrollment-confirmation': { attendeeFirstName?: string; buyerName: string; courseTitle: string   // CCR-W2-6: guest seat notice
+    sessionStartsAt: ISODate; sessionEndsAt: ISODate; location: Location; contactEmail?: string }   //   no prices, no receipt, no order PII
+  'oversell-refund': { orderNumber: string; courseTitle: string; sessionStartsAt: ISODate; quantity: number /* CCR-W2-6 */; refundAmount: number; currency: 'cad' }
+  'refund-issued': { orderNumber: string; refundAmount: number; currency: 'cad'; full: boolean }
+  // remaining EmailTemplate members get their data types in Wave 3
+}
+// Money in cents (formatted fr-CA / en-CA), dates ISO UTC (rendered America/Toronto).
 ```
 
 `TxContext` = `{ req: PayloadRequest }` carrying Payload's `transactionID`. Raw SQL locks run on the same transaction.
@@ -231,7 +278,8 @@ export function buildIcs(i: { uid: string; title: string; description: string; l
 | `POST /api/auth/magic-link/request` | identity | public, rate-limited (5/email/h, 20/IP/h) | `{ email, locale, next? }` → `200 { ok: true }` always |
 | `POST /api/auth/magic-link/verify` | identity | public | `{ token }` → `303` + `Set-Cookie` → `next` |
 | `POST /api/auth/logout` | identity | customer | → `303 /{locale}`; clears cookie and revokes all of the customer's sessions (`sessionVersion + 1`) |
-| `POST /api/checkout` | commerce | public (cart token cookie) | `{ lines: CartLine[], locale, email? }` → `{ checkoutUrl, holdExpiresAt }` \| `409 SOLD_OUT` |
+| `POST /api/checkout` | commerce | public (cart token cookie), Origin check, 10/IP/h (`consumeRateLimit` namespace `checkout`) | `{ lines: CartLine[] /* exactly 1 */, locale, email? /* required when quantity > 1 */ }` → `{ checkoutUrl, holdExpiresAt }` \| `400 VALIDATION` (issues with paths e.g. `lines.0.attendees.1.email`) \| `409 SOLD_OUT` (`details: { available }`, informational) \| `429` |
+| `POST /api/checkout/release` | commerce | public (cart token cookie), Origin check | → `200 { released }` (no cookie → `0`); releases the cart's active holds and expires their open Checkout sessions (CCR-W2-4) |
 | `POST /api/stripe/webhook` | commerce | Stripe signature | raw body → `200` (also on duplicate) |
 | `POST /api/waitlist` | scheduling | public | `{ sessionId, email, locale }` → `200` |
 | `POST /api/enrollments/:id/cancel` | scheduling | customer (owner) or staff | → `{ outcome, amount }` |
@@ -276,11 +324,11 @@ Processing envelope (applies to every event):
 
 | Event | Handler |
 |-------|---------|
-| `checkout.session.completed` (`payment_status = paid`) | Upsert customer by email → create Order `paid` (unique on session ID). For each session line: `SELECT … FOR UPDATE` on the session row; hold valid → convert hold → create enrollments; hold expired and seats remain → create enrollments anyway; hold expired and **no seats** → `refundOrder` (that line or the whole order) + `oversell-refund` email, outcome `refunded`. For each course: `access.grantEntitlement({ source: 'purchase', sourceRef: orderId })`. Enqueue `order-confirmation` (+ `.ics` per session) with a magic link for guest customers. |
+| `checkout.session.completed` (`payment_status = paid`) | **Before the transaction:** read the hold (metadata `holdId`) for `quantity` N + `attendees`; verify Stripe line quantity = N; upsert the buyer (`customer_details.email`) and each guest via `identity.upsertCustomerByEmail` (existing customer → linked, never overwritten). **In the transaction:** create Order `paid` (unique on session ID; `customer` = buyer, item `quantity` N). In-person: `SELECT … FOR UPDATE` on the session row; hold valid → convert hold → create **N** enrollments; hold expired and **≥ N** seats remain → create N enrollments anyway; hold expired and **fewer than N** seats → `refundOrder` of the **whole order** (no partial fulfilment) + `oversell-refund` email to the buyer, outcome `refunded`. Enrollments: index 0 = buyer, index i = `attendees[i−1]`'s customer, `attendeeName` set, `seatAmount` per §3.4. Per attendee customer: `access.grantEntitlement({ source: 'purchase', sourceRef: orderId })` (online: N = 1, buyer only). Enqueue `order-confirmation` to the buyer (`.ics` for the session) and one `enrollment-confirmation` (+ own `.ics`) per guest. No magic link in Wave 2 emails (portal login = W3-01). |
 | `checkout.session.async_payment_succeeded` | Same as completed. |
 | `checkout.session.async_payment_failed` | Release holds, order `cancelled`. |
 | `checkout.session.expired` | Holds → `released`. `scheduling.onSeatReleased(session)`. |
-| `charge.refunded` | Update `order.refunds`, set the status. Full refund → revoke purchase entitlements + cancel enrollments → `onSeatReleased`. |
+| `charge.refunded` | Update `order.refunds` (dedupe by `stripeRefundId`; copy `metadata.enrollmentId` → `refunds[].enrollment`), set the status. Full refund → revoke the purchase entitlements of **every** attendee + all N enrollments `refunded` → `onSeatReleased` (once). Partial refund → `partially_refunded`; no access/enrollment change in Wave 2 (the W3 per-seat cancellation updates the one enrollment + entitlement itself before calling `refundOrder({ enrollmentId })`). `refund-issued` email to the buyer only. |
 | `invoice.finalized` | Store `stripeInvoiceId` and `invoicePdfUrl` on the order (receipts). |
 
 Internal jobs (Payload Jobs Queue, task slugs): `stripe-sync-course`, `stripe-sync-discount`, `send-email`, `waitlist-notify`, `issue-certificate`.
@@ -291,6 +339,7 @@ Internal jobs (Payload Jobs Queue, task slugs): `stripe-sync-course`, `stripe-sy
 
 - Only the owning module writes its collections — through Payload Local API or, in `commerce` only, raw SQL for locks. Other modules call the owner's `index.ts`.
 - Reading another module's collection via Payload Local API is allowed **only** in server components for display (read-only). Writes are never allowed.
+- Exceptions (CCR-W2-4): commerce reads `sessions.capacity, status, course, starts_at` inside its locked raw-SQL `SELECT … FOR UPDATE` (F3) — all other catalog data via `@/modules/catalog`; commerce reads `customers` name/email/phone/dietaryNotes **read-only** to build attendee rows/CSV.
 - Schema changes = a Payload migration generated by the owning module's agent (`pnpm payload migrate:create <module>-<change>`). Migrations are reviewed by the orchestrator (Opus) before merge.
 - No `push: true` outside local dev.
 
@@ -301,3 +350,9 @@ Internal jobs (Payload Jobs Queue, task slugs): `stripe-sync-course`, `stripe-sy
 |------|---------|--------|----|
 | 2026-10-07 | 1.0-draft | Initial contract from Wave 0 discovery | orchestrator |
 | 2026-10-18 | 1.1 | CCR approved by Erick: (1) `auth-rate-limits` collection added to identity (§1, §3.2); (2) `customers.sessionVersion` for revocable sessions, logout revokes all devices (§3.2, §4, §5.1) | backend-engineer |
+| 2026-10-19 | 1.2 | CCR-W2-1 approved by Erick: catalog adds `getSessionView`, `getCourseCommerceRecord`, `recordCourseStripeSync`; `getSessionWithAvailability` removed (no catalog → commerce import) (§4) | architect |
+| 2026-10-19 | 1.2 | CCR-W2-2 approved by Erick: `identity.consumeRateLimit` on `auth-rate-limits`, no schema change; checkout 10/IP/h (§4, §5.1) | architect |
+| 2026-10-19 | 1.2 | CCR-W2-3 approved by Erick: notifications `enqueueEmail`, `notificationsJobTasks`, `IcsInput`, `Attachment`, `EmailData` (§4) | architect |
+| 2026-10-19 | 1.2 | CCR-W2-4 approved by Erick: `POST /api/checkout/release` + `releaseCartHolds`, `commerceJobTasks`, commerce owns `api/{sessions,orders}/**`, §7 read exceptions (locked sessions read, customers read-only for attendees) (§1, §4, §5.1, §7) | architect |
+| 2026-10-19 | 1.2 | CCR-W2-5 approved by Erick: modules export `<module>JobTasks`, `payload.config.ts` composes `jobs.tasks` (§1) | architect |
+| 2026-10-19 | 1.2 | CCR-W2-6 approved by Erick (D9 change, client-confirmed): multi-seat purchase. `site-settings.maxSeatsPerPurchase` default 4 (max 10); `seat-holds.attendees[]` + PII retention; `enrollments.seatAmount`; `orders.refunds[].enrollment`; `CartLine.attendees`, `AttendeeInput`, `AttendeeRow`; checkout validation rules; `refundOrder.enrollmentId`; `EmailData` `enrollment-confirmation` + `quantity`/`attendees`; webhook: guest customer upsert, N enrollments + per-attendee entitlements, whole-order refund on oversell; availability sums hold quantity (§3.1, §3.3, §3.4, §3.7, §4, §5.1, §6). Schema lands in one migration owned by W2-02b | architect |

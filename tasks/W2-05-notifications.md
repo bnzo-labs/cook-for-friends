@@ -6,13 +6,13 @@ wave: 2
 module: notifications
 agent: backend-engineer
 model: sonnet
-depends-on: [W2-01, W2-03]
+depends-on: [W2-01, W2-02b, W2-03]
 ---
 
 # W2-05 — Notifications: React Email FR/EN, `.ics`, `send-email` job
 
 ## Mission
-Build the notifications module: `sendEmail`, `buildIcs`, `enqueueEmail` (transactional, sent after commit by the jobs queue), the `send-email` job task, and the four Wave 2 templates in FR and EN. Swap identity's magic-link email onto the new template. This task owns the **only Wave 2 migration in batch 2b** (Payload jobs table).
+Build the notifications module: `sendEmail`, `buildIcs`, `enqueueEmail` (transactional, sent after commit by the jobs queue), the `send-email` job task, and the five Wave 2 templates in FR and EN (incl. the guest-seat `enrollment-confirmation`, D9 change 2026-10-19). Swap identity's magic-link email onto the new template. This task owns the **only Wave 2 migration in batch 2b** (Payload jobs table). Its migration must be generated **after W2-02b's `w2_multi_seat` migration is on `main`** (snapshot chain) — rebase first, then `migrate:create`.
 
 ## Context loading (in order)
 1. `CLAUDE.md`
@@ -23,7 +23,8 @@ Build the notifications module: `sendEmail`, `buildIcs`, `enqueueEmail` (transac
 6. `docs/DESIGN_SPEC.md` (email section if present; otherwise tokens for colors/fonts — inline values derived from `tokens.css`, no external CSS)
 7. `apps/web/src/modules/identity/server/ports.ts` (current plain magic-link sender)
 
-## Contract Change Request (CCR-W2-3) — assumed approved at plan review
+## Contract Change Request (CCR-W2-3, approved 2026-10-19; amended by CCR-W2-6) — authoritative text now in `docs/CONTRACT.md` 1.2 §4 `@/modules/notifications`
+CCR-W2-6 deltas vs the block below: `order-confirmation.items[]` gains `quantity: number` and `attendees?: { name, email }[]`; `oversell-refund` gains `quantity`; new `enrollment-confirmation` data type. CONTRACT 1.2 wins on any difference.
 Additive to `@/modules/notifications`:
 ```ts
 export type IcsInput = { uid: string; title: string; description: string; location: string; startsAt: ISODate; endsAt: ISODate; url: string }
@@ -47,9 +48,10 @@ Money in cents (formatted `fr-CA` / `en-CA`), dates ISO UTC (rendered `America/T
 
 ## Acceptance criteria
 - [ ] Exports per CONTRACT §4 + CCR-W2-3. `sendEmail` for a template not built in Wave 2 returns `{ ok: false, error: { code: 'VALIDATION', … } }` (no throw).
-- [ ] Templates `magic-link`, `order-confirmation`, `oversell-refund`, `refund-issued` with `@react-email/components@1.0.12`, FR and EN, HTML + plain text. All copy from `messages/{fr,en}.json` under `notifications.*` (no hard-coded customer strings). `order-confirmation` shows each in-person item's date/time in `America/Toronto`, location + maps link, an "Add to Google Calendar" link, totals, and `receiptUrl` when present.
+- [ ] Templates `magic-link`, `order-confirmation`, `enrollment-confirmation`, `oversell-refund`, `refund-issued` with `@react-email/components@1.0.12`, FR and EN, HTML + plain text. All copy from `messages/{fr,en}.json` under `notifications.*` (no hard-coded customer strings). `order-confirmation` shows each in-person item's date/time in `America/Toronto`, location + maps link, an "Add to Google Calendar" link, totals, and `receiptUrl` when present. Multi-seat: shows `quantity` × unit, and when `attendees` is non-empty a "Seats booked for" list (names + emails) with a line that each guest gets their own email. `enrollment-confirmation` (guest variant): "<buyerName> booked a seat for you", course, date/time `America/Toronto`, location + maps link, Google Calendar link, how to sign in later with this email address (text, no magic link in Wave 2 — Q3), contact email; **no prices, totals, order number or receipt**. `oversell-refund` mentions the number of seats refunded. All names are escaped (React Email default) and never placed in the subject line.
 - [ ] `buildIcs` (CONTRACT signature) emits RFC 5545: CRLF line endings, `METHOD:PUBLISH`, `VTIMEZONE` for `America/Toronto`, `DTSTART;TZID=America/Toronto`, `DTSTAMP`, stable `UID`, escaped `, ; \ \n`, lines folded at 75 **octets** (UTF-8 safe with French accents). Unit tests cover each rule; output imports cleanly into a parser check (e.g. validate structure with a small hand-written parser in the test, no new dependency).
 - [ ] `send-email` job task: input is JSON-serializable `{ template, to, locale, data, idempotencyKey, ics? }`; handler builds `.ics` attachments via `buildIcs` (`text/calendar; method=PUBLISH`), calls `sendEmail`, passes `idempotencyKey` to Resend, retries 3. Registered through `notificationsJobTasks` (platform composes it, W2-01).
+- [ ] Snapshot/render tests: `order-confirmation` with quantity 3 + 2 attendees (FR + EN), `enrollment-confirmation` (FR + EN) contains no amount/currency string, a guest name with `<script>` renders escaped.
 - [ ] `enqueueEmail` integration tests: inside a transaction then commit → one `payload-jobs` row; rollback → zero rows. Job handler test with the test transport (see below) asserts attachment count/filename and locale.
 - [ ] Test seam: `setEmailTransportForTests()` in `notifications/server/transport.ts`; production path always Resend (`resend@6.32.1`, `EMAIL_FROM`, `EMAIL_REPLY_TO`).
 - [ ] Identity magic-link default sender now calls `sendEmail({ template: 'magic-link', … })` (edit `identity/server/ports.ts` default only; `setMagicLinkEmailSender` and the port type unchanged). All identity tests still pass.
@@ -73,7 +75,7 @@ Money in cents (formatted `fr-CA` / `en-CA`), dates ISO UTC (rendered `America/T
 
 ## DO NOT TOUCH
 - `payload.config.ts` (jobs wiring is W2-01's), any `collections/**`, other modules, `errors.*` message keys.
-- Wave 3 templates (reminder, waitlist, certificate, comment, cancellation).
+- Wave 3 templates (reminder, waitlist, certificate, comment, cancellation). Guest reminders/certificates are Wave 3.
 
 ## Erick handoffs
 - Add `W2_TEST_EMAIL=<address that Resend test sender can deliver to>` to `apps/web/.env.local` (staging uses the Resend test domain; it only delivers to the Resend account owner's address — D8).
