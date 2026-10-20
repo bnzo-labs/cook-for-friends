@@ -14,7 +14,7 @@ import {
 
 const DAY = 86_400_000
 
-describe.skipIf(!hasTestDb)("catalog read API (integration)", () => {
+describe.skipIf(!hasTestDb)("catalog read API (integration)", { timeout: 30_000 }, () => {
   let payload: Payload
   beforeAll(async () => {
     payload = await getTestPayload()
