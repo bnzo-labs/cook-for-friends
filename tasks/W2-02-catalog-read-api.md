@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-02
-status: pending
+status: complete
 wave: 2
 module: catalog
 agent: backend-engineer
@@ -42,15 +42,15 @@ export function recordCourseStripeSync(courseId: ID, patch: { status: 'pending'|
 If Erick rejects the replacement: keep `getSessionWithAvailability` out of this task and log it; the orchestrator re-plans.
 
 ## Acceptance criteria
-- [ ] `@/modules/catalog` exports: `getPublishedCourse(slug, locale)`, `listPublishedCourses(locale, filter?)`, `getSiteSettings()`, `getCancellationPolicy()`, and the three CCR-W2-1 functions. Return types (`CourseView`, `CourseCard`, `SessionSummary`, `SessionView`, `SiteSettings`, `CancellationPolicy`, `CourseCommerceRecord`) are exported from `catalog/types.ts` and expose no Payload internals.
-- [ ] `CourseView` includes `upcomingSessions: SessionSummary[]` (status `scheduled`, `startsAt > now`, ascending) for in-person courses, and `lessons` titles only (no body, no video) for online courses.
-- [ ] Localized reads use `locale` with `fallbackLocale: 'fr'`. `CourseView`/`CourseCard` carry `isLocaleFallback: boolean` (true when the requested EN title/summary is missing and FR is shown), for the "available in French" badge.
-- [ ] Only published courses are returned (`status: 'published'` and published draft version). A draft-only change is never visible. Test: publish a course, save a draft title change → `getPublishedCourse` still returns the published title.
-- [ ] `getPublishedCourse` resolves by the localized slug of the requested locale (`/fr/cours/pain-au-levain` vs `/en/courses/sourdough-bread`); an EN request with an FR-only slug returns `null` unless EN slug falls back (document the chosen rule in a test).
-- [ ] `recordCourseStripeSync` updates only the four sync fields, does **not** publish pending drafts and does **not** create a new draft version. Test: course with a pending draft → call it → published doc has the new `stripePriceId`, pending draft still unpublished.
-- [ ] `getSiteSettings()` returns defaults when the global is empty (`maxSeatsPerPurchase: 1`, `holdMinutes: 15`, …) matching CONTRACT §3.1.
-- [ ] Integration tests (real Postgres, throwaway Neon branch, seed data) cover every exported function; unit tests cover mapping helpers. Whole suite passes locally; CI green.
-- [ ] No migration, no collection field change, no `payload-types.ts` change.
+- [x] `@/modules/catalog` exports: `getPublishedCourse(slug, locale)`, `listPublishedCourses(locale, filter?)`, `getSiteSettings()`, `getCancellationPolicy()`, and the three CCR-W2-1 functions. Return types (`CourseView`, `CourseCard`, `SessionSummary`, `SessionView`, `SiteSettings`, `CancellationPolicy`, `CourseCommerceRecord`) are exported from `catalog/types.ts` and expose no Payload internals.
+- [x] `CourseView` includes `upcomingSessions: SessionSummary[]` (status `scheduled`, `startsAt > now`, ascending) for in-person courses, and `lessons` titles only (no body, no video) for online courses.
+- [x] Localized reads use `locale` with `fallbackLocale: 'fr'`. `CourseView`/`CourseCard` carry `isLocaleFallback: boolean` (true when the requested EN title/summary is missing and FR is shown), for the "available in French" badge.
+- [x] Only published courses are returned (`status: 'published'` and published draft version). A draft-only change is never visible. Test: publish a course, save a draft title change → `getPublishedCourse` still returns the published title.
+- [x] `getPublishedCourse` resolves by the localized slug of the requested locale (`/fr/cours/pain-au-levain` vs `/en/courses/sourdough-bread`); an EN request with an FR-only slug returns `null` unless EN slug falls back (document the chosen rule in a test).
+- [x] `recordCourseStripeSync` updates only the four sync fields, does **not** publish pending drafts and does **not** create a new draft version. Test: course with a pending draft → call it → published doc has the new `stripePriceId`, pending draft still unpublished.
+- [x] `getSiteSettings()` returns defaults when the global is empty (`maxSeatsPerPurchase: 1`, `holdMinutes: 15`, …) matching CONTRACT §3.1.
+- [x] Integration tests (real Postgres, throwaway Neon branch, seed data) cover every exported function; unit tests cover mapping helpers. Whole suite passes locally; CI green.
+- [x] No migration, no collection field change, no `payload-types.ts` change.
 
 ## Implementation steps
 1. Worktree + env copy. Throwaway Neon branch from `dev`, `pnpm payload migrate`, `pnpm seed`.
@@ -87,3 +87,16 @@ All criteria ticked, CI green, Vercel deploy Ready, SESSION entry added, `status
 
 ## Communication
 Caveman. English only.
+
+
+## Result (2026-10-19, backend-engineer)
+- Exported: `getPublishedCourse`, `listPublishedCourses`, `getSiteSettings`, `getCancellationPolicy`, `getCourseCommerceRecord`, `getSessionView`, `recordCourseStripeSync` + types (`catalog/types.ts`). `getSessionWithAvailability` not implemented (CCR-W2-1 replacement approved).
+- Slug rule: per-locale match; FR slug resolves under EN only when the course has no EN slug (then card links FR slug). Tested.
+- `recordCourseStripeSync` uses `payload.db.updateOne` (no hooks, no version, no publish) and also patches the newest pending-draft version snapshot so publishing it later does not restore stale Stripe ids. `skipStripeSync` context is therefore moot (no hooks run); W2-08 hook need not special-case this path.
+- `SiteSettings.maxSeatsPerPurchase` read from global (default 1) for D9 multi-seat. `SiteSettings.legal` exposes page ids only.
+- Online `CourseView.lessons` ordered by `course.lessons`, fallback lesson `order`.
+- `CourseView.description` is opaque Lexical JSON (`RichTextDoc`).
+
+### Findings (not fixed, out of scope)
+- F1 (HIGH, database-specialist): `enum_courses_status` in migration 0001 is `('draft','published')`; collection `status` option `archived` is lost because `_status` shares the enum name. Saving `status: 'archived'` fails in Postgres. Fix: give `status` its own `enumName` + migration, or drop `archived`. Read API already guards `status = published`.
+- F2 (LOW): flaky 5 s timeouts in identity/commerce schema tests (password hashing) under CPU/disk contention.

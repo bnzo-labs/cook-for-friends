@@ -16,6 +16,13 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ## 2026-10-18 — Wave 2 plan (Commerce core) — APPROVED 2026-10-19, REVISED for D9 multi-seat (architect, Opus)
 Approved by Erick 2026-10-19 with CCR-W2-1..6. Briefs: `tasks/W2-01` … `tasks/W2-12` + `tasks/W2-02b`.
+## 2026-10-19 — W2-02 catalog-read-api — COMPLETE (backend-engineer)
+Catalog public read API + CCR-W2-1 functions in `@/modules/catalog` (types.ts, server/{courses,sessions,settings,stripe-sync-record,mappers,where}.ts). 15 unit + 20 integration tests. No migration/collection/type changes. Finding F1: Postgres enum `enum_courses_status` lacks `archived` (see task file) -> needs database-specialist. Next: W2-04/W2-06 consume the API; compose `getSessionView` + `commerce.getAvailableSeats`.
+
+---
+
+## 2026-10-18 — Wave 2 plan (Commerce core) — AWAITING ERICK REVIEW (architect, Opus)
+Planning only. No build agent starts before Erick approves this plan and the CCRs below. Briefs: `tasks/W2-01` … `tasks/W2-12`.
 
 **Tasks**
 | ID | Task | Agent · model | Depends on | Batch |
