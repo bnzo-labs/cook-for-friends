@@ -10,6 +10,8 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "test/**/*.test.ts"],
     exclude: ["e2e/**", "node_modules/**"],
     setupFiles: ["./test/setup.ts"],
+    // next-intl imports "next/navigation" extensionless; bundle it so vite resolves it.
+    server: { deps: { inline: [/next-intl/] } },
     coverage: {
       provider: "v8",
       include: ["src/modules/**"],

@@ -1,4 +1,4 @@
-import type { CollectionConfig } from "payload"
+import type { CollectionConfig, TaskConfig } from "payload"
 
 import { DiscountCodes } from "./collections/discount-codes"
 import { Enrollments } from "./collections/enrollments"
@@ -13,3 +13,6 @@ export const commerceCollections: CollectionConfig[] = [
   DiscountCodes,
   ProcessedStripeEvents,
 ]
+
+/** Payload Jobs Queue tasks owned by commerce (W2-08 fills). */
+export const commerceJobTasks: TaskConfig[] = []

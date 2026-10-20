@@ -10,16 +10,17 @@ import { en } from "@payloadcms/translations/languages/en"
 
 import { locales, defaultLocale } from "./i18n/locales"
 import { env } from "./lib/env"
+import { jobsRunAccess } from "./lib/jobs-access"
 
 // Module collections — W1-02 populates these
 import { catalogCollections, catalogGlobals } from "./modules/catalog"
 import { identityCollections } from "./modules/identity"
 import { accessCollections } from "./modules/access"
-import { commerceCollections } from "./modules/commerce"
+import { commerceCollections, commerceJobTasks } from "./modules/commerce"
 import { schedulingCollections } from "./modules/scheduling"
 import { learningCollections } from "./modules/learning"
 import { videoCollections } from "./modules/video"
-import { notificationsCollections } from "./modules/notifications"
+import { notificationsCollections, notificationsJobTasks } from "./modules/notifications"
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -53,6 +54,15 @@ export default buildConfig({
 
   // Globals (catalog owns site-settings + cancellation-policy)
   globals: [...catalogGlobals],
+
+  // -------------------------------------------------------------------------
+  // Jobs Queue — modules export `<module>JobTasks`. No autoRun (serverless):
+  // the Cloudflare cron worker drives GET /api/cron/jobs. Run endpoint is staff only.
+  // -------------------------------------------------------------------------
+  jobs: {
+    tasks: [...notificationsJobTasks, ...commerceJobTasks],
+    access: { run: jobsRunAccess },
+  },
 
   // -------------------------------------------------------------------------
   // Editor

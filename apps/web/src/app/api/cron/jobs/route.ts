@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getPayload } from "payload"
+import config from "@payload-config"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
+
+/** Max jobs processed per invocation (worker calls every 5 min). */
+const JOBS_LIMIT = 50
 
 /**
  * GET /api/cron/jobs
  *
- * Triggered by Vercel Cron every 5 minutes (see vercel.json).
- * Runs Payload's Jobs Queue (email sends, Stripe sync, etc.).
+ * Driven by the Cloudflare cron worker (infra/cron-worker). Runs Payload's
+ * Jobs Queue (email sends, Stripe sync, ...). With zero registered tasks the
+ * queue is disabled; returns ran: 0 without throwing.
  *
  * Auth: Authorization: Bearer CRON_SECRET
  */
@@ -16,6 +25,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   }
 
-  // TODO: W2-04+ — import getPayload and call payload.jobs.run()
-  return NextResponse.json({ ok: true })
+  const payload = await getPayload({ config })
+  if (!payload.config.jobs.enabled) {
+    return NextResponse.json({ ok: true, ran: 0 })
+  }
+
+  const result = await payload.jobs.run({ limit: JOBS_LIMIT })
+  const ran = Object.keys(result.jobStatus ?? {}).length
+  return NextResponse.json({ ok: true, ran })
 }

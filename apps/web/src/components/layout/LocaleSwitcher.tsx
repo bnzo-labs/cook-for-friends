@@ -1,5 +1,7 @@
 "use client"
 
+import type { ComponentProps } from "react"
+import { useParams } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { Link, usePathname } from "@/i18n/navigation"
 import { locales, type Locale } from "@/i18n/locales"
@@ -15,6 +17,9 @@ export function LocaleSwitcher({ className }: { className?: string }) {
   const t = useTranslations("layout.locale")
   const current = useLocale()
   const pathname = usePathname()
+  const params = useParams()
+  // Typed pathnames: dynamic routes need their params (next-intl documented pattern).
+  const href = { pathname, params } as ComponentProps<typeof Link>["href"]
 
   return (
     <nav aria-label={t("label")} className={className}>
@@ -35,7 +40,7 @@ export function LocaleSwitcher({ className }: { className?: string }) {
                 </span>
               ) : (
                 <Link
-                  href={pathname}
+                  href={href}
                   locale={locale}
                   lang={locale}
                   hrefLang={locale}
