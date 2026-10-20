@@ -19,6 +19,9 @@ Catalog public read API + CCR-W2-1 functions in `@/modules/catalog` (types.ts, s
 - Plan entry below updated in place (table, batches, critical path, CCRs, D9, edge-case defaults, open questions).
 - **Next:** finish 2a (W2-01, W2-02, W2-03) → W2-02b → batch 2b.
 
+## 2026-10-19 — W2-01 platform-prep COMPLETE (devops-agent)
+Jobs queue wired (`jobs.tasks` from module `*JobTasks`, empty; run access staff-only), `/api/cron/jobs` runs `payload.jobs.run({limit:50})` (ran:0 when disabled), next-intl `pathnames` FR/EN for CONTRACT 5.2, `@react-email/components@1.0.12`. No migration (jobs disabled until W2-05 adds a task, that migration is W2-05's). CI green, Vercel prod Ready, staging probes pass (/fr 200, jobs 401/200). Commits 7aa130c, d876670. Details: `tasks/W2-01-platform-prep.md`.
+
 ## 2026-10-18 — Wave 2 plan (Commerce core) — APPROVED 2026-10-19, REVISED for D9 multi-seat (architect, Opus)
 Approved by Erick 2026-10-19 with CCR-W2-1..6. Briefs: `tasks/W2-01` … `tasks/W2-12` + `tasks/W2-02b`.
 ## 2026-10-18 — Wave 2 plan (Commerce core) — AWAITING ERICK REVIEW (architect, Opus)
