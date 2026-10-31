@@ -1,5 +1,7 @@
 // src/modules/_shared/types.ts  (owned by platform, read-only for all)
 // Verbatim from CONTRACT §2. Do not modify without an orchestrator decision.
+import type { PayloadRequest } from "payload"
+
 export type Locale = "fr" | "en"
 export type ID = string | number // Payload id (postgres: number)
 export type ISODate = string
@@ -18,3 +20,6 @@ export type ModuleError =
   | { code: "UPSTREAM"; service: "stripe" | "resend" | "video"; message: string }
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: ModuleError }
+
+// Carries Payload's transactionID; pass as `tx` so writes join the caller's transaction (CONTRACT §4).
+export type TxContext = { req: PayloadRequest }

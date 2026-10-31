@@ -6,6 +6,9 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-31 — W2-03 access/identity/scheduling seams — COMPLETE (backend-engineer)
+All 10 acceptance criteria satisfied. Code written: `_shared/types.ts` (TxContext); `access/{index,types,server/entitlements,server/payload}.ts`; `identity/server/rate-limit.ts` (generic core + `consumeRateLimitGeneric`), `identity/index.ts` (re-exports `consumeRateLimit` CCR-W2-2); `scheduling/{index,server/seat-released,server/payload}.ts`. Tests: 3 unit (isActiveAt boundaries), 8 access integration tests (grant/list/active, idempotency seq+concurrent×5, multi-seat D9 per-attendee×3, revoke idempotent+NOT_FOUND, tx rollback+commit), 4 identity generic rate-limit integration tests (limit+1 denied, namespaces isolated, 10-concurrent→exactly-5-allowed, normalize+validate), 3 scheduling integration tests (no-waiting→silent, waiting→warn log, unknown-id→no-throw). Unit tests: 80 passed (87 skipped — integration, require TEST_DATABASE_URL). Typecheck: 0 errors. Lint: clean. No migration, no collection changes, no payload-types.ts changes. Note: integration tests require Neon throwaway branch (TEST_DATABASE_URL); CI creates branch automatically via GitHub Actions. Branch: w2-03-seams. Batch 2a unblocked: W2-04 + W2-05 can start once W2-02b lands.
+
 ## 2026-10-19 — W2-02 catalog-read-api — COMPLETE (backend-engineer)
 Catalog public read API + CCR-W2-1 functions in `@/modules/catalog` (types.ts, server/{courses,sessions,settings,stripe-sync-record,mappers,where}.ts). 15 unit + 20 integration tests. No migration/collection/type changes. Finding F1: Postgres enum `enum_courses_status` lacks `archived` (see task file) -> needs database-specialist. Next: W2-04/W2-06 consume the API; compose `getSessionView` + `commerce.getAvailableSeats`.
 
