@@ -595,9 +595,32 @@ export interface Order {
         amount: number;
         reason?: string | null;
         at: string;
+        enrollment?: (number | null) | Enrollment;
         id?: string | null;
       }[]
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enrollments".
+ */
+export interface Enrollment {
+  id: number;
+  session: number | Session;
+  customer: number | Customer;
+  order: number | Order;
+  attendeeIndex: number;
+  attendeeName?: string | null;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  seatAmount?: number | null;
+  status: 'confirmed' | 'cancelled' | 'refunded';
+  attendance: 'unknown' | 'present' | 'absent';
+  cancelledAt?: string | null;
+  cancellationOutcome?: ('refund' | 'credit' | 'none') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -614,24 +637,14 @@ export interface SeatHold {
   stripeCheckoutSessionId?: string | null;
   status: 'active' | 'converted' | 'expired' | 'released';
   expiresAt: string;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "enrollments".
- */
-export interface Enrollment {
-  id: number;
-  session: number | Session;
-  customer: number | Customer;
-  order: number | Order;
-  attendeeIndex: number;
-  attendeeName?: string | null;
-  status: 'confirmed' | 'cancelled' | 'refunded';
-  attendance: 'unknown' | 'present' | 'absent';
-  cancelledAt?: string | null;
-  cancellationOutcome?: ('refund' | 'credit' | 'none') | null;
+  attendees?:
+    | {
+        firstName: string;
+        lastName: string;
+        email: string;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1234,6 +1247,7 @@ export interface OrdersSelect<T extends boolean = true> {
         amount?: T;
         reason?: T;
         at?: T;
+        enrollment?: T;
         id?: T;
       };
   updatedAt?: T;
@@ -1251,6 +1265,14 @@ export interface SeatHoldsSelect<T extends boolean = true> {
   stripeCheckoutSessionId?: T;
   status?: T;
   expiresAt?: T;
+  attendees?:
+    | T
+    | {
+        firstName?: T;
+        lastName?: T;
+        email?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1264,6 +1286,7 @@ export interface EnrollmentsSelect<T extends boolean = true> {
   order?: T;
   attendeeIndex?: T;
   attendeeName?: T;
+  seatAmount?: T;
   status?: T;
   attendance?: T;
   cancelledAt?: T;
@@ -1411,6 +1434,9 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 export interface SiteSetting {
   id: number;
   communityUrl?: string | null;
+  /**
+   * Max. seats per purchase (1–10)
+   */
   maxSeatsPerPurchase: number;
   holdMinutes: number;
   waitlistNotifyCount: number;

@@ -12,6 +12,14 @@ export function validateReminderOffsets(value: unknown): true | string {
   return ok ? true : "Heures entières > 0 / Hours must be integers > 0"
 }
 
+/** Validates `maxSeatsPerPurchase`: integer 1..10. Exported for tests. */
+export function validateMaxSeats(value: unknown): true | string {
+  const base = validateInteger(1)(value)
+  if (base !== true) return base
+  if (typeof value === "number" && value > 10) return "Doit être ≤ 10 / Must be ≤ 10"
+  return true
+}
+
 /** `site-settings` — CONTRACT §3.1. Late-bound decisions D3, D9, D10. */
 export const SiteSettings: GlobalConfig = {
   slug: "site-settings",
@@ -27,10 +35,12 @@ export const SiteSettings: GlobalConfig = {
       name: "maxSeatsPerPurchase",
       type: "number",
       required: true,
-      defaultValue: 1,
+      defaultValue: 4,
       min: 1,
+      max: 10,
       label: { fr: "Places max. par achat", en: "Max seats per purchase" },
-      validate: (v: unknown) => validateInteger(1)(v),
+      admin: { description: { fr: "Max. places par achat (1–10)", en: "Max. seats per purchase (1–10)" } },
+      validate: (v: unknown) => validateMaxSeats(v),
     },
     {
       name: "holdMinutes",

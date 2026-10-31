@@ -105,6 +105,7 @@ export const Orders: CollectionConfig = {
         moneyField({ name: "amount", required: true }),
         { name: "reason", type: "text" },
         { name: "at", type: "date", required: true },
+        { name: "enrollment", type: "relationship", relationTo: "enrollments", admin: { readOnly: true } },
       ],
     },
   ],

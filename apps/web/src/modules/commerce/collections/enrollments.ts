@@ -2,7 +2,7 @@ import type { CollectionConfig, Field, FieldAccess } from "payload"
 
 import { isAdmin, isAdminField, isStaffOrAdmin, ownsDocument } from "@/modules/identity"
 import { salesGroup } from "../labels"
-import { validateInteger } from "../money"
+import { moneyField, validateInteger } from "../money"
 
 /** Staff may update only `attendance`; every other field is admin-only on update. */
 const adminUpdateOnly: { update: FieldAccess } = { update: isAdminField }
@@ -21,6 +21,12 @@ const fields: Field[] = [
     access: adminUpdateOnly,
   },
   { name: "attendeeName", type: "text", access: adminUpdateOnly },
+  /**
+   * This seat's share of `order.total` in cents (incl. tax and discount):
+   * `floor(total / N)`, remainder cents on attendeeIndex 0; sum = order.total.
+   * Basis for per-seat partial refund/credit (CONTRACT §3.4, D1).
+   */
+  moneyField({ name: "seatAmount", access: adminUpdateOnly }),
   {
     name: "status",
     type: "select",
@@ -70,7 +76,7 @@ export const Enrollments: CollectionConfig = {
     plural: { fr: "Inscriptions", en: "Enrollments" },
   },
   admin: {
-    defaultColumns: ["session", "customer", "attendeeName", "status", "attendance"],
+    defaultColumns: ["session", "customer", "attendeeName", "seatAmount", "status", "attendance"],
     group: salesGroup,
   },
   access: {

@@ -53,5 +53,19 @@ export const SeatHolds: CollectionConfig = {
       ],
     },
     { name: "expiresAt", type: "date", required: true },
+    {
+      /**
+       * Guests only; position i <-> attendeeIndex i+1; emptied 7 days after a
+       * non-active hold expires (PII retention).
+       */
+      name: "attendees",
+      type: "array",
+      maxRows: 9,
+      fields: [
+        { name: "firstName", type: "text", required: true, maxLength: 100 },
+        { name: "lastName", type: "text", required: true, maxLength: 100 },
+        { name: "email", type: "email", required: true },
+      ],
+    },
   ],
 }

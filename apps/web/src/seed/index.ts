@@ -285,7 +285,7 @@ async function seedGlobals(payload: Payload): Promise<void> {
     slug: "site-settings",
     overrideAccess: true,
     data: {
-      maxSeatsPerPurchase: 1,
+      maxSeatsPerPurchase: 4,
       holdMinutes: 15,
       waitlistNotifyCount: 3,
       reminderOffsetsHours: [48, 24],
