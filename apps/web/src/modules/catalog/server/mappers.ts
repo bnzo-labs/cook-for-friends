@@ -162,7 +162,7 @@ export function mapCommerceRecord(doc: Rec): CourseCommerceRecord {
 /** Defaults match CONTRACT §3.1 and the global's `defaultValue`s. */
 export const SITE_SETTINGS_DEFAULTS: SiteSettings = {
   communityUrl: null,
-  maxSeatsPerPurchase: 1,
+  maxSeatsPerPurchase: 4,
   holdMinutes: 15,
   waitlistNotifyCount: 3,
   reminderOffsetsHours: [48, 24],

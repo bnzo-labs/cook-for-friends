@@ -101,7 +101,7 @@ describe("mapCommerceRecord", () => {
 describe("mapSiteSettings / mapCancellationPolicy", () => {
   it("defaults when empty", () => {
     expect(mapSiteSettings(null)).toMatchObject({
-      maxSeatsPerPurchase: 1,
+      maxSeatsPerPurchase: 4,
       holdMinutes: 15,
       waitlistNotifyCount: 3,
       reminderOffsetsHours: [48, 24],

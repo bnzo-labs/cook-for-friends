@@ -78,6 +78,9 @@ export const Courses: CollectionConfig = {
     {
       name: "status",
       type: "select",
+      // Own Postgres enum: the default `enum_courses_status` collides with the
+      // drafts `_status` enum (draft|published only) and rejects 'archived'.
+      enumName: "enum_courses_lifecycle_status",
       required: true,
       defaultValue: "draft",
       index: true,

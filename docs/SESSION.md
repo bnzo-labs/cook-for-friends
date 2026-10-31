@@ -6,6 +6,31 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-31 — W2-02b multi-seat schema — COMPLETE (backend-engineer)
+
+**Done**
+- All schema fields landed: `site-settings.maxSeatsPerPurchase` (default 4, max 10, integer 1..10, admin description FR/EN), `seat-holds.attendees[]` (maxRows 9, firstName/lastName/email, JSDoc), `enrollments.seatAmount` (moneyField, adminUpdateOnly, in defaultColumns), `orders.refunds[].enrollment` (relationship → enrollments, readOnly), seed `maxSeatsPerPurchase: 4`, `getSiteSettings` fallback 4.
+- **F1 fix (from W2-02):** `courses.status` given `enumName: "enum_courses_lifecycle_status"` so it no longer shares the drafts `_status` enum — `archived` value now accepted.
+- Migration `20261020_004708_w2_multi_seat_course_status`: creates `enum_courses_lifecycle_status`, `seat_holds_attendees` table, adds `enrollments.seat_amount`, `orders_refunds.enrollment_id`, alters `site_settings.max_seats_per_purchase` default to 4, data step `UPDATE site_settings SET max_seats_per_purchase=4 WHERE max_seats_per_purchase=1`, `down()` reverts all. Applied to **Neon `dev`** (batch 4). Throwaway branch `w2-02b-tmp` exists on Neon project `empty-rain-36048098`.
+- `payload-types.ts` regenerated + migration index updated.
+- Tests: 79 unit pass (83 integration skipped — need TEST_DATABASE_URL; CI creates own branch). `validateMaxSeats` unit tests pass. New files: `multi-seat-schema.test.ts`, `course-status.test.ts`.
+- Typecheck: clean. Lint: 1 pre-existing warning in payload-types.ts (unused eslint-disable, not blocking).
+
+**Blocked / Erick must do**
+1. **Staging migration:** `neonctl connection-string --project-id empty-rain-36048098 --branch staging` → set as `DATABASE_URL` → `pnpm -C apps/web payload migrate` in worktree. (Credential materialization blocked this in the agent session.)
+2. **Integration tests:** set `TEST_DATABASE_URL` from `w2-02b-tmp` (or any migrated throwaway) → `pnpm -C apps/web test`; CI also runs these on push.
+3. After staging migration: push branch `w2-02b-multi-seat` → CI green → Vercel Ready → merge to `main`.
+
+**Notes**
+- F1 resolved: `courses.status` has its own `enum_courses_lifecycle_status`; migration handles existing rows.
+- Neon throwaway branch `w2-02b-tmp` (br-ancient-river-b52f66gj) created by previous session — reuse or delete after tests.
+- Integration tests on the throwaway branch will verify: attendees round-trip, 10 rows rejected, seatAmount negative/fractional rejected, settings 11 rejected, empty global → 4, orders.refunds enrollment link.
+
+**Next step**
+- Erick applies staging migration (see above) → push → CI green → merge to `main` → W2-04/05/06 unblocked.
+
+---
+
 ## 2026-10-19 — W2-02 catalog-read-api — COMPLETE (backend-engineer)
 Catalog public read API + CCR-W2-1 functions in `@/modules/catalog` (types.ts, server/{courses,sessions,settings,stripe-sync-record,mappers,where}.ts). 15 unit + 20 integration tests. No migration/collection/type changes. Finding F1: Postgres enum `enum_courses_status` lacks `archived` (see task file) -> needs database-specialist. Next: W2-04/W2-06 consume the API; compose `getSessionView` + `commerce.getAvailableSeats`.
 

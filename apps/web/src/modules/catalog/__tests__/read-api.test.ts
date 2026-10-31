@@ -42,9 +42,8 @@ describe.skipIf(!hasTestDb)("catalog read API (integration)", { timeout: 30_000 
         format,
         price: 5000,
         level: "beginner",
-        // "unlisted": published version whose `status` field is not "published".
-        // (DB enum lacks "archived" today — see task file finding F1.)
-        status: status === "unlisted" ? "draft" : status,
+        // "unlisted": published version whose `status` field is "archived".
+        status: status === "unlisted" ? "archived" : status,
         _status: status === "draft" ? "draft" : "published",
       },
     })
@@ -354,7 +353,7 @@ describe.skipIf(!hasTestDb)("catalog read API (integration)", { timeout: 30_000 
   describe("settings", () => {
     it("getSiteSettings returns CONTRACT defaults when nothing was customised", async () => {
       const s = await getSiteSettings()
-      expect(s.maxSeatsPerPurchase).toBeGreaterThanOrEqual(1)
+      expect(s.maxSeatsPerPurchase).toBe(4)
       expect(s.holdMinutes).toBe(15)
       expect(s.waitlistNotifyCount).toBe(3)
       expect(s.reminderOffsetsHours).toEqual([48, 24])
