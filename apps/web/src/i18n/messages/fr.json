@@ -22,7 +22,19 @@
     "CONFLICT": "Une erreur de conflit est survenue.",
     "UPSTREAM": "Une erreur de service externe est survenue.",
     "MAGIC_LINK_INVALID": "Ce lien de connexion est invalide ou a expiré. Veuillez en demander un nouveau.",
-    "MAGIC_LINK_RATE_LIMITED": "Trop de demandes de connexion. Veuillez réessayer plus tard."
+    "MAGIC_LINK_RATE_LIMITED": "Trop de demandes de connexion. Veuillez réessayer plus tard.",
+    "CHECKOUT_RATE_LIMITED": "Trop de tentatives de paiement. Veuillez réessayer plus tard.",
+    "COURSE_NOT_PURCHASABLE": "Ce cours n'est pas offert à l'achat pour le moment.",
+    "SESSION_NOT_BOOKABLE": "Cette session ne peut plus être réservée.",
+    "SESSION_INVALID": "Veuillez choisir une session valide pour ce cours.",
+    "SESSION_REQUIRED": "Veuillez choisir une session.",
+    "SESSION_NOT_ALLOWED": "Les cours en ligne n'ont pas de session.",
+    "CART_SINGLE_LINE": "Votre panier ne peut contenir qu'un cours à la fois.",
+    "CART_TOKEN_INVALID": "Votre panier n'a pas pu être identifié. Veuillez recharger la page.",
+    "QUANTITY_OUT_OF_RANGE": "Veuillez choisir un nombre de places valide.",
+    "BUYER_EMAIL_REQUIRED": "Votre adresse courriel est requise pour réserver plus d'une place.",
+    "ATTENDEES_MISMATCH": "Veuillez saisir un nom et un courriel pour chaque place supplémentaire.",
+    "ATTENDEE_EMAIL_DUPLICATE": "Chaque participant doit avoir une adresse courriel différente (y compris la vôtre)."
   },
   "layout": {
     "skip_to_content": "Aller au contenu principal",
