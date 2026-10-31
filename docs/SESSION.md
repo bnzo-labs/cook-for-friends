@@ -6,6 +6,30 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-31 — W2-04 seat-holds-checkout — COMPLETE, pending CI (backend-engineer, Opus)
+
+**Done**
+- `src/lib/stripe.ts` (stripe 22.6.2, `2026-08-26.dahlia`, `maxNetworkRetries: 2`), `commerce/server/stripe-port.ts` (only Stripe seam; `setStripeForTests` test-only).
+- `commerce/server/{tx,availability,holds,checkout,validation,expire,http,payload}.ts`; `commerce/{sync,webhook,attendees}/index.ts` empty barrels (`syncJobTasks = []`, `commerceJobTasks = [...syncJobTasks]`); `commerce/index.ts` exports `getAvailableSeats`, `createCheckout`, `releaseCartHolds`, `expireStaleHolds`, types, route helpers.
+- Routes `POST /api/checkout` (Origin, 10/IP/h, `cff_cart` cookie, ModuleError → envelope, SOLD_OUT `details.available`), `POST /api/checkout/release`, `/api/cron/expire-holds` wired.
+- 12 `errors.*` keys FR/EN.
+- Allocation: READ COMMITTED tx, cart advisory lock → session `FOR UPDATE` → release cart holds → Σ-quantity count → one hold of N (all-or-nothing). Stripe after commit, key `hold-<id>`, failure → hold `released` + UPSTREAM.
+- Tests: 52 new unit (green locally), 41 new integration incl. R5 race + multi-seat race (skip locally, run in CI). Stripe test-mode smoke passed (`cs_test_b1JrSr3i…`, window 1860 s, expired).
+
+**Blocked / Erick must do**
+1. R5 race on the **pooled** (`-pooler`) URL: agent was denied creating a Neon branch. Run: throwaway branch from `dev` → `TEST_DATABASE_URL=<pooled url> pnpm -C apps/web vitest run src/modules/commerce` → record result in `tasks/W2-04-seat-holds-checkout.md`.
+2. Push/merge `w2-04-batch2b` → CI integration green → Vercel Ready → staging probes (`/api/cron/expire-holds` bearer 200, `POST /api/checkout` invalid → 400).
+
+**Notes for W2-07/W2-10**
+- Metadata keys `{ cartToken, holdId?, courseId, sessionId?, locale, quantity }` on session, PaymentIntent, invoice. Stripe `locale` sent as `fr-CA` / `en`.
+- VALIDATION envelope: `error.details.issues` (CONTRACT §2) + mirrored `error.issues` (identity parity). 429 code `RATE_LIMITED`.
+- SOLD_OUT rolls back: the cart's previous hold survives a failed re-checkout.
+
+**Next step**
+- Merge after CI → batch 2c (W2-07, W2-08, W2-09, W2-10).
+
+---
+
 ## 2026-10-31 — W2-02b multi-seat schema — COMPLETE (backend-engineer)
 
 **Done**
