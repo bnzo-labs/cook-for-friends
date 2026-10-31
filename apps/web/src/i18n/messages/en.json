@@ -22,7 +22,19 @@
     "CONFLICT": "A conflict error occurred.",
     "UPSTREAM": "An external service error occurred.",
     "MAGIC_LINK_INVALID": "This sign-in link is invalid or has expired. Please request a new one.",
-    "MAGIC_LINK_RATE_LIMITED": "Too many sign-in requests. Please try again later."
+    "MAGIC_LINK_RATE_LIMITED": "Too many sign-in requests. Please try again later.",
+    "CHECKOUT_RATE_LIMITED": "Too many checkout attempts. Please try again later.",
+    "COURSE_NOT_PURCHASABLE": "This course is not available for purchase right now.",
+    "SESSION_NOT_BOOKABLE": "This session can no longer be booked.",
+    "SESSION_INVALID": "Please choose a valid session for this course.",
+    "SESSION_REQUIRED": "Please choose a session.",
+    "SESSION_NOT_ALLOWED": "Online courses do not have sessions.",
+    "CART_SINGLE_LINE": "Your cart can contain one course at a time.",
+    "CART_TOKEN_INVALID": "Your cart could not be identified. Please reload the page.",
+    "QUANTITY_OUT_OF_RANGE": "Please choose a valid number of seats.",
+    "BUYER_EMAIL_REQUIRED": "Your email address is required when booking more than one seat.",
+    "ATTENDEES_MISMATCH": "Please enter a name and email for each additional seat.",
+    "ATTENDEE_EMAIL_DUPLICATE": "Each attendee needs a different email address (including yours)."
   },
   "layout": {
     "skip_to_content": "Skip to main content",
