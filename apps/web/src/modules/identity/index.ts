@@ -47,3 +47,17 @@ export {
 export { sendMagicLinkEmail, setMagicLinkEmailSender, resetMagicLinkEmailSender } from "./server/ports"
 export type { MagicLinkEmailInput, MagicLinkEmailSender } from "./server/ports"
 export type { CustomerView } from "./types"
+
+// Generic rate limit (CCR-W2-2) — checkout and other modules.
+import { getPayload } from "./server/payload"
+import { consumeRateLimitGeneric } from "./server/rate-limit"
+
+export async function consumeRateLimit(i: {
+  scope: "ip" | "email"
+  namespace: string
+  key: string
+  limit: number
+  windowSeconds: number
+}): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  return consumeRateLimitGeneric(await getPayload(), i)
+}

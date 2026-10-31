@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-03
-status: pending
+status: complete
 wave: 2
 module: access, identity, scheduling, _shared (TxContext only)
 agent: backend-engineer
