@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-05
-status: pending
+status: complete
 wave: 2
 module: notifications
 agent: backend-engineer
