@@ -28,6 +28,37 @@ Newest first. Each entry: what was done, what is blocked, next step.
 **Next step**
 - Merge after CI → batch 2c (W2-07, W2-08, W2-09, W2-10).
 
+## 2026-10-31 — W2-05 notifications module — COMPLETE (backend-engineer)
+
+**Done**
+- 5 React Email templates (FR + EN each): `magic-link`, `order-confirmation`, `enrollment-confirmation`, `oversell-refund`, `refund-issued`. All copy under `notifications.*` in `messages/{fr,en}.json`. No hard-coded customer strings.
+- `buildIcs()` — RFC 5545 compliant: CRLF endings, `METHOD:PUBLISH`, `VTIMEZONE America/Toronto`, `DTSTART;TZID=`, `DTSTAMP` UTC Z, text escaping (backslash/semicolon/comma/newline), line folding at 75 octets (UTF-8-safe for French accents).
+- `sendEmail()` — render + send via Resend (or test transport). Wave-3 templates return `{ ok: false, error: { code: 'VALIDATION' } }`.
+- `enqueueEmail()` — queues `send-email` Payload job inside caller's transaction via `req: tx?.req`.
+- `send-email` Payload job task: retries 3, Zod input validation, ICS attachment building, idempotency key forwarded to Resend.
+- `notificationsJobTasks: TaskConfig[]` exported from `notifications/index.ts`.
+- Identity `ports.ts` default sender swapped to `sendEmail({ template: 'magic-link', ... })`.
+- Migration `20261031_220248_w2_jobs_send_email`: creates `enum_payload_jobs_task_slug` ('inline','send-email'), `enum_payload_jobs_log_task_slug`, `enum_payload_jobs_log_state`, `payload_jobs`, `payload_jobs_log` tables. Working `down()`. Applied to **Neon `dev`** (batch 5, 154ms).
+- `payload-types.ts` regenerated — `jobs.tasks['send-email']` now typed.
+- `lib/payload.ts` config import made lazy (dynamic import inside `getPayload`) — fixes import-time env validation failure in integration test files.
+- Tests: 30 unit passed (15 ICS rules, 10 send/render, 6 job handler); 1 integration file correctly skipped locally (requires `TEST_DATABASE_URL`; CI runs). TypeScript typecheck: 0 errors.
+
+**Blocked / Erick must do**
+1. **Staging migration:** run `pnpm -C apps/web payload migrate` in this worktree with `DATABASE_URL` pointing at Neon `staging`. Agent cannot materialize Neon credentials.
+2. **Integration tests:** set `TEST_DATABASE_URL` from a throwaway Neon branch that has batch 5 applied → `pnpm -C apps/web test src/modules/notifications/__tests__/enqueue.test.ts`.
+3. **Smoke test (optional):** add `W2_TEST_EMAIL=<resend-verified-address>` to `.env.local`, run `pnpm vitest run src/modules/notifications/__tests__/send.test.ts` with transport pointed at Resend (remove `setEmailTransportForTests` override).
+4. After staging migration: push branch `w2-05-batch2b` → CI green → Vercel Ready → merge to `main`.
+
+**Notes**
+- `order-confirmation` shows `quantity`, `attendees[]` (names + emails), Google Calendar link, location, totals. FR uses `fr-CA` formatting.
+- `enrollment-confirmation` contains no price/order number — guest-seat variant only.
+- `oversell-refund` and `refund-issued` handle cents → formatted currency display.
+- Migration chain: batch 4 (W2-02b `w2_multi_seat_course_status`) → batch 5 (W2-05 `w2_jobs_send_email`).
+- Resend message ID from smoke test: _(not run — W2_TEST_EMAIL absent)_.
+
+**Next step**
+- Erick applies staging migration (see above) → push `w2-05-batch2b` → CI green → merge.
+
 ---
 
 ## 2026-10-31 — W2-02b multi-seat schema — COMPLETE (backend-engineer)
