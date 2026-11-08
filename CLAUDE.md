@@ -14,6 +14,9 @@ Behavior contract for every agent in this repo. No implementation details here.
 9. Small commits per task. Conventional commit messages (`feat(commerce): …`).
 10. Use `/compact` proactively. Keep each session scoped to one task file.
 
+## Dev database
+Schema changes ship as migrations only (`pnpm payload migrate`). Dev schema push is opt-in via `PAYLOAD_DB_PUSH=1` and must never run against the shared Neon `dev` branch (it corrupts enums and blocks CI migrate).
+
 ## Communication
 - Internal / agent-to-agent: caveman protocol. Terse. English only.
 - Full quality only in file writes and user-facing deliverables.

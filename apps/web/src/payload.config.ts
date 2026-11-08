@@ -97,9 +97,13 @@ export default buildConfig({
     /**
      * push: false in staging and production.
      * Migrations must be committed and run via `pnpm payload migrate`.
-     * push: true is allowed only in local development (NODE_ENV=development).
+     * push is opt-in (PAYLOAD_DB_PUSH=1), never implied by NODE_ENV: a dev-mode
+     * boot against the shared Neon `dev` branch recreated enums (dropping
+     * migration-added values) and wrote a batch -1 row into payload_migrations,
+     * which makes `payload migrate` prompt and hang in CI. Use it only against a
+     * throwaway local database, never staging/production/shared dev.
      */
-    push: process.env.NODE_ENV === "development",
+    push: process.env.PAYLOAD_DB_PUSH === "1",
   }),
 
   // -------------------------------------------------------------------------

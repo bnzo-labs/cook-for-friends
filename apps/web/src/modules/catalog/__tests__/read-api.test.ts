@@ -332,6 +332,33 @@ describe.skipIf(!hasTestDb)("catalog read API (integration)", { timeout: 30_000 
       expect(live._status).toBe("published")
     })
 
+    it("keeps Stripe ids across a later save of a published course (newest version snapshot patched)", async () => {
+      const c = await course()
+      await recordCourseStripeSync(c.id, { status: "synced", productId: "prod_T4", priceId: "price_T4" })
+
+      // The newest version is a *published* snapshot: it must carry the ids too.
+      const latest = await payload.findVersions({
+        collection: "courses",
+        where: { parent: { equals: c.id } },
+        sort: "-updatedAt",
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      expect(latest.docs[0]?.version).toMatchObject({ stripeProductId: "prod_T4", stripePriceId: "price_T4" })
+
+      // Later save (title edit, published): ids must survive on the main row.
+      await payload.update({
+        collection: "courses",
+        id: c.id,
+        locale: "fr",
+        overrideAccess: true,
+        data: { title: `Cours ${c.k} bis`, _status: "published" },
+      })
+      const doc = await payload.findByID({ collection: "courses", id: c.id, overrideAccess: true })
+      expect(doc).toMatchObject({ stripeProductId: "prod_T4", stripePriceId: "price_T4" })
+    })
+
     it("records an error then clears it on success; untouched fields stay", async () => {
       const c = await course()
       await recordCourseStripeSync(c.id, { status: "synced", productId: "prod_T2", priceId: "price_T2" })
