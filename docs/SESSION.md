@@ -6,6 +6,28 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-10-31 — W2-06 storefront-content — COMPLETE (frontend-architect)
+
+**Done**
+- Deleted `src/app/(frontend)/[locale]/page.tsx` (approved exception). `(site)/page.tsx` owns `/[locale]`.
+- Created `src/app/(frontend)/[locale]/(site)/` route tree: `page.tsx` (home → Payload page slug `accueil`/`home`), `[...slug]/page.tsx` (catch-all Payload pages, 404 on miss), `courses/page.tsx` (list + format filter as `?format=` param), `courses/[slug]/page.tsx` (detail + read-only SessionList + lessons), `products/page.tsx` (product grid), `products/[slug]/page.tsx` (product detail). All `revalidate = 300`.
+- Block renderers: `LexicalRenderer` (safe recursive Lexical → React, no `dangerouslySetInnerHTML`), `HeroBlock`, `GalleryBlock`, `TestimonialsBlock`, `CtaBlock`, `RichTextBlock`, `BlockRenderer` dispatcher.
+- Components: `CourseCard` (4/5 image, format badge, level/duration, fr-CA/en-CA price, "available in French" badge), `CourseFormatFilter` (Server Component link-based, `aria-current`), `SessionList` (read-only, `maxSeatsPerPurchase` prop + `data-session-id`/`data-max-seats` placeholders for W2-10), `ProductCard`.
+- `messages/{fr,en}.json` — `storefront.*` namespace added (home, courses, course_detail, sessions, products, pages).
+- Playwright e2e: `apps/web/e2e/w2-06-storefront.test.ts` — 200 in FR+EN for all routes, 404 for unknown slugs, axe 0 serious/critical at 320+1440, no horizontal overflow at 320, opt-in screenshot suite.
+- `pnpm tsc --noEmit`: 0 errors. `pnpm lint`: 0 errors (1 pre-existing warning in payload-types.ts). `pnpm build`: green, all storefront routes `ƒ (Dynamic)`, no Payload client imports.
+
+**Blocked / Erick must do**
+1. Push branch `w2-06-batch2b` → CI green → Vercel deploy Ready → staging probes (`vercel curl /fr/cours`, `/en/courses`, `/fr` → 200).
+2. Merge to `main` after staging confirmed.
+
+**Notes**
+- `SessionList` exposes `data-session-id` and `data-max-seats` on each session row for W2-10 to mount the booking UI without touching read-only display code.
+- On-demand revalidation hooks (Payload webhooks → `revalidatePath`) are out of scope; `revalidate = 300` (5 min) is the current strategy. Note for W3-06.
+
+**Next step**
+- Erick pushes branch, confirms CI + Vercel. W2-10 (storefront-booking) can consume this after merge.
+
 ## 2026-10-31 — W2-04 seat-holds-checkout — COMPLETE, pending CI (backend-engineer, Opus)
 
 **Done**

@@ -151,5 +151,59 @@
       "contact": "Besoin d'aide ? Contactez-nous à {email}.",
       "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
     }
+  },
+  "storefront": {
+    "home": {
+      "discover_courses": "Découvrir nos cours",
+      "see_all_courses": "Tous les cours",
+      "see_all_products": "Tous les produits"
+    },
+    "courses": {
+      "heading": "Cours",
+      "meta_title": "Cours — Cook for Friends",
+      "meta_description": "Cours de pâtisserie en personne à Montréal ou en ligne.",
+      "filter_all": "Tous",
+      "filter_in_person": "En personne",
+      "filter_online": "En ligne",
+      "level_beginner": "Débutant",
+      "level_intermediate": "Intermédiaire",
+      "level_advanced": "Avancé",
+      "duration": "{minutes} min",
+      "next_session": "Prochaine : {date}",
+      "available_in_french": "Disponible en français",
+      "in_person": "En personne",
+      "online": "En ligne",
+      "empty": "Aucun cours disponible pour le moment.",
+      "taxes": "taxes en sus",
+      "up_to_seats": "Jusqu'à {n} places par réservation"
+    },
+    "course_detail": {
+      "level": "Niveau",
+      "duration": "Durée",
+      "minutes": "{minutes} min",
+      "in_person": "En personne",
+      "online": "En ligne",
+      "upcoming_sessions": "Séances à venir",
+      "no_sessions": "Aucune séance à venir.",
+      "lessons": "Contenu du cours",
+      "materials": "Matériel inclus",
+      "not_found": "Cours introuvable."
+    },
+    "sessions": {
+      "date": "Date",
+      "location": "Lieu",
+      "up_to_seats": "Jusqu'à {n} places par réservation"
+    },
+    "products": {
+      "heading": "Produits",
+      "meta_title": "Produits — Cook for Friends",
+      "meta_description": "Découvrez notre sélection d'outils et produits de pâtisserie.",
+      "empty": "Aucun produit disponible pour le moment.",
+      "visit": "Visiter le site",
+      "not_found": "Produit introuvable."
+    },
+    "pages": {
+      "not_found": "Page introuvable."
+    }
   }
 }

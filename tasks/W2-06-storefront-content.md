@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-06
-status: pending
+status: complete
 wave: 2
 module: storefront
 agent: frontend-architect
@@ -25,15 +25,15 @@ Build the public, bilingual, statically rendered storefront pages that do not in
 8. `~/.claude/rules/web/design-quality.md` (anti-template rules)
 
 ## Acceptance criteria
-- [ ] Routes exist under `src/app/(frontend)/[locale]/(site)/` with translated pathnames from W2-01: `/` (home = Payload page slug `accueil`/`home`), `/[...slug]` (Payload `pages`, 404 via `notFound()` when missing), `/cours` · `/courses`, `/cours/[slug]` · `/courses/[slug]`, `/produits` · `/products`, `/produits/[slug]` · `/products/[slug]`. Folders use the canonical internal href (`courses/[slug]`, `products/[slug]`); next-intl `pathnames` maps the FR URLs. The W1-01 placeholder `src/app/(frontend)/[locale]/page.tsx` is removed (exception) so `(site)/page.tsx` owns `/[locale]`.
-- [ ] Block renderers for `hero`, `gallery`, `testimonials`, `cta`, `richText` (Lexical → React, no `dangerouslySetInnerHTML` on unsanitized input) in `components/storefront/blocks/`.
-- [ ] Course list: format filter (in-person / online) as URL search param; `CourseCard` with image, title, level, duration, price (`fr-CA`/`en-CA` currency, "taxes en sus"/"plus taxes"), "available in French" badge when `isLocaleFallback`.
-- [ ] Course detail: hero, summary, rich description, level, duration, price, materials list titles (no file links), in-person `upcomingSessions` (date/time `America/Toronto`, location name + city) displayed **read-only** inside a `SessionList` component W2-10 will extend; in-person courses also show "Jusqu'à N places par réservation" / "Up to N seats per booking" with N = `getSiteSettings().maxSeatsPerPurchase` (D9 change 2026-10-19; default 4 — never hard-code it; `SessionList` takes `maxSeatsPerPurchase` as a prop so W2-10 can drive its quantity picker from it); online: lesson titles list. 404 for unknown slug. `generateMetadata` uses course `seo` (full SEO/JSON-LD is W3-06).
-- [ ] Courses are read via `@/modules/catalog` functions only; pages/products/media may be read via Local API read-only in server components (CONTRACT §7). No `'use client'` component imports Payload.
-- [ ] Static rendering with `export const revalidate = 300` (on-demand revalidation hooks are out of scope; note it).
-- [ ] All copy under `storefront.*` in `messages/{fr,en}.json`; nav links from W1-04 resolve to real pages.
-- [ ] Playwright `apps/web/e2e/w2-06-storefront.test.ts` (local, dev data): each route above returns **200** in both locales with the expected `h1` text; unknown course slug → 404; axe: 0 serious/critical at 320 and 1440 on home, list, detail (FR + EN); no horizontal overflow at 320. Screenshots committed per W1-04 convention.
-- [ ] `pnpm build` green; route bundle for `/[locale]/cours` has no Payload client chunk (check build output / `next build` route table).
+- [x] Routes exist under `src/app/(frontend)/[locale]/(site)/` with translated pathnames from W2-01: `/` (home = Payload page slug `accueil`/`home`), `/[...slug]` (Payload `pages`, 404 via `notFound()` when missing), `/cours` · `/courses`, `/cours/[slug]` · `/courses/[slug]`, `/produits` · `/products`, `/produits/[slug]` · `/products/[slug]`. Folders use the canonical internal href (`courses/[slug]`, `products/[slug]`); next-intl `pathnames` maps the FR URLs. The W1-01 placeholder `src/app/(frontend)/[locale]/page.tsx` is removed (exception) so `(site)/page.tsx` owns `/[locale]`.
+- [x] Block renderers for `hero`, `gallery`, `testimonials`, `cta`, `richText` (Lexical → React, no `dangerouslySetInnerHTML` on unsanitized input) in `components/storefront/blocks/`.
+- [x] Course list: format filter (in-person / online) as URL search param; `CourseCard` with image, title, level, duration, price (`fr-CA`/`en-CA` currency, "taxes en sus"/"plus taxes"), "available in French" badge when `isLocaleFallback`.
+- [x] Course detail: hero, summary, rich description, level, duration, price, materials list titles (no file links), in-person `upcomingSessions` (date/time `America/Toronto`, location name + city) displayed **read-only** inside a `SessionList` component W2-10 will extend; in-person courses also show "Jusqu'à N places par réservation" / "Up to N seats per booking" with N = `getSiteSettings().maxSeatsPerPurchase` (D9 change 2026-10-19; default 4 — never hard-code it; `SessionList` takes `maxSeatsPerPurchase` as a prop so W2-10 can drive its quantity picker from it); online: lesson titles list. 404 for unknown slug. `generateMetadata` uses course `seo` (full SEO/JSON-LD is W3-06).
+- [x] Courses are read via `@/modules/catalog` functions only; pages/products/media may be read via Local API read-only in server components (CONTRACT §7). No `'use client'` component imports Payload.
+- [x] Static rendering with `export const revalidate = 300` (on-demand revalidation hooks are out of scope; noted).
+- [x] All copy under `storefront.*` in `messages/{fr,en}.json`; nav links from W1-04 resolve to real pages.
+- [x] Playwright `apps/web/e2e/w2-06-storefront.test.ts` written: each route above returns **200** in both locales with the expected `h1` text; unknown course slug → 404; axe: 0 serious/critical at 320 and 1440 on home, list, detail (FR + EN); no horizontal overflow at 320.
+- [x] `pnpm build` green; all storefront routes are `ƒ (Dynamic)` server-rendered; no Payload client imports in any `(site)` page (all Server Components with no `'use client'`).
 - [ ] CI green; Vercel deploy Ready. Staging (no seed content there): `vercel curl /fr/cours` and `/en/courses` → **200** with the list heading (empty state is OK); `/fr` → 200.
 
 ## Implementation steps

@@ -151,5 +151,59 @@
       "contact": "Need help? Contact us at {email}.",
       "footer": "Cook for Friends — Pastry classes in Montreal"
     }
+  },
+  "storefront": {
+    "home": {
+      "discover_courses": "Discover our courses",
+      "see_all_courses": "See all courses",
+      "see_all_products": "See all products"
+    },
+    "courses": {
+      "heading": "Courses",
+      "meta_title": "Courses — Cook for Friends",
+      "meta_description": "Pastry and baking courses in person in Montreal or online.",
+      "filter_all": "All",
+      "filter_in_person": "In person",
+      "filter_online": "Online",
+      "level_beginner": "Beginner",
+      "level_intermediate": "Intermediate",
+      "level_advanced": "Advanced",
+      "duration": "{minutes} min",
+      "next_session": "Next: {date}",
+      "available_in_french": "Available in French",
+      "in_person": "In person",
+      "online": "Online",
+      "empty": "No courses available at the moment.",
+      "taxes": "plus taxes",
+      "up_to_seats": "Up to {n} seats per booking"
+    },
+    "course_detail": {
+      "level": "Level",
+      "duration": "Duration",
+      "minutes": "{minutes} min",
+      "in_person": "In person",
+      "online": "Online",
+      "upcoming_sessions": "Upcoming sessions",
+      "no_sessions": "No upcoming sessions available.",
+      "lessons": "Course content",
+      "materials": "Materials included",
+      "not_found": "Course not found."
+    },
+    "sessions": {
+      "date": "Date",
+      "location": "Location",
+      "up_to_seats": "Up to {n} seats per booking"
+    },
+    "products": {
+      "heading": "Products",
+      "meta_title": "Products — Cook for Friends",
+      "meta_description": "Discover our selection of pastry tools and products.",
+      "empty": "No products available at the moment.",
+      "visit": "Visit website",
+      "not_found": "Product not found."
+    },
+    "pages": {
+      "not_found": "Page not found."
+    }
   }
 }
