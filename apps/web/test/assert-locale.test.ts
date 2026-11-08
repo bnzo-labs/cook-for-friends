@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(() => {
     const err = new Error("NEXT_NOT_FOUND")
-    ;(err as Record<string, unknown>).digest = "NEXT_NOT_FOUND"
+    ;(err as unknown as Record<string, unknown>).digest = "NEXT_NOT_FOUND"
     throw err
   }),
 }))
