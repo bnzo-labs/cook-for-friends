@@ -1,4 +1,5 @@
 import type { Payload, PayloadRequest, Where } from "payload"
+import { ValidationError } from "payload"
 
 import type { EntitlementSource, ID, Result, TxContext } from "@/modules/_shared/types"
 
@@ -95,9 +96,57 @@ export async function listActiveEntitlements(customerId: ID): Promise<Entitlemen
   return (docs as unknown as EntitlementDoc[]).map(toView).filter((v) => isActiveAt(v, now))
 }
 
-const isUniqueViolation = (e: unknown): boolean => {
-  const err = e as { code?: string; cause?: { code?: string }; message?: string } | null
-  return err?.code === "23505" || err?.cause?.code === "23505" || /duplicate key|unique/i.test(err?.message ?? "")
+/**
+ * SQL column names that form the entitlement unique key.
+ * Matches what @payloadcms/drizzle handleUpsertError places in `ValidationFieldError.path`
+ * when it converts a PG 23505 on this index.
+ */
+const ENTITLEMENT_UNIQUE_COLS = new Set(["customer_id", "course_id", "source", "source_ref"])
+
+/**
+ * Returns true when a single `ValidationFieldError.path` token (which may be a
+ * comma-separated list of SQL column names for a composite constraint) consists
+ * exclusively of columns that belong to the entitlement unique key.
+ */
+function pathInUniqueKey(path: string | null | undefined): boolean {
+  if (!path) return false
+  const parts = path
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+  return parts.length > 0 && parts.every((p) => ENTITLEMENT_UNIQUE_COLS.has(p))
+}
+
+/**
+ * Returns true when `error` represents a unique-key conflict on the entitlement
+ * composite index `(customer, course, source, sourceRef)`.
+ *
+ * Handles three shapes:
+ * 1. Raw PG error (code "23505") anywhere up to two levels deep in the cause chain.
+ * 2. Payload `ValidationError` produced by `@payloadcms/drizzle` `handleUpsertError`,
+ *    detected via `instanceof` / `.name` and by inspecting `data.errors[].path`.
+ *    Language-independent — does NOT rely on localized message text.
+ *
+ * @internal visible for testing
+ */
+export function isUniqueConflict(error: unknown): boolean {
+  // 1. Raw PG 23505 anywhere in the cause chain (up to depth 2)
+  const e = error as { code?: string; cause?: { code?: string; cause?: { code?: string } } } | null
+  if (e?.code === "23505" || e?.cause?.code === "23505" || e?.cause?.cause?.code === "23505") {
+    return true
+  }
+
+  // 2. Payload ValidationError wrapping the unique violation
+  //    Use instanceof as primary; name check as fallback for edge cases.
+  if (error instanceof ValidationError || (error instanceof Error && error.name === "ValidationError")) {
+    const ve = error as ValidationError
+    const errors = ve.data?.errors
+    if (Array.isArray(errors) && errors.length > 0) {
+      return errors.every((f) => pathInUniqueKey(f?.path))
+    }
+  }
+
+  return false
 }
 
 /**
@@ -141,7 +190,7 @@ export async function grantEntitlement(i: {
     })
     return { ok: true, data: toView(created as unknown as EntitlementDoc) }
   } catch (error) {
-    if (!isUniqueViolation(error)) throw error
+    if (!isUniqueConflict(error)) throw error
     const winner = await findByKey(payload, i, req)
     if (!winner) throw error
     return { ok: true, data: toView(winner) }
