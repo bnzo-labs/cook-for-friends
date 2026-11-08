@@ -1,11 +1,21 @@
+import { getTranslations } from "next-intl/server"
+import { Link } from "@/i18n/navigation"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { formatSessionDate, formatSessionTime } from "@/lib/storefront/format"
 import type { SessionSummary } from "@/modules/catalog"
 import type { Locale } from "@/modules/_shared"
+
+/** At or below this many seats left, the session shows the "low" state. */
+const LOW_SEATS_THRESHOLD = 3
 
 export interface SessionListProps {
   sessions: SessionSummary[]
   locale: Locale
   /** From getSiteSettings().maxSeatsPerPurchase — W2-10 drives its quantity picker from this. */
   maxSeatsPerPurchase: number
+  /** Live seats left per session id (commerce.getAvailableSeats). */
+  availability: Record<string, number>
   labels: {
     upcomingSessions: string
     noSessions: string
@@ -16,36 +26,15 @@ export interface SessionListProps {
   }
 }
 
-function formatSessionDate(isoDate: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale === "fr" ? "fr-CA" : "en-CA", {
-    timeZone: "America/Toronto",
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(isoDate))
-}
-
-function formatSessionTime(startsAt: string, endsAt: string, locale: Locale): string {
-  const fmt = new Intl.DateTimeFormat(locale === "fr" ? "fr-CA" : "en-CA", {
-    timeZone: "America/Toronto",
-    hour: "numeric",
-    minute: "2-digit",
-  })
-  return `${fmt.format(new Date(startsAt))} – ${fmt.format(new Date(endsAt))}`
-}
-
-/**
- * Read-only session list for course detail page.
- * W2-10 will extend this with booking UI (quantity picker, seat availability).
- * `maxSeatsPerPurchase` is a prop now so W2-10 can wire the quantity input.
- */
-export function SessionList({
+/** Session list with live availability and a "Book" CTA per session. */
+export async function SessionList({
   sessions,
   locale,
   maxSeatsPerPurchase,
+  availability,
   labels,
 }: SessionListProps) {
+  const t = await getTranslations({ locale, namespace: "storefront.booking" })
   const seatsLabel = labels.upToSeats.replace("{n}", String(maxSeatsPerPurchase))
 
   return (
@@ -71,6 +60,14 @@ export function SessionList({
             const timeStr = formatSessionTime(session.startsAt, session.endsAt, locale)
             const locationName = session.location.name ?? ""
             const locationCity = session.location.city ?? ""
+            const left = availability[String(session.id)] ?? 0
+            const soldOut = left <= 0
+            const low = !soldOut && left <= LOW_SEATS_THRESHOLD
+            const statusText = soldOut
+              ? t("sold_out")
+              : low
+                ? left === 1 ? t("seats_low_one") : t("seats_low_other", { count: left })
+                : left === 1 ? t("seats_available_one") : t("seats_available_other", { count: left })
 
             return (
               <li
@@ -109,13 +106,40 @@ export function SessionList({
                     )}
                   </div>
 
-                  {/* Placeholder slot: W2-10 mounts booking CTA here */}
                   <div
-                    id={`session-booking-${session.id}`}
+                    className="flex flex-col gap-3 sm:items-end"
                     data-session-id={String(session.id)}
                     data-max-seats={maxSeatsPerPurchase}
-                    aria-label="Booking"
-                  />
+                    data-seats-left={left}
+                  >
+                    <span
+                      className="inline-flex items-center gap-2 text-sm font-medium"
+                      data-seat-state={soldOut ? "full" : low ? "low" : "ok"}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "size-2.5 rounded-full",
+                          soldOut ? "bg-seats-full" : low ? "bg-seats-low" : "bg-seats-ok",
+                        )}
+                      />
+                      <span className={soldOut ? "text-fg-muted" : "text-fg"}>{statusText}</span>
+                    </span>
+                    {soldOut ? (
+                      <Button disabled aria-label={`${t("sold_out")}, ${dateStr}`}>
+                        {t("sold_out")}
+                      </Button>
+                    ) : (
+                      <Button asChild>
+                        <Link
+                          href={{ pathname: "/cart", query: { session: String(session.id) } }}
+                          aria-label={t("book_aria", { date: dateStr })}
+                        >
+                          {t("book")}
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </li>
             )

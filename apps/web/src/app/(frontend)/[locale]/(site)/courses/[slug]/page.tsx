@@ -1,7 +1,15 @@
+import { Suspense } from "react"
+import { connection } from "next/server"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { getTranslations } from "next-intl/server"
 import { getPublishedCourse, getSiteSettings } from "@/modules/catalog"
+import type { CourseView, SiteSettings } from "@/modules/catalog"
+import { getAvailableSeats } from "@/modules/commerce"
+import { Link } from "@/i18n/navigation"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { formatMoney } from "@/lib/storefront/format"
 import { assertLocale } from "@/i18n/locale"
 import { LexicalRenderer } from "@/components/storefront/lexical/LexicalRenderer"
 import { SessionList } from "@/components/storefront/SessionList"
@@ -10,7 +18,8 @@ import { Section, Container } from "@/components/layout"
 import type { Locale } from "@/modules/_shared"
 import type { Metadata } from "next"
 
-export const revalidate = 300
+// Seat availability is live (no ISR): the session block below calls connection()
+// so seat counts are never served from a stale cache.
 
 export async function generateMetadata({
   params,
@@ -27,13 +36,39 @@ export async function generateMetadata({
   }
 }
 
-/** Price in cents → localized currency string. */
-function formatPrice(amountCents: number, locale: Locale): string {
-  return new Intl.NumberFormat(locale === "fr" ? "fr-CA" : "en-CA", {
-    style: "currency",
-    currency: "CAD",
-    minimumFractionDigits: 2,
-  }).format(amountCents / 100)
+/**
+ * Live seat counts for one course's sessions. Dynamic on purpose: availability
+ * must never come from a cached render.
+ */
+async function LiveSessionList({
+  course,
+  settings,
+  locale,
+}: {
+  course: CourseView
+  settings: SiteSettings
+  locale: Locale
+}) {
+  await connection()
+  const t = await getTranslations({ locale, namespace: "storefront" })
+  const counts = await Promise.all(
+    course.upcomingSessions.map(async (s) => [String(s.id), await getAvailableSeats(s.id)] as const),
+  )
+  return (
+    <SessionList
+      sessions={course.upcomingSessions}
+      locale={locale}
+      maxSeatsPerPurchase={settings.maxSeatsPerPurchase}
+      availability={Object.fromEntries(counts)}
+      labels={{
+        upcomingSessions: t("course_detail.upcoming_sessions"),
+        noSessions: t("course_detail.no_sessions"),
+        upToSeats: t("sessions.up_to_seats", { n: settings.maxSeatsPerPurchase }),
+        date: t("sessions.date"),
+        location: t("sessions.location"),
+      }}
+    />
+  )
 }
 
 export default async function CourseDetailPage({
@@ -62,9 +97,9 @@ export default async function CourseDetailPage({
     )
   }
 
-  const tSession = (key: string) => t(`sessions.${key}`)
+  const tb = await getTranslations({ locale, namespace: "storefront.booking" })
 
-  const price = formatPrice(course.price.amount, locale)
+  const price = formatMoney(course.price.amount, locale)
   const isInPerson = course.format === "in_person"
 
   return (
@@ -117,8 +152,19 @@ export default async function CourseDetailPage({
               {/* Price */}
               <div className="flex items-baseline gap-2 border-t border-border pt-4">
                 <span className="font-display text-2xl font-semibold text-fg">{price}</span>
-                <span className="text-sm text-fg-subtle">{t("courses.taxes")}</span>
+                <span className="text-sm text-fg-muted">{t("courses.taxes")}</span>
               </div>
+
+              {!isInPerson && (
+                <Button asChild size="lg" className="w-fit">
+                  <Link
+                    href={{ pathname: "/cart", query: { course: String(course.id) } }}
+                    aria-label={tb("buy_aria")}
+                  >
+                    {tb("buy")}
+                  </Link>
+                </Button>
+              )}
             </div>
 
             {/* Right: hero image */}
@@ -153,18 +199,9 @@ export default async function CourseDetailPage({
       <Section tone="bg">
         <Container>
           {isInPerson ? (
-            <SessionList
-              sessions={course.upcomingSessions}
-              locale={locale}
-              maxSeatsPerPurchase={settings.maxSeatsPerPurchase}
-              labels={{
-                upcomingSessions: tc("upcoming_sessions"),
-                noSessions: tc("no_sessions"),
-                upToSeats: t("sessions.up_to_seats", { n: settings.maxSeatsPerPurchase }),
-                date: tSession("date"),
-                location: tSession("location"),
-              }}
-            />
+            <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+              <LiveSessionList course={course} settings={settings} locale={locale} />
+            </Suspense>
           ) : (
             <section aria-labelledby="lessons-heading">
               <h2
