@@ -22,7 +22,19 @@
     "CONFLICT": "A conflict error occurred.",
     "UPSTREAM": "An external service error occurred.",
     "MAGIC_LINK_INVALID": "This sign-in link is invalid or has expired. Please request a new one.",
-    "MAGIC_LINK_RATE_LIMITED": "Too many sign-in requests. Please try again later."
+    "MAGIC_LINK_RATE_LIMITED": "Too many sign-in requests. Please try again later.",
+    "CHECKOUT_RATE_LIMITED": "Too many checkout attempts. Please try again later.",
+    "COURSE_NOT_PURCHASABLE": "This course is not available for purchase right now.",
+    "SESSION_NOT_BOOKABLE": "This session can no longer be booked.",
+    "SESSION_INVALID": "Please choose a valid session for this course.",
+    "SESSION_REQUIRED": "Please choose a session.",
+    "SESSION_NOT_ALLOWED": "Online courses do not have sessions.",
+    "CART_SINGLE_LINE": "Your cart can contain one course at a time.",
+    "CART_TOKEN_INVALID": "Your cart could not be identified. Please reload the page.",
+    "QUANTITY_OUT_OF_RANGE": "Please choose a valid number of seats.",
+    "BUYER_EMAIL_REQUIRED": "Your email address is required when booking more than one seat.",
+    "ATTENDEES_MISMATCH": "Please enter a name and email for each additional seat.",
+    "ATTENDEE_EMAIL_DUPLICATE": "Each attendee needs a different email address (including yours)."
   },
   "layout": {
     "skip_to_content": "Skip to main content",
@@ -68,6 +80,76 @@
       "cta": "Sign in",
       "expiry": "This link expires in {minutes} minutes and can be used only once.",
       "ignore": "If you did not request this email, you can safely ignore it."
+    }
+  },
+  "notifications": {
+    "magicLink": {
+      "subject": "Your Cook for Friends sign-in link",
+      "heading": "Sign in to your account",
+      "preview": "Sign in to your Cook for Friends account",
+      "intro": "Click the button below to sign in to your Cook for Friends account.",
+      "cta": "Sign in",
+      "expiry": "This link expires in {minutes} minutes and can be used only once.",
+      "ignore": "If you did not request this email, you can safely ignore it."
+    },
+    "orderConfirmation": {
+      "subject": "Order confirmation #{orderNumber}",
+      "heading": "Thank you for your order!",
+      "preview": "Your order #{orderNumber} is confirmed",
+      "greeting": "Hello {name},",
+      "greetingAnon": "Hello,",
+      "intro": "Your payment was received. Here is a summary of your order.",
+      "orderNumber": "Order #{number}",
+      "itemDateLabel": "Date:",
+      "itemLocationLabel": "Location:",
+      "mapsLink": "View on Google Maps",
+      "addToCalendar": "Add to Google Calendar",
+      "seatsFor": "Seats booked for:",
+      "guestEmailsNotice": "Each attendee will receive their own confirmation email at the address provided.",
+      "qty": "{quantity} × {unitPrice}",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "tax": "Taxes",
+      "total": "Total",
+      "viewReceipt": "View receipt",
+      "contact": "Questions? Contact us at {email}.",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "enrollmentConfirmation": {
+      "subject": "{buyerName} booked a seat for you — {courseTitle}",
+      "heading": "Your seat has been booked!",
+      "preview": "{buyerName} booked a seat for you in {courseTitle}",
+      "bookedBy": "{buyerName} booked a seat for you in this class.",
+      "courseLabel": "Course:",
+      "dateLabel": "Date:",
+      "locationLabel": "Location:",
+      "mapsLink": "View on Google Maps",
+      "addToCalendar": "Add to Google Calendar",
+      "signInInfo": "To access your course account, you can sign in with this email address on the sign-in page.",
+      "contact": "Questions? Contact us at {email}.",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "oversellRefund": {
+      "subject": "Refund — order #{orderNumber}",
+      "heading": "We're sorry — your order has been refunded",
+      "preview": "Your order #{orderNumber} has been refunded",
+      "intro": "Unfortunately, the session you selected was full by the time your payment was processed.",
+      "seatsOne": "1 seat refunded",
+      "seatsMany": "{quantity} seats refunded",
+      "refundAmount": "Amount refunded: {amount}",
+      "timeline": "The refund will appear on your account within 5–10 business days.",
+      "contact": "Need help? Contact us at {email}.",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "refundIssued": {
+      "subject": "Refund processed — order #{orderNumber}",
+      "heading": "Your refund has been processed",
+      "preview": "Your refund for order #{orderNumber} has been processed",
+      "full": "A full refund for order #{orderNumber} has been issued.",
+      "partial": "A partial refund of {amount} for order #{orderNumber} has been issued.",
+      "timeline": "The refund will appear on your account within 5–10 business days.",
+      "contact": "Need help? Contact us at {email}.",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
     }
   },
   "storefront": {

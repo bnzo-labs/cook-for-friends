@@ -38,10 +38,21 @@ export function renderMagicLinkEmail(input: MagicLinkEmailInput) {
   return { subject: m.subject, text, html }
 }
 
-/** Default sender: plain FR/EN email through the Payload Resend adapter. */
+/** Default sender: React Email magic-link template via notifications module. */
 const resendSender: MagicLinkEmailSender = async (input) => {
-  const payload = await getPayload()
-  await payload.sendEmail({ to: input.to, ...renderMagicLinkEmail(input) })
+  const { sendEmail } = await import("@/modules/notifications")
+  const result = await sendEmail({
+    template: "magic-link",
+    to: input.to,
+    locale: input.locale,
+    data: { link: input.link, expiresInMinutes: input.expiresInMinutes },
+    idempotencyKey: `magic-link:${input.to}:${Date.now()}`,
+  })
+  if (!result.ok) {
+    // Fall back to plain payload.sendEmail so magic links always work
+    const payload = await getPayload()
+    await payload.sendEmail({ to: input.to, ...renderMagicLinkEmail(input) })
+  }
 }
 
 let sender: MagicLinkEmailSender = resendSender

@@ -28,6 +28,59 @@ Newest first. Each entry: what was done, what is blocked, next step.
 **Next step**
 - Erick pushes branch, confirms CI + Vercel. W2-10 (storefront-booking) can consume this after merge.
 
+## 2026-10-31 — W2-04 seat-holds-checkout — COMPLETE, pending CI (backend-engineer, Opus)
+
+**Done**
+- `src/lib/stripe.ts` (stripe 22.6.2, `2026-08-26.dahlia`, `maxNetworkRetries: 2`), `commerce/server/stripe-port.ts` (only Stripe seam; `setStripeForTests` test-only).
+- `commerce/server/{tx,availability,holds,checkout,validation,expire,http,payload}.ts`; `commerce/{sync,webhook,attendees}/index.ts` empty barrels (`syncJobTasks = []`, `commerceJobTasks = [...syncJobTasks]`); `commerce/index.ts` exports `getAvailableSeats`, `createCheckout`, `releaseCartHolds`, `expireStaleHolds`, types, route helpers.
+- Routes `POST /api/checkout` (Origin, 10/IP/h, `cff_cart` cookie, ModuleError → envelope, SOLD_OUT `details.available`), `POST /api/checkout/release`, `/api/cron/expire-holds` wired.
+- 12 `errors.*` keys FR/EN.
+- Allocation: READ COMMITTED tx, cart advisory lock → session `FOR UPDATE` → release cart holds → Σ-quantity count → one hold of N (all-or-nothing). Stripe after commit, key `hold-<id>`, failure → hold `released` + UPSTREAM.
+- Tests: 52 new unit (green locally), 41 new integration incl. R5 race + multi-seat race (skip locally, run in CI). Stripe test-mode smoke passed (`cs_test_b1JrSr3i…`, window 1860 s, expired).
+
+**Blocked / Erick must do**
+1. R5 race on the **pooled** (`-pooler`) URL: agent was denied creating a Neon branch. Run: throwaway branch from `dev` → `TEST_DATABASE_URL=<pooled url> pnpm -C apps/web vitest run src/modules/commerce` → record result in `tasks/W2-04-seat-holds-checkout.md`.
+2. Push/merge `w2-04-batch2b` → CI integration green → Vercel Ready → staging probes (`/api/cron/expire-holds` bearer 200, `POST /api/checkout` invalid → 400).
+
+**Notes for W2-07/W2-10**
+- Metadata keys `{ cartToken, holdId?, courseId, sessionId?, locale, quantity }` on session, PaymentIntent, invoice. Stripe `locale` sent as `fr-CA` / `en`.
+- VALIDATION envelope: `error.details.issues` (CONTRACT §2) + mirrored `error.issues` (identity parity). 429 code `RATE_LIMITED`.
+- SOLD_OUT rolls back: the cart's previous hold survives a failed re-checkout.
+
+**Next step**
+- Merge after CI → batch 2c (W2-07, W2-08, W2-09, W2-10).
+
+## 2026-10-31 — W2-05 notifications module — COMPLETE (backend-engineer)
+
+**Done**
+- 5 React Email templates (FR + EN each): `magic-link`, `order-confirmation`, `enrollment-confirmation`, `oversell-refund`, `refund-issued`. All copy under `notifications.*` in `messages/{fr,en}.json`. No hard-coded customer strings.
+- `buildIcs()` — RFC 5545 compliant: CRLF endings, `METHOD:PUBLISH`, `VTIMEZONE America/Toronto`, `DTSTART;TZID=`, `DTSTAMP` UTC Z, text escaping (backslash/semicolon/comma/newline), line folding at 75 octets (UTF-8-safe for French accents).
+- `sendEmail()` — render + send via Resend (or test transport). Wave-3 templates return `{ ok: false, error: { code: 'VALIDATION' } }`.
+- `enqueueEmail()` — queues `send-email` Payload job inside caller's transaction via `req: tx?.req`.
+- `send-email` Payload job task: retries 3, Zod input validation, ICS attachment building, idempotency key forwarded to Resend.
+- `notificationsJobTasks: TaskConfig[]` exported from `notifications/index.ts`.
+- Identity `ports.ts` default sender swapped to `sendEmail({ template: 'magic-link', ... })`.
+- Migration `20261031_220248_w2_jobs_send_email`: creates `enum_payload_jobs_task_slug` ('inline','send-email'), `enum_payload_jobs_log_task_slug`, `enum_payload_jobs_log_state`, `payload_jobs`, `payload_jobs_log` tables. Working `down()`. Applied to **Neon `dev`** (batch 5, 154ms).
+- `payload-types.ts` regenerated — `jobs.tasks['send-email']` now typed.
+- `lib/payload.ts` config import made lazy (dynamic import inside `getPayload`) — fixes import-time env validation failure in integration test files.
+- Tests: 30 unit passed (15 ICS rules, 10 send/render, 6 job handler); 1 integration file correctly skipped locally (requires `TEST_DATABASE_URL`; CI runs). TypeScript typecheck: 0 errors.
+
+**Blocked / Erick must do**
+1. **Staging migration:** run `pnpm -C apps/web payload migrate` in this worktree with `DATABASE_URL` pointing at Neon `staging`. Agent cannot materialize Neon credentials.
+2. **Integration tests:** set `TEST_DATABASE_URL` from a throwaway Neon branch that has batch 5 applied → `pnpm -C apps/web test src/modules/notifications/__tests__/enqueue.test.ts`.
+3. **Smoke test (optional):** add `W2_TEST_EMAIL=<resend-verified-address>` to `.env.local`, run `pnpm vitest run src/modules/notifications/__tests__/send.test.ts` with transport pointed at Resend (remove `setEmailTransportForTests` override).
+4. After staging migration: push branch `w2-05-batch2b` → CI green → Vercel Ready → merge to `main`.
+
+**Notes**
+- `order-confirmation` shows `quantity`, `attendees[]` (names + emails), Google Calendar link, location, totals. FR uses `fr-CA` formatting.
+- `enrollment-confirmation` contains no price/order number — guest-seat variant only.
+- `oversell-refund` and `refund-issued` handle cents → formatted currency display.
+- Migration chain: batch 4 (W2-02b `w2_multi_seat_course_status`) → batch 5 (W2-05 `w2_jobs_send_email`).
+- Resend message ID from smoke test: _(not run — W2_TEST_EMAIL absent)_.
+
+**Next step**
+- Erick applies staging migration (see above) → push `w2-05-batch2b` → CI green → merge.
+
 ---
 
 ## 2026-10-31 — W2-02b multi-seat schema — COMPLETE (backend-engineer)

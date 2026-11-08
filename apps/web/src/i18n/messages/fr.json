@@ -22,7 +22,19 @@
     "CONFLICT": "Une erreur de conflit est survenue.",
     "UPSTREAM": "Une erreur de service externe est survenue.",
     "MAGIC_LINK_INVALID": "Ce lien de connexion est invalide ou a expiré. Veuillez en demander un nouveau.",
-    "MAGIC_LINK_RATE_LIMITED": "Trop de demandes de connexion. Veuillez réessayer plus tard."
+    "MAGIC_LINK_RATE_LIMITED": "Trop de demandes de connexion. Veuillez réessayer plus tard.",
+    "CHECKOUT_RATE_LIMITED": "Trop de tentatives de paiement. Veuillez réessayer plus tard.",
+    "COURSE_NOT_PURCHASABLE": "Ce cours n'est pas offert à l'achat pour le moment.",
+    "SESSION_NOT_BOOKABLE": "Cette session ne peut plus être réservée.",
+    "SESSION_INVALID": "Veuillez choisir une session valide pour ce cours.",
+    "SESSION_REQUIRED": "Veuillez choisir une session.",
+    "SESSION_NOT_ALLOWED": "Les cours en ligne n'ont pas de session.",
+    "CART_SINGLE_LINE": "Votre panier ne peut contenir qu'un cours à la fois.",
+    "CART_TOKEN_INVALID": "Votre panier n'a pas pu être identifié. Veuillez recharger la page.",
+    "QUANTITY_OUT_OF_RANGE": "Veuillez choisir un nombre de places valide.",
+    "BUYER_EMAIL_REQUIRED": "Votre adresse courriel est requise pour réserver plus d'une place.",
+    "ATTENDEES_MISMATCH": "Veuillez saisir un nom et un courriel pour chaque place supplémentaire.",
+    "ATTENDEE_EMAIL_DUPLICATE": "Chaque participant doit avoir une adresse courriel différente (y compris la vôtre)."
   },
   "layout": {
     "skip_to_content": "Aller au contenu principal",
@@ -68,6 +80,76 @@
       "cta": "Se connecter",
       "expiry": "Ce lien expire dans {minutes} minutes et ne peut être utilisé qu'une seule fois.",
       "ignore": "Si vous n'avez pas demandé ce courriel, vous pouvez l'ignorer en toute sécurité."
+    }
+  },
+  "notifications": {
+    "magicLink": {
+      "subject": "Votre lien de connexion Cook for Friends",
+      "heading": "Connexion à votre compte",
+      "preview": "Connectez-vous à votre compte Cook for Friends",
+      "intro": "Cliquez sur le bouton ci-dessous pour vous connecter à votre compte Cook for Friends.",
+      "cta": "Se connecter",
+      "expiry": "Ce lien expire dans {minutes} minutes et ne peut être utilisé qu'une seule fois.",
+      "ignore": "Si vous n'avez pas demandé ce courriel, vous pouvez l'ignorer en toute sécurité."
+    },
+    "orderConfirmation": {
+      "subject": "Confirmation de commande #{orderNumber}",
+      "heading": "Merci pour votre commande !",
+      "preview": "Votre commande #{orderNumber} est confirmée",
+      "greeting": "Bonjour {name},",
+      "greetingAnon": "Bonjour,",
+      "intro": "Votre paiement a été reçu. Voici le récapitulatif de votre commande.",
+      "orderNumber": "Commande #{number}",
+      "itemDateLabel": "Date :",
+      "itemLocationLabel": "Lieu :",
+      "mapsLink": "Voir sur Google Maps",
+      "addToCalendar": "Ajouter à Google Agenda",
+      "seatsFor": "Places réservées pour :",
+      "guestEmailsNotice": "Chaque participant·e recevra un courriel de confirmation à l'adresse indiquée.",
+      "qty": "{quantity} × {unitPrice}",
+      "subtotal": "Sous-total",
+      "discount": "Rabais",
+      "tax": "Taxes",
+      "total": "Total",
+      "viewReceipt": "Voir le reçu",
+      "contact": "Questions ? Contactez-nous à {email}.",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "enrollmentConfirmation": {
+      "subject": "{buyerName} vous a réservé une place — {courseTitle}",
+      "heading": "Votre place a été réservée !",
+      "preview": "{buyerName} vous a réservé une place pour {courseTitle}",
+      "bookedBy": "{buyerName} vous a réservé une place pour ce cours.",
+      "courseLabel": "Cours :",
+      "dateLabel": "Date :",
+      "locationLabel": "Lieu :",
+      "mapsLink": "Voir sur Google Maps",
+      "addToCalendar": "Ajouter à Google Agenda",
+      "signInInfo": "Pour accéder à votre espace cours, vous pourrez vous connecter avec cette adresse courriel via la page de connexion.",
+      "contact": "Questions ? Contactez-nous à {email}.",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "oversellRefund": {
+      "subject": "Remboursement — commande #{orderNumber}",
+      "heading": "Nous sommes désolés — remboursement de votre commande",
+      "preview": "Votre commande #{orderNumber} a été remboursée",
+      "intro": "Malheureusement, la session que vous avez choisie était complète au moment du traitement de votre paiement.",
+      "seatsOne": "1 place remboursée",
+      "seatsMany": "{quantity} places remboursées",
+      "refundAmount": "Montant remboursé : {amount}",
+      "timeline": "Le remboursement apparaîtra sur votre compte dans 5 à 10 jours ouvrables.",
+      "contact": "Besoin d'aide ? Contactez-nous à {email}.",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "refundIssued": {
+      "subject": "Remboursement traité — commande #{orderNumber}",
+      "heading": "Votre remboursement a été traité",
+      "preview": "Votre remboursement pour la commande #{orderNumber} a été traité",
+      "full": "Un remboursement complet pour votre commande #{orderNumber} a été émis.",
+      "partial": "Un remboursement de {amount} pour votre commande #{orderNumber} a été émis.",
+      "timeline": "Le remboursement apparaîtra sur votre compte dans 5 à 10 jours ouvrables.",
+      "contact": "Besoin d'aide ? Contactez-nous à {email}.",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
     }
   },
   "storefront": {
