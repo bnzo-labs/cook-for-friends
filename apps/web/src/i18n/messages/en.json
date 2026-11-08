@@ -205,5 +205,10 @@
     "pages": {
       "not_found": "Page not found."
     }
+  },
+  "commerce": {
+    "webhook": {
+      "ics_description": "Your seat at the Cook for Friends class: {course}. See you in the kitchen!"
+    }
   }
 }

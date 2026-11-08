@@ -205,5 +205,10 @@
     "pages": {
       "not_found": "Page introuvable."
     }
+  },
+  "commerce": {
+    "webhook": {
+      "ics_description": "Votre place au cours Cook for Friends : {course}. À bientôt en cuisine !"
+    }
   }
 }
