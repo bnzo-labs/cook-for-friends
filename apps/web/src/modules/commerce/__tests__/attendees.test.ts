@@ -144,8 +144,9 @@ describe.skipIf(!hasTestDb)("listAttendees + CSV route (integration)", () => {
       expect(res.status).toBe(200)
       expect(res.headers.get("content-type")).toBe("text/csv; charset=utf-8")
       expect(res.headers.get("content-disposition")).toMatch(/^attachment; filename="participants-.+-\d{4}-\d{2}-\d{2}\.csv"$/)
-      const body = await res.text()
-      expect(body.charCodeAt(0)).toBe(0xfeff)
+      const bytes = new Uint8Array(await res.arrayBuffer())
+      expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]) // UTF-8 BOM (res.text() would strip it)
+      const body = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes)
       expect(body).toContain("Nom;Prénom")
       expect(body).toContain(c.email)
 
