@@ -9,7 +9,8 @@ export interface CourseCardProps {
   locale: Locale
   formatLabel: { in_person: string; online: string }
   levelLabel: { beginner: string; intermediate: string; advanced: string }
-  nextSessionLabel: string
+  /** Callback: receives the already-formatted date string, returns the full label. */
+  formatNextSession: (formattedDate: string) => string
   taxesLabel: string
   availableInFrenchLabel: string
 }
@@ -43,7 +44,7 @@ export function CourseCard({
   locale,
   formatLabel,
   levelLabel,
-  nextSessionLabel,
+  formatNextSession,
   taxesLabel,
   availableInFrenchLabel,
 }: CourseCardProps) {
@@ -101,7 +102,7 @@ export function CourseCard({
           )}
 
           {/* Meta row */}
-          <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-subtle">
+          <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-muted">
             {course.level && (
               <span>{levelLabel[course.level]}</span>
             )}
@@ -114,11 +115,11 @@ export function CourseCard({
           <div className="flex items-end justify-between gap-2 border-t border-border pt-3">
             <div className="flex flex-col">
               <span className="font-semibold text-fg">{price}</span>
-              <span className="text-xs text-fg-subtle">{taxesLabel}</span>
+              <span className="text-xs text-fg-muted">{taxesLabel}</span>
             </div>
             {nextDate && (
               <span className="text-right text-xs text-fg-muted">
-                {nextSessionLabel.replace("{date}", nextDate)}
+                {formatNextSession(nextDate)}
               </span>
             )}
           </div>

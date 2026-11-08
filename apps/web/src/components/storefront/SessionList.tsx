@@ -82,7 +82,7 @@ export function SessionList({
                     {/* Date + time */}
                     <time
                       dateTime={session.startsAt}
-                      className="font-semibold capitalize text-fg"
+                      className="font-semibold text-fg"
                     >
                       {dateStr}
                     </time>

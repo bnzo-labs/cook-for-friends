@@ -157,7 +157,7 @@ export default async function CourseDetailPage({
               labels={{
                 upcomingSessions: tc("upcoming_sessions"),
                 noSessions: tc("no_sessions"),
-                upToSeats: tSession("up_to_seats"),
+                upToSeats: t("sessions.up_to_seats", { n: settings.maxSeatsPerPurchase }),
                 date: tSession("date"),
                 location: tSession("location"),
               }}

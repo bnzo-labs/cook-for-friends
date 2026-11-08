@@ -86,7 +86,7 @@ export default async function CoursesPage({
                     locale={locale as Locale}
                     formatLabel={formatLabel}
                     levelLabel={levelLabel}
-                    nextSessionLabel={t("next_session")}
+                    formatNextSession={(date) => t("next_session", { date })}
                     taxesLabel={t("taxes")}
                     availableInFrenchLabel={t("available_in_french")}
                   />
