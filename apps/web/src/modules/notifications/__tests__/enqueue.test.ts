@@ -29,18 +29,22 @@ describe.skipIf(!hasTestDb)("enqueueEmail — integration", () => {
 
   afterEach(() => setEmailTransportForTests(null))
 
-  it("commit: enqueue without tx → job row persists", async () => {
-    const key = `test-enqueue-commit-${uid()}`
-
-    // Count rows before via payload.find
-    const before = await payload.find({
+  /** Count payload-jobs rows whose input.idempotencyKey matches key. */
+  async function countJobRows(key: string): Promise<number> {
+    const result = await payload.find({
       collection: "payload-jobs",
       where: {},
       limit: 1000,
     })
-    const countBefore = before.docs.filter(
+    return result.docs.filter(
       (d) => (d.input as Record<string, unknown>)?.["idempotencyKey"] === key,
     ).length
+  }
+
+  it("commit: enqueue without tx → job row persists", async () => {
+    const key = `test-enqueue-commit-${uid()}`
+
+    const countBefore = await countJobRows(key)
 
     await enqueueEmail({
       template: "magic-link",
@@ -50,16 +54,7 @@ describe.skipIf(!hasTestDb)("enqueueEmail — integration", () => {
       idempotencyKey: key,
     })
 
-    const after = await payload.find({
-      collection: "payload-jobs",
-      where: {},
-      limit: 1000,
-    })
-    const countAfter = after.docs.filter(
-      (d) => (d.input as Record<string, unknown>)?.["idempotencyKey"] === key,
-    ).length
-
-    expect(countAfter).toBe(countBefore + 1)
+    expect(await countJobRows(key)).toBe(countBefore + 1)
   })
 
   it("no-tx call does not throw and completes successfully", async () => {
@@ -74,5 +69,50 @@ describe.skipIf(!hasTestDb)("enqueueEmail — integration", () => {
         idempotencyKey: key,
       }),
     ).resolves.toBeUndefined()
+  })
+
+  it("tx commit: enqueue inside tx → job row persists after commit", async () => {
+    const key = `test-tx-commit-${uid()}`
+    const to = `tx-commit-${uid()}@example.com`
+
+    const req = { payload } as unknown as import("payload").PayloadRequest
+    const { initTransaction, commitTransaction } = await import("payload")
+
+    await initTransaction(req)
+    await enqueueEmail({
+      template: "magic-link",
+      to,
+      locale: "en",
+      data: { link: "https://example.com/verify?token=txcommit", expiresInMinutes: 15 },
+      idempotencyKey: key,
+      tx: { req },
+    })
+    await commitTransaction(req)
+
+    expect(await countJobRows(key)).toBe(1)
+  })
+
+  it("tx rollback: enqueue inside tx, tx fails → no job row", async () => {
+    const key = `test-tx-rollback-${uid()}`
+    const to = `tx-rollback-${uid()}@example.com`
+
+    const req = { payload } as unknown as import("payload").PayloadRequest
+    const { initTransaction, killTransaction } = await import("payload")
+
+    await initTransaction(req)
+    try {
+      await enqueueEmail({
+        template: "magic-link",
+        to,
+        locale: "en",
+        data: { link: "https://example.com/verify?token=txrollback", expiresInMinutes: 15 },
+        idempotencyKey: key,
+        tx: { req },
+      })
+    } finally {
+      await killTransaction(req)
+    }
+
+    expect(await countJobRows(key)).toBe(0)
   })
 })
