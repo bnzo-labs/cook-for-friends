@@ -157,6 +157,38 @@ test.describe("W2-06 overflow", () => {
   }
 })
 
+/**
+ * Raw-key guard: none of the pages should render a literal storefront.* message key.
+ * A raw key (e.g. "storefront.courses.next_session") appears when next-intl throws
+ * a FORMATTING_ERROR and falls back to the key string.
+ */
+test.describe("W2-06 no raw i18n keys", () => {
+  const RAW_KEY_RE = /\bstorefront\.[a-z_]+\.[a-z_]+/
+
+  const CHECK_PAGES = [
+    "/fr",
+    "/en",
+    "/fr/cours",
+    "/en/courses",
+    "/fr/cours/macarons-francais",
+    "/en/courses/french-macarons",
+    "/fr/produits",
+    "/en/products",
+    "/fr/produits/coffret-biscuits",
+    "/en/products/cookie-box",
+  ]
+
+  for (const pagePath of CHECK_PAGES) {
+    test(`no raw keys on ${pagePath}`, async ({ page }) => {
+      const res = await page.goto(pagePath)
+      // 404 pages are acceptable (seed might not have all slugs) — skip them
+      if (res?.status() === 404) return
+      const bodyText = await page.locator("body").innerText()
+      expect(RAW_KEY_RE.test(bodyText), `Raw i18n key found on ${pagePath}:\n${bodyText.match(new RegExp(".{0,120}" + RAW_KEY_RE.source + ".{0,120}", "g"))?.join("\n") ?? ""}`).toBe(false)
+    })
+  }
+})
+
 test.describe("W2-06 screenshots", () => {
   test("capture screenshots", async ({ page }) => {
     test.skip(!process.env.W206_SCREENSHOTS, "opt-in: set W206_SCREENSHOTS=1")
