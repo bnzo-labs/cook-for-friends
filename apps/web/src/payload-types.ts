@@ -144,6 +144,8 @@ export interface Config {
   jobs: {
     tasks: {
       'send-email': TaskSendEmail;
+      'stripe-sync-course': TaskStripeSyncCourse;
+      'stripe-sync-discount': TaskStripeSyncDiscount;
       inline: {
         input: unknown;
         output: unknown;
@@ -828,7 +830,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'send-email';
+        taskSlug: 'inline' | 'send-email' | 'stripe-sync-course' | 'stripe-sync-discount';
         taskID: string;
         input?:
           | {
@@ -861,7 +863,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'send-email') | null;
+  taskSlug?: ('inline' | 'send-email' | 'stripe-sync-course' | 'stripe-sync-discount') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1677,6 +1679,26 @@ export interface TaskSendEmail {
       | number
       | boolean
       | null;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskStripe-sync-course".
+ */
+export interface TaskStripeSyncCourse {
+  input: {
+    courseId: number;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskStripe-sync-discount".
+ */
+export interface TaskStripeSyncDiscount {
+  input: {
+    discountCodeId: number;
   };
   output?: unknown;
 }

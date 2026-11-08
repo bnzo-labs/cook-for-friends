@@ -1,8 +1,9 @@
-import type { CollectionConfig, Validate } from "payload"
+import type { CollectionAfterChangeHook, CollectionConfig, Validate } from "payload"
 
 import { isAdmin, isStaffOrAdmin } from "@/modules/identity"
 import { salesGroup } from "../labels"
 import { validateInteger } from "../money"
+import { discountNeedsSync } from "../sync/mapping"
 
 /**
  * `discount-codes` — synced one-way to Stripe Coupons/Promotion Codes (W2).
@@ -20,6 +21,15 @@ export function validateDiscountValue(
   return true
 }
 
+/** Queue `stripe-sync-discount` (W2-08) when Stripe-relevant fields change. */
+export const enqueueDiscountSync: CollectionAfterChangeHook = async ({ doc, previousDoc, req, context, operation }) => {
+  if (context?.skipStripeSync) return doc
+  if (!discountNeedsSync(operation === "create" ? null : previousDoc, doc)) return doc
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (req.payload.jobs.queue as any)({ task: "stripe-sync-discount", input: { discountCodeId: doc.id }, req })
+  return doc
+}
+
 export const DiscountCodes: CollectionConfig = {
   slug: "discount-codes",
   labels: {
@@ -31,6 +41,7 @@ export const DiscountCodes: CollectionConfig = {
     defaultColumns: ["code", "kind", "value", "active", "expiresAt"],
     group: salesGroup,
   },
+  hooks: { afterChange: [enqueueDiscountSync] },
   access: {
     read: isStaffOrAdmin,
     create: isStaffOrAdmin,

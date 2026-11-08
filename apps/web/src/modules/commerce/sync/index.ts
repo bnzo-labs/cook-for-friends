@@ -1,4 +1,9 @@
 import type { TaskConfig } from "payload"
 
-/** Stripe catalog sync (W2-08 owns this folder). Empty until W2-08. */
-export const syncJobTasks: TaskConfig[] = []
+import { stripeSyncCourseTask, stripeSyncDiscountTask } from "./jobs"
+
+/** Stripe catalog sync job tasks (W2-08). Composed into `commerceJobTasks`. */
+export const syncJobTasks: TaskConfig[] = [stripeSyncCourseTask, stripeSyncDiscountTask] as TaskConfig[]
+
+export { syncCourseToStripe } from "./course"
+export { syncDiscountToStripe } from "./discount"
