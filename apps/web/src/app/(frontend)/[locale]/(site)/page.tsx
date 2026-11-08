@@ -1,8 +1,9 @@
-import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { getPayload } from "@/lib/payload"
 import { assertLocale } from "@/i18n/locale"
 import { BlockRenderer } from "@/components/storefront/blocks/BlockRenderer"
+import { FallbackHomePage } from "@/components/storefront/FallbackHomePage"
+import { pickHomePage } from "@/lib/storefront/pick-home-page"
 import type { Metadata } from "next"
 import type { Page } from "@/payload-types"
 
@@ -67,10 +68,12 @@ export default async function HomePage({
     overrideAccess: true,
   })
 
-  const page = res.docs[0] as Page | undefined
+  const page = pickHomePage(res.docs as Page[])
 
   if (!page) {
-    notFound()
+    // CMS home page doc is absent (e.g. staging with no seed content).
+    // Render a minimal fallback so the route returns 200 instead of 404.
+    return <FallbackHomePage locale={locale} />
   }
 
   const blocks = page.layout ?? []
