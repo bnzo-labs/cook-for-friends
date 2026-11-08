@@ -189,6 +189,49 @@ test.describe("W2-06 no raw i18n keys", () => {
   }
 })
 
+/**
+ * Bogus-locale guard: paths where the first segment is not a valid locale
+ * (e.g. dotted asset-like names that bypass middleware) must return 404 and
+ * must NOT return 500 (which would indicate a Postgres enum error).
+ *
+ * Before the assertLocale fix these paths caused:
+ *   "invalid input value for enum _locales: favicon.ico"
+ */
+test.describe("W2-06 bogus locale → 404", () => {
+  const BOGUS_PATHS = [
+    "/favicon.ico",
+    "/robots.txt",
+    "/x.y/courses",
+    "/x.y/products",
+    "/x.y/some-page",
+  ]
+
+  for (const bogusPath of BOGUS_PATHS) {
+    test(`${bogusPath} → not 500`, async ({ page }) => {
+      const res = await page.goto(bogusPath)
+      // The response must not be a 5xx server error.
+      // 404 is the expected outcome; 200 is acceptable for static assets
+      // served by Next.js (e.g. favicon.ico from app/icon.svg).
+      expect(res?.status() ?? 0).toBeLessThan(500)
+    })
+  }
+
+  // Specifically verify the x.y/* paths that reach [locale] with a bogus
+  // locale value return 404 (not 200 and definitely not 500).
+  const BOGUS_LOCALE_PATHS = [
+    "/x.y/courses",
+    "/x.y/products",
+    "/x.y/some-page",
+  ]
+
+  for (const bogusPath of BOGUS_LOCALE_PATHS) {
+    test(`${bogusPath} → 404`, async ({ page }) => {
+      const res = await page.goto(bogusPath)
+      expect(res?.status()).toBe(404)
+    })
+  }
+})
+
 test.describe("W2-06 screenshots", () => {
   test("capture screenshots", async ({ page }) => {
     test.skip(!process.env.W206_SCREENSHOTS, "opt-in: set W206_SCREENSHOTS=1")
