@@ -1,9 +1,37 @@
-import type { CollectionConfig } from "payload"
+import type { CollectionAfterChangeHook, CollectionConfig } from "payload"
 
 import { isStaffOrAdmin, publishedOrStaff } from "@/modules/identity"
 import { catalogGroup } from "../fields/labels"
 import { moneyField, validateInteger } from "../fields/money"
 import { seoField } from "../fields/seo"
+
+/** Fields whose change on a published course must reach Stripe. */
+const SYNC_FIELDS = ["status", "price", "title", "summary", "slug"] as const
+
+/**
+ * Enqueue `stripe-sync-course` (W2-08) when the *published* version changes
+ * price/title/status. Hook exception: catalog must not import commerce, so the
+ * task is queued by slug. `req` joins the save transaction; the pending marker
+ * is written through the DB adapter (no hooks, so no loop) in the same one.
+ */
+export const enqueueStripeSync: CollectionAfterChangeHook = async ({ doc, previousDoc, req, context }) => {
+  if (context?.skipStripeSync) return doc
+  if (doc._status !== "published") return doc // draft-only saves never sync
+  const published = previousDoc?._status === "published"
+  if (published && !SYNC_FIELDS.some((k) => previousDoc?.[k] !== doc[k])) return doc
+
+  await req.payload.db.updateOne({
+    collection: "courses",
+    id: doc.id,
+    data: { stripeSyncStatus: "pending" },
+    returning: false,
+    req,
+  })
+  // jobs.tasks types are generated from the commerce tasks; slug string keeps catalog decoupled.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (req.payload.jobs.queue as any)({ task: "stripe-sync-course", input: { courseId: doc.id }, req })
+  return doc
+}
 
 /**
  * `courses` — CONTRACT §3.1. Drafts enabled. Stripe fields are written only by
@@ -21,6 +49,7 @@ export const Courses: CollectionConfig = {
     group: catalogGroup,
   },
   versions: { drafts: true },
+  hooks: { afterChange: [enqueueStripeSync] },
   access: {
     read: publishedOrStaff({ status: { equals: "published" } }),
     create: isStaffOrAdmin,

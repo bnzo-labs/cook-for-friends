@@ -4,6 +4,7 @@ import * as migration_20261017_183746_0002_auth_rate_limits from './20261017_183
 import * as migration_20261018_114002_sessions_version from './20261018_114002_sessions_version';
 import * as migration_20261020_004708_w2_multi_seat_course_status from './20261020_004708_w2_multi_seat_course_status';
 import * as migration_20261031_220248_w2_jobs_send_email from './20261031_220248_w2_jobs_send_email';
+import * as migration_20261108_171630_w2_jobs_stripe_sync from './20261108_171630_w2_jobs_stripe_sync';
 
 export const migrations = [
   {
@@ -34,6 +35,11 @@ export const migrations = [
   {
     up: migration_20261031_220248_w2_jobs_send_email.up,
     down: migration_20261031_220248_w2_jobs_send_email.down,
-    name: '20261031_220248_w2_jobs_send_email'
+    name: '20261031_220248_w2_jobs_send_email',
+  },
+  {
+    up: migration_20261108_171630_w2_jobs_stripe_sync.up,
+    down: migration_20261108_171630_w2_jobs_stripe_sync.down,
+    name: '20261108_171630_w2_jobs_stripe_sync'
   },
 ];
