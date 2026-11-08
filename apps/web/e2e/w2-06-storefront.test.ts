@@ -14,7 +14,8 @@ import path from "node:path"
  */
 
 const LOCALES = ["fr", "en"] as const
-const WIDTHS = [375, 768, 1440] as const
+/** Match W1-04 convention: 320 / 768 / 1024 / 1440 */
+const WIDTHS = [320, 768, 1024, 1440] as const
 const SHOT_DIR = path.join(process.cwd(), "e2e", "__screenshots__", "w2-06")
 
 /** URL pairs keyed by internal name: [fr-path, en-path] */
@@ -235,14 +236,20 @@ test.describe("W2-06 bogus locale → 404", () => {
 test.describe("W2-06 screenshots", () => {
   test("capture screenshots", async ({ page }) => {
     test.skip(!process.env.W206_SCREENSHOTS, "opt-in: set W206_SCREENSHOTS=1")
+    // 10 pages × 4 widths — allow generous budget for cold Next.js renders
+    test.setTimeout(180_000)
 
     const shots = [
       { locale: "fr", path: "/fr", name: "home" },
       { locale: "en", path: "/en", name: "home" },
       { locale: "fr", path: "/fr/cours", name: "courses" },
       { locale: "en", path: "/en/courses", name: "courses" },
+      { locale: "fr", path: "/fr/cours/macarons-francais", name: "course-detail" },
+      { locale: "en", path: "/en/courses/french-macarons", name: "course-detail" },
       { locale: "fr", path: "/fr/produits", name: "products" },
       { locale: "en", path: "/en/products", name: "products" },
+      { locale: "fr", path: "/fr/produits/coffret-biscuits", name: "product-detail" },
+      { locale: "en", path: "/en/products/cookie-box", name: "product-detail" },
     ]
 
     for (const shot of shots) {
