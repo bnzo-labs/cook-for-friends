@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation"
-import { hasLocale } from "next-intl"
 import { getPayload } from "@/lib/payload"
-import { routing } from "@/i18n/routing"
+import { assertLocale } from "@/i18n/locale"
 import { BlockRenderer } from "@/components/storefront/blocks/BlockRenderer"
 import type { Metadata } from "next"
 import type { Page } from "@/payload-types"
@@ -13,8 +12,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string[] }>
 }): Promise<Metadata> {
-  const { locale, slug } = await params
-  if (!hasLocale(routing.locales, locale)) return {}
+  const { locale: rawLocale, slug } = await params
+  const locale = assertLocale(rawLocale)
   const pageSlug = slug.join("/")
   const payload = await getPayload()
 
@@ -23,7 +22,7 @@ export async function generateMetadata({
     where: {
       and: [{ _status: { equals: "published" } }, { slug: { equals: pageSlug } }],
     },
-    locale: locale as "fr" | "en",
+    locale,
     fallbackLocale: "fr",
     depth: 0,
     limit: 1,
@@ -46,8 +45,8 @@ export default async function PayloadPage({
 }: {
   params: Promise<{ locale: string; slug: string[] }>
 }) {
-  const { locale, slug } = await params
-  if (!hasLocale(routing.locales, locale)) notFound()
+  const { locale: rawLocale, slug } = await params
+  const locale = assertLocale(rawLocale)
   const pageSlug = slug.join("/")
   const payload = await getPayload()
 
@@ -56,7 +55,7 @@ export default async function PayloadPage({
     where: {
       and: [{ _status: { equals: "published" } }, { slug: { equals: pageSlug } }],
     },
-    locale: locale as "fr" | "en",
+    locale,
     fallbackLocale: "fr",
     depth: 2,
     limit: 1,

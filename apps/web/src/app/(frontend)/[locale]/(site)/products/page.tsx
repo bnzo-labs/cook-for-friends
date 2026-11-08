@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server"
-import { notFound } from "next/navigation"
 import { getPayload } from "@/lib/payload"
+import { assertLocale } from "@/i18n/locale"
 import { ProductCard, type ProductCardData } from "@/components/storefront/ProductCard"
 import { Section, Container } from "@/components/layout"
 import type { Metadata } from "next"
@@ -13,7 +13,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
-  const { locale } = await params
+  const { locale: rawLocale } = await params
+  const locale = assertLocale(rawLocale)
   const t = await getTranslations({ locale, namespace: "storefront.products" })
   return { title: t("meta_title"), description: t("meta_description") }
 }
@@ -41,7 +42,8 @@ export default async function ProductsPage({
 }: {
   params: Promise<{ locale: string }>
 }) {
-  const { locale } = await params
+  const { locale: rawLocale } = await params
+  const locale = assertLocale(rawLocale)
 
   const [payload, t] = await Promise.all([
     getPayload(),
@@ -51,7 +53,7 @@ export default async function ProductsPage({
   const res = await payload.find({
     collection: "products",
     where: { status: { equals: "published" } },
-    locale: locale as "fr" | "en",
+    locale,
     fallbackLocale: "fr",
     depth: 1,
     limit: 100,

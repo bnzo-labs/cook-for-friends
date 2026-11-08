@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { getTranslations } from "next-intl/server"
 import { getPayload } from "@/lib/payload"
+import { assertLocale } from "@/i18n/locale"
 import { BlockRenderer } from "@/components/storefront/blocks/BlockRenderer"
 import type { Metadata } from "next"
 import type { Page } from "@/payload-types"
@@ -15,7 +16,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
-  const { locale } = await params
+  const { locale: rawLocale } = await params
+  const locale = assertLocale(rawLocale)
   const payload = await getPayload()
   const slug = HOME_SLUG[locale] ?? "home"
 
@@ -24,7 +26,7 @@ export async function generateMetadata({
     where: {
       and: [{ _status: { equals: "published" } }, { slug: { equals: slug } }],
     },
-    locale: locale as "fr" | "en",
+    locale,
     fallbackLocale: "fr",
     depth: 0,
     limit: 1,
@@ -47,7 +49,8 @@ export default async function HomePage({
 }: {
   params: Promise<{ locale: string }>
 }) {
-  const { locale } = await params
+  const { locale: rawLocale } = await params
+  const locale = assertLocale(rawLocale)
   const payload = await getPayload()
   const slug = HOME_SLUG[locale] ?? "home"
 
@@ -56,7 +59,7 @@ export default async function HomePage({
     where: {
       and: [{ _status: { equals: "published" } }, { slug: { equals: slug } }],
     },
-    locale: locale as "fr" | "en",
+    locale,
     fallbackLocale: "fr",
     depth: 2,
     limit: 1,

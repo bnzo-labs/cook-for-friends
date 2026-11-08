@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import { getTranslations } from "next-intl/server"
 import { getPayload } from "@/lib/payload"
+import { assertLocale } from "@/i18n/locale"
 import { Button } from "@/components/ui/button"
 import { Section, Container } from "@/components/layout"
 import type { Metadata } from "next"
@@ -14,7 +15,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string }>
 }): Promise<Metadata> {
-  const { locale, slug } = await params
+  const { locale: rawLocale, slug } = await params
+  const locale = assertLocale(rawLocale)
   const payload = await getPayload()
 
   const res = await payload.find({
@@ -22,7 +24,7 @@ export async function generateMetadata({
     where: {
       and: [{ status: { equals: "published" } }, { slug: { equals: slug } }],
     },
-    locale: locale as "fr" | "en",
+    locale,
     fallbackLocale: "fr",
     depth: 0,
     limit: 1,
@@ -41,7 +43,8 @@ export default async function ProductDetailPage({
 }: {
   params: Promise<{ locale: string; slug: string }>
 }) {
-  const { locale, slug } = await params
+  const { locale: rawLocale, slug } = await params
+  const locale = assertLocale(rawLocale)
 
   const [payload, t] = await Promise.all([
     getPayload(),
@@ -53,7 +56,7 @@ export default async function ProductDetailPage({
     where: {
       and: [{ status: { equals: "published" } }, { slug: { equals: slug } }],
     },
-    locale: locale as "fr" | "en",
+    locale,
     fallbackLocale: "fr",
     depth: 1,
     limit: 1,

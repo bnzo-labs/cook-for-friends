@@ -1,9 +1,10 @@
 import { getTranslations } from "next-intl/server"
 import { listPublishedCourses } from "@/modules/catalog"
+import { assertLocale } from "@/i18n/locale"
 import { CourseCard } from "@/components/storefront/CourseCard"
 import { CourseFormatFilter } from "@/components/storefront/CourseFormatFilter"
 import { Section, Container } from "@/components/layout"
-import type { CourseFormat, Locale } from "@/modules/_shared"
+import type { CourseFormat } from "@/modules/_shared"
 import type { Metadata } from "next"
 
 export const revalidate = 300
@@ -13,7 +14,8 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string }>
 }): Promise<Metadata> {
-  const { locale } = await params
+  const { locale: rawLocale } = await params
+  const locale = assertLocale(rawLocale)
   const t = await getTranslations({ locale, namespace: "storefront.courses" })
   return { title: t("meta_title"), description: t("meta_description") }
 }
@@ -29,13 +31,14 @@ export default async function CoursesPage({
   params: Promise<{ locale: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { locale } = await params
+  const { locale: rawLocale } = await params
+  const locale = assertLocale(rawLocale)
   const sp = await searchParams
   const rawFormat = Array.isArray(sp.format) ? sp.format[0] : sp.format
   const format = isValidFormat(rawFormat) ? rawFormat : undefined
 
   const [courses, t] = await Promise.all([
-    listPublishedCourses(locale as Locale, format ? { format } : undefined),
+    listPublishedCourses(locale, format ? { format } : undefined),
     getTranslations({ locale, namespace: "storefront.courses" }),
   ])
 
@@ -83,7 +86,7 @@ export default async function CoursesPage({
                 <li key={String(course.id)}>
                   <CourseCard
                     course={course}
-                    locale={locale as Locale}
+                    locale={locale}
                     formatLabel={formatLabel}
                     levelLabel={levelLabel}
                     formatNextSession={(date) => t("next_session", { date })}

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import { getTranslations } from "next-intl/server"
 import { getPublishedCourse, getSiteSettings } from "@/modules/catalog"
+import { assertLocale } from "@/i18n/locale"
 import { LexicalRenderer } from "@/components/storefront/lexical/LexicalRenderer"
 import { SessionList } from "@/components/storefront/SessionList"
 import { Badge } from "@/components/ui/badge"
@@ -16,8 +17,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string }>
 }): Promise<Metadata> {
-  const { locale, slug } = await params
-  const course = await getPublishedCourse(slug, locale as Locale)
+  const { locale: rawLocale, slug } = await params
+  const locale = assertLocale(rawLocale)
+  const course = await getPublishedCourse(slug, locale)
   if (!course) return {}
   return {
     title: course.seo.title ?? course.title,
@@ -39,10 +41,11 @@ export default async function CourseDetailPage({
 }: {
   params: Promise<{ locale: string; slug: string }>
 }) {
-  const { locale, slug } = await params
+  const { locale: rawLocale, slug } = await params
+  const locale = assertLocale(rawLocale)
 
   const [course, settings, t] = await Promise.all([
-    getPublishedCourse(slug, locale as Locale),
+    getPublishedCourse(slug, locale),
     getSiteSettings(),
     getTranslations({ locale, namespace: "storefront" }),
   ])
@@ -61,7 +64,7 @@ export default async function CourseDetailPage({
 
   const tSession = (key: string) => t(`sessions.${key}`)
 
-  const price = formatPrice(course.price.amount, locale as Locale)
+  const price = formatPrice(course.price.amount, locale)
   const isInPerson = course.format === "in_person"
 
   return (
@@ -152,7 +155,7 @@ export default async function CourseDetailPage({
           {isInPerson ? (
             <SessionList
               sessions={course.upcomingSessions}
-              locale={locale as Locale}
+              locale={locale}
               maxSeatsPerPurchase={settings.maxSeatsPerPurchase}
               labels={{
                 upcomingSessions: tc("upcoming_sessions"),
