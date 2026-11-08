@@ -142,5 +142,11 @@ export const Sessions: CollectionConfig = {
       ],
     },
     { name: "notes", type: "textarea", localized: true, label: { fr: "Notes", en: "Notes" } },
+    {
+      // UI-only (no DB column). Attendee list + CSV export, rendered by W2-09.
+      name: "participants",
+      type: "ui",
+      admin: { components: { Field: "/admin/SessionAttendees#SessionAttendees" } },
+    },
   ],
 }

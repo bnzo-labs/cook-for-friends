@@ -22,6 +22,7 @@ import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997e
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { MoneyCell as MoneyCell_7e7791bd6a38f6718a1893f0b4210783 } from '../../../modules/catalog/admin/MoneyCell'
+import { SessionAttendees as SessionAttendees_317044b54943ea577258bad2d62c8439 } from '../../../admin/SessionAttendees'
 import { MoneyCell as MoneyCell_ee21e9d4bfefb906b596d1bda93f9e04 } from '../../../modules/commerce/admin/MoneyCell'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
@@ -52,6 +53,7 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "/modules/catalog/admin/MoneyCell#MoneyCell": MoneyCell_7e7791bd6a38f6718a1893f0b4210783,
+  "/admin/SessionAttendees#SessionAttendees": SessionAttendees_317044b54943ea577258bad2d62c8439,
   "/modules/commerce/admin/MoneyCell#MoneyCell": MoneyCell_ee21e9d4bfefb906b596d1bda93f9e04,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24

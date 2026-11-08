@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-09
-status: pending
+status: in-review
 wave: 2
 module: commerce (attendees) + admin-ext
 agent: backend-engineer
@@ -67,3 +67,9 @@ All criteria ticked, CI green, Vercel deploy Ready, SESSION entry added, `status
 
 ## Communication
 Caveman. English only.
+
+## Implementation notes (W2-09)
+- Done: listAttendees/getSeatSummary/CSV/route/admin panel/importMap/tests (unit run locally; integration + CSV route auth matrix ran only if CI has TEST_DATABASE_URL).
+- Not verified locally: no throwaway Neon branch (creation denied by sandbox), so `/admin` 200 with panel, Playwright e2e (env-gated: E2E_STAFF_EMAIL/PASSWORD/SESSION_ID) and staging probes pending.
+- `AttendeeRow` defined in `commerce/attendees/types.ts` (not in commerce/types.ts).
+- Name split: attendeeName split at first whitespace.
