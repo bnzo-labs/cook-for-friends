@@ -22,6 +22,7 @@ const entry = (over: Partial<AttendeeEntry["row"]> = {}, seatCount = 1): Attende
     enrollmentStatus: "confirmed",
     attendance: "unknown",
     paidAt: "2026-11-01T00:00:00.000Z",
+    locale: "fr",
     ...over,
   },
 })
