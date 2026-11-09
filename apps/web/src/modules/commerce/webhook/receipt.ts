@@ -17,8 +17,8 @@ async function viewer(headers: Headers): Promise<{ customerId: number | null; st
 
 /**
  * `GET /api/orders/:id/receipt` (CONTRACT §5.1): owner customer or staff →
- * Stripe invoice PDF URL. Anonymous → NOT_FOUND (no existence leak); other
- * customer → FORBIDDEN; no order / no invoice yet → NOT_FOUND.
+ * Stripe invoice PDF URL. Anonymous, other customer (W2-11 L-2), no order or
+ * no invoice yet → NOT_FOUND: one answer, so order ids are not an existence oracle.
  */
 export async function getOrderReceiptUrl(rawId: string, headers: Headers): Promise<Result<{ url: string }>> {
   if (!/^\d{1,12}$/.test(rawId)) return notFound()
@@ -27,7 +27,7 @@ export async function getOrderReceiptUrl(rawId: string, headers: Headers): Promi
 
   const order = await findOrderById(await getPayload(), Number(rawId))
   if (!order) return notFound()
-  if (!who.staff && relId(order.customer) !== who.customerId) return { ok: false, error: { code: "FORBIDDEN" } }
+  if (!who.staff && relId(order.customer) !== who.customerId) return notFound()
   if (!order.invoicePdfUrl) return notFound()
   return { ok: true, data: { url: order.invoicePdfUrl } }
 }

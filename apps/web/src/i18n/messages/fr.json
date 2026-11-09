@@ -113,7 +113,9 @@
       "total": "Total",
       "viewReceipt": "Voir le reçu",
       "contact": "Questions ? Contactez-nous à {email}.",
-      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal",
+      "accountIntro": "Accédez à votre compte pour consulter vos cours, vos reçus et plus encore.",
+      "accountCta": "Accéder à mon compte"
     },
     "enrollmentConfirmation": {
       "subject": "{buyerName} vous a réservé une place — {courseTitle}",
@@ -127,7 +129,9 @@
       "addToCalendar": "Ajouter à Google Agenda",
       "signInInfo": "Pour accéder à votre espace cours, vous pourrez vous connecter avec cette adresse courriel via la page de connexion.",
       "contact": "Questions ? Contactez-nous à {email}.",
-      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal",
+      "accountIntro": "Accédez à votre compte pour consulter vos cours, vos reçus et plus encore.",
+      "accountCta": "Accéder à mon compte"
     },
     "oversellRefund": {
       "subject": "Remboursement — commande #{orderNumber}",
@@ -149,6 +153,74 @@
       "partial": "Un remboursement de {amount} pour votre commande #{orderNumber} a été émis.",
       "timeline": "Le remboursement apparaîtra sur votre compte dans 5 à 10 jours ouvrables.",
       "contact": "Besoin d'aide ? Contactez-nous à {email}.",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "reminder": {
+      "subject": "Rappel : {courseTitle} commence dans {hoursBefore, plural, one {# heure} other {# heures}}",
+      "preview": "Votre cours commence dans {hoursBefore, plural, one {# heure} other {# heures}}",
+      "heading": "À bientôt !",
+      "greeting": "Bonjour {name},",
+      "greetingAnon": "Bonjour,",
+      "intro": "Votre cours {courseTitle} commence dans {hoursBefore, plural, one {# heure} other {# heures}}.",
+      "dateLabel": "Date :",
+      "locationLabel": "Lieu :",
+      "mapsLink": "Voir sur Google Maps",
+      "addToCalendar": "Ajouter à Google Agenda",
+      "accountIntro": "Accédez à votre compte pour consulter vos cours et les détails.",
+      "accountCta": "Accéder à mon compte",
+      "contact": "Questions ? Contactez-nous à {email}.",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "waitlistSeatAvailable": {
+      "subject": "Une place s’est libérée — {courseTitle}",
+      "preview": "Une place est disponible pour {courseTitle}",
+      "heading": "Une place vient de se libérer !",
+      "intro": "Bonne nouvelle : une place est maintenant disponible pour {courseTitle}, que vous attendiez.",
+      "dateLabel": "Date :",
+      "locationLabel": "Lieu :",
+      "mapsLink": "Voir sur Google Maps",
+      "firstToPay": "Les places ne sont pas réservées : la première personne qui complète son paiement obtient la place.",
+      "cta": "Réserver ma place",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "cancellationConfirmation": {
+      "subject": "Place annulée — {courseTitle}",
+      "preview": "Votre annulation pour {courseTitle} est confirmée",
+      "heading": "Annulation confirmée",
+      "buyerIntro": "La place de {attendeeName} pour {courseTitle} le {date} a été annulée.",
+      "outcomeRefund": "Un remboursement de {amount} sera émis sur votre mode de paiement d’origine dans 5 à 10 jours ouvrables.",
+      "outcomeCredit": "Vous recevez un crédit de {amount}, utilisable pour une prochaine réservation.",
+      "outcomeNone": "Selon notre politique d’annulation, aucun remboursement ni crédit ne s’applique à cette annulation.",
+      "creditCodeLabel": "Votre code de crédit :",
+      "creditExpires": "Valide jusqu’au {date}.",
+      "orderNumber": "Commande #{orderNumber}",
+      "attendeeIntroBy": "Votre place pour {courseTitle} le {date} a été annulée par {cancelledByName}.",
+      "attendeeIntro": "Votre place pour {courseTitle} le {date} a été annulée.",
+      "attendeeContact": "Pour toute question, communiquez avec la personne qui a réservé votre place.",
+      "contact": "Besoin d’aide ? Contactez-nous à {email}.",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "certificateIssued": {
+      "subject": "Votre certificat pour {courseTitle}",
+      "preview": "Votre certificat pour {courseTitle} est prêt",
+      "heading": "Félicitations !",
+      "greeting": "Bonjour {name},",
+      "greetingAnon": "Bonjour,",
+      "intro": "Vous avez terminé {courseTitle}. Votre certificat est prêt.",
+      "downloadCta": "Télécharger mon certificat",
+      "downloadNote": "Connectez-vous à votre compte pour le télécharger.",
+      "verifyIntro": "Toute personne peut en vérifier l’authenticité avec ce code :",
+      "verifyLink": "Vérifier ce certificat",
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+    },
+    "commentApproved": {
+      "subject": "Votre commentaire est publié",
+      "preview": "Votre commentaire sur {lessonTitle} a été approuvé",
+      "heading": "Votre commentaire est en ligne",
+      "greeting": "Bonjour {name},",
+      "greetingAnon": "Bonjour,",
+      "intro": "Votre commentaire sur la leçon {lessonTitle} ({courseTitle}) a été approuvé et est maintenant visible des autres élèves.",
+      "cta": "Voir la leçon",
       "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
     }
   },

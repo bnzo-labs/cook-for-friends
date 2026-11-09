@@ -12,6 +12,7 @@ import { render, toPlainText } from "@react-email/components"
 import type { Locale } from "@/modules/_shared"
 import type { EmailData } from "../types"
 import { EmailLayout, Heading, BodyText, Muted, brandColors } from "./shared"
+import { AccountBlock } from "./blocks"
 
 import frMsg from "@/i18n/messages/fr.json"
 import enMsg from "@/i18n/messages/en.json"
@@ -291,6 +292,8 @@ function OrderConfirmationEmail({ locale, data }: Props) {
           </Link>
         </Section>
       )}
+
+      <AccountBlock url={data.accountUrl} intro={m.accountIntro} cta={m.accountCta} />
 
       {data.contactEmail && (
         <Muted>{t(m.contact, { email: data.contactEmail })}</Muted>
