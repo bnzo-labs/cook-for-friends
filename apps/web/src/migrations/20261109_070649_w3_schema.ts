@@ -15,7 +15,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   );
   
   ALTER TABLE "lessons" ADD COLUMN "video_upload_id" varchar;
-  ALTER TABLE "lessons" ADD COLUMN "video_status" "enum_lessons_video_status" DEFAULT 'none' NOT NULL;
+  ALTER TABLE "lessons" ADD COLUMN "video_status" "enum_lessons_video_status" DEFAULT 'none';
   ALTER TABLE "payload_locked_documents_rels" ADD COLUMN "reminder_deliveries_id" integer;
   ALTER TABLE "reminder_deliveries" ADD CONSTRAINT "reminder_deliveries_enrollment_id_enrollments_id_fk" FOREIGN KEY ("enrollment_id") REFERENCES "public"."enrollments"("id") ON DELETE set null ON UPDATE no action;
   CREATE INDEX "reminder_deliveries_enrollment_idx" ON "reminder_deliveries" USING btree ("enrollment_id");

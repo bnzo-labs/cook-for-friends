@@ -42,7 +42,7 @@ describe.skipIf(!hasTestDb)("scheduling reminder-deliveries (integration)", { ti
     const e = await makeEnrollment()
     await expect(create(e.id, 0)).rejects.toThrow()
     await expect(create(e.id, 1.5)).rejects.toThrow()
-    const row = await payload.create({ collection: "reminder-deliveries", overrideAccess: true, data: { enrollment: e.id as number, offsetHours: 2 } })
+    const row = await payload.create({ collection: "reminder-deliveries", overrideAccess: true, data: { enrollment: e.id as number, offsetHours: 2 } as never })
     expect(new Date(row.sentAt).getTime()).toBeGreaterThan(Date.now() - 60_000)
   })
 
@@ -57,10 +57,10 @@ describe.skipIf(!hasTestDb)("scheduling reminder-deliveries (integration)", { ti
     await expect(payload.find({ collection: "reminder-deliveries", user: asCustomer, overrideAccess: false })).rejects.toThrow()
     await expect(payload.find({ collection: "reminder-deliveries", overrideAccess: false })).rejects.toThrow()
     await expect(
-      payload.create({ collection: "reminder-deliveries", user: asCustomer, overrideAccess: false, data: { enrollment: e.id as number, offsetHours: 5 } }),
+      payload.create({ collection: "reminder-deliveries", user: asCustomer, overrideAccess: false, data: { enrollment: e.id as number, offsetHours: 5, sentAt: new Date().toISOString() } }),
     ).rejects.toThrow()
     await expect(
-      payload.create({ collection: "reminder-deliveries", user: asStaff, overrideAccess: false, data: { enrollment: e.id as number, offsetHours: 6 } }),
+      payload.create({ collection: "reminder-deliveries", user: asStaff, overrideAccess: false, data: { enrollment: e.id as number, offsetHours: 6, sentAt: new Date().toISOString() } }),
     ).rejects.toThrow()
     await expect(payload.find({ collection: "reminder-deliveries", user: asStaff, overrideAccess: false })).resolves.toBeTruthy()
   })

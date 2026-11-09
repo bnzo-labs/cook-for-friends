@@ -69,7 +69,6 @@ export const Lessons: CollectionConfig = {
         {
           name: "status",
           type: "select",
-          required: true,
           defaultValue: "none",
           admin: { readOnly: true },
           options: [

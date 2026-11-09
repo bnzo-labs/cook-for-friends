@@ -1627,7 +1627,7 @@
           "type": "enum_lessons_video_status",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": "'none'"
         },
         "is_preview": {
@@ -11626,6 +11626,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "35ea2ca4-af0a-4bbb-a466-b0bd19f99617",
+  "id": "1f6aefdc-3887-4481-94dd-714e5bed1c6e",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

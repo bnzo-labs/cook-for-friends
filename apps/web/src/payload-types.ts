@@ -286,13 +286,13 @@ export interface Lesson {
     };
     [k: string]: unknown;
   } | null;
-  video: {
+  video?: {
     provider?: ('mux' | 'bunny' | 'fake') | null;
     assetId?: string | null;
     playbackId?: string | null;
     durationSec?: number | null;
     uploadId?: string | null;
-    status: 'none' | 'preparing' | 'ready' | 'errored';
+    status?: ('none' | 'preparing' | 'ready' | 'errored') | null;
   };
   materials?: (number | Material)[] | null;
   isPreview?: boolean | null;

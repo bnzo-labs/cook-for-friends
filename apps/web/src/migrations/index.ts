@@ -5,7 +5,7 @@ import * as migration_20261018_114002_sessions_version from './20261018_114002_s
 import * as migration_20261020_004708_w2_multi_seat_course_status from './20261020_004708_w2_multi_seat_course_status';
 import * as migration_20261031_220248_w2_jobs_send_email from './20261031_220248_w2_jobs_send_email';
 import * as migration_20261108_171630_w2_jobs_stripe_sync from './20261108_171630_w2_jobs_stripe_sync';
-import * as migration_20261109_020251_w3_schema from './20261109_020251_w3_schema';
+import * as migration_20261109_070649_w3_schema from './20261109_070649_w3_schema';
 
 export const migrations = [
   {
@@ -44,8 +44,8 @@ export const migrations = [
     name: '20261108_171630_w2_jobs_stripe_sync',
   },
   {
-    up: migration_20261109_020251_w3_schema.up,
-    down: migration_20261109_020251_w3_schema.down,
-    name: '20261109_020251_w3_schema'
+    up: migration_20261109_070649_w3_schema.up,
+    down: migration_20261109_070649_w3_schema.down,
+    name: '20261109_070649_w3_schema'
   },
 ];
