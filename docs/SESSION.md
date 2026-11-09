@@ -6,6 +6,44 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-11-08 — Wave 3 plan (Portal & operations) — AWAITING ERICK REVIEW (architect, Opus)
+Planning only. Briefs `tasks/W3-00` … `tasks/W3-11` (+ `W3-01b`, `W3-03a/b`). CONTRACT 1.2 → **1.3** (CCR-W3-1…8, pending approval). Base `main` 875a54e; W2-11, W2-12 and hardening PR #12 still open — W3-07 rebases on #12 before generating its migration.
+
+**Tasks + batches** (each batch starts when its deps are merged on `main`; orchestrator merges, applies migrations dev → staging)
+| ID | Task | Agent · model | Depends on | Batch | Migration |
+|----|------|---------------|------------|-------|-----------|
+| W3-00 | platform-prep: DEP-W3 pins, `VIDEO_PROVIDER=fake` + guard, `lib/r2.ts` presign, CI/env | devops-agent · Sonnet | — | 3a | — |
+| W3-07 | schema + seams: `lessons.video.{uploadId,status}`, `reminder-deliveries`, catalog/identity seams, learning comments barrel | backend-engineer · Sonnet (Opus schema review) | PR #12 | 3a | **owner `w3_schema` (only W3 migration)** |
+| W3-08 | notifications: 5 W3 templates FR/EN + `accountUrl` | backend-engineer · Sonnet | — | 3a | — |
+| W3-09 | commerce seats: per-seat cancel money path, `issueCreditCode`, customer seats/orders, attendance, buyer reads guest seats | backend-engineer · **Opus** | — | 3a | — |
+| W3-06 | seo-pwa: metadata/hreflang, sitemap, robots (staging noindex), JSON-LD Course/Event, manifest, SW | frontend-architect · Sonnet | — | 3a | — |
+| W3-01 | portal-shell: login/verify, account layout, dashboard, courses, sessions (read), history, receipts, profile, community | frontend-architect · Sonnet | W3-07, W3-09 | 3b | — |
+| W3-02 | video-adapter: interface, fake + Mux, playback, webhook, staff upload field | backend-engineer · Sonnet | W3-00, W3-07 | 3b | — |
+| W3-03a | learning-core: player view, progress, certificates (issue/PDF/verify), materials route | backend-engineer · Sonnet | W3-00, W3-07, W3-08 | 3b | — |
+| W3-04 | comments + moderation | backend-engineer · Sonnet | W3-07, W3-08 | 3b | — |
+| W3-05 | scheduling-ops: waitlist, reminders, cancellation policy, attendance | backend-engineer · Sonnet | W3-07, W3-08, W3-09 | 3b | — |
+| W3-03b | learning-ui: player, video, progress, materials, comments thread, verify page | frontend-architect · Sonnet | W3-01, W3-02, W3-03a, W3-04 | 3c | — |
+| W3-01b | portal-ops-ui: seat cancel dialog, certificates, progress, storefront waitlist | frontend-architect · Sonnet | W3-01, W3-03a, W3-05 | 3c | — |
+| W3-10 | security + correctness review | security-reviewer · **Opus** | all 3b/3c + W3-09 | 3d | — |
+| W3-11 | acceptance on staging (online DoD, cancel, reminders, waitlist) | e2e-runner · Sonnet | all 3b/3c + W3-06 | 3d | — |
+
+**Critical path:** (PR #12) → W3-07 → W3-03a → W3-03b → W3-11. Parallel chain: W3-09 (Opus) → W3-05 → W3-01b. 3b/3c have **no migration owner**: a schema need = CCR + stop, orchestrator opens a 3b+ slot.
+
+**Ownership rules:** learning split by sub-barrel (W3-03a `index.ts`/`server/**`; W3-04 `comments/**` + `collections/comments.ts` + `api/comments/**`; barrel pre-created by W3-07). Commerce W3 code in new `commerce/seats/**` (W3-09). Approved one-off exceptions (single writer): W3-02 → `catalog/collections/lessons.ts` one `admin.components.Field` line + `importMap.js`; W3-05 → `api/cron/reminders/route.ts`, `src/admin/SessionAttendees/**` attendance control; W3-06 → `[locale]/layout.tsx` SW mount; W3-01b → W3-01's account pages in 3c + `SessionList` waitlist mount; W3-07 → scheduling collection file + learning barrel. Deps/env/CI only via W3-00.
+
+**Late-bound decisions (workarounds baked into briefs)**
+- D2 video: Mux adapter behind `VideoProvider`; `VIDEO_PROVIDER=fake` (+ `VIDEO_FAKE_ALLOWED=true`, never prod) in CI/local/staging until Mux keys; staff upload polling route covers a missing webhook. Bunny not built.
+- D3 community: `site-settings.communityUrl`; empty → link hidden.
+- D10 waitlist: next `waitlistNotifyCount` (3) FIFO, each entry notified once, first to pay wins, no reserved hold.
+- D1 cancellation: global tiers; empty → ≥72 h refund 100 %, 24–72 h credit 100 % (personal code, +365 d), <24 h none.
+- Q6 yes (reminders to buyer + guests). Q7: per-seat cancellation now notifies the guest; Wave 2 full-order staff refunds stay buyer-only. Q8–Q10 defaults kept.
+
+**New defaults needing Erick (Q11–Q17)** — Q11 only the buyer (or staff) cancels a seat; Q12 refund/credit goes to the buyer; Q13 preview lessons playable by any signed-in customer, no anonymous preview; Q14 comment author = first name + last initial, staff moderate only (no staff replies); Q15 certificates for online courses only; Q16 waitlist entry notified once; Q17 credit codes expire after 365 days.
+
+**Erick handoffs:** (1) approve plan + CCR-W3-1…8 + DEP-W3 pins; (2) D2 Mux account + env + webhook (W3-02) — workaround fake; (3) Vercel env `VIDEO_PROVIDER=fake`, `VIDEO_FAKE_ALLOWED=true` on staging/preview until then; (4) D3 community URL in admin; (5) D1 real tiers + cancellation page; (6) confirm cron worker hourly reminders (else manual).
+
+**Risks:** react-pdf under Next 16/Turbopack (W3-00 smoke test first); Stripe partial refund failure after seat cancel (retryable by design, W3-10 reviews); staging email limited to Resend owner (D8) → acceptance mints magic-link tokens via test helper.
+
 ## 2026-10-31 — W2-06 storefront-content — COMPLETE (frontend-architect)
 
 **Done**

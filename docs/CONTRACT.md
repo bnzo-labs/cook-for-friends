@@ -1,6 +1,6 @@
 ---
-version: 1.2
-status: draft — frozen on Wave 0 approval
+version: 1.3
+status: draft — frozen on Wave 0 approval (1.3 = Wave 3 CCRs, pending Erick approval)
 owner: orchestrator
 ---
 
@@ -22,13 +22,13 @@ All app code lives in `apps/web/src/`. A module = one folder in `apps/web/src/mo
 
 | Module | Owns collections / globals | Owns paths (exclusive write) | Agent / model |
 |--------|----------------------------|------------------------------|---------------|
-| `platform` | — | `/` root configs, `turbo.json`, `pnpm-workspace.yaml`, `packages/*`, `apps/web/{package.json,next.config.ts,tsconfig.json,vercel.json,.env.example}`, `apps/web/src/payload.config.ts`, `apps/web/src/proxy.ts`, `apps/web/src/i18n/*` (except `messages/`), `apps/web/src/lib/{env,db,payload}.ts`, `apps/web/src/app/(payload)/**`, `apps/web/src/app/api/cron/**`, `.github/**` | devops-agent / Sonnet |
+| `platform` | — | `/` root configs, `turbo.json`, `pnpm-workspace.yaml`, `packages/*`, `apps/web/{package.json,next.config.ts,tsconfig.json,vercel.json,.env.example}`, `apps/web/src/payload.config.ts`, `apps/web/src/proxy.ts`, `apps/web/src/i18n/*` (except `messages/`), `apps/web/src/lib/{env,db,payload,r2}.ts`, `apps/web/src/app/(payload)/**`, `apps/web/src/app/api/cron/**`, `.github/**` | devops-agent / Sonnet |
 | `catalog` | `products`, `courses`, `sessions`, `lessons`, `materials`, `pages`, `media`, globals `site-settings`, `cancellation-policy`, page blocks | `src/modules/catalog/**` | backend-engineer / Sonnet (schema reviewed by Opus) |
 | `identity` | `users` (staff), `customers`, `magic-link-tokens`, `auth-rate-limits` | `src/modules/identity/**`, `src/app/api/auth/**` | backend-engineer / Sonnet |
 | `access` | `entitlements` | `src/modules/access/**` | backend-engineer / Sonnet |
 | `commerce` | `orders`, `seat-holds`, `enrollments`, `discount-codes`, `processed-stripe-events` | `src/modules/commerce/**`, `src/app/api/{cart,checkout,stripe,sessions,orders}/**`, `src/lib/stripe.ts` | backend-engineer / **Opus** for seat + webhook logic |
-| `scheduling` | `waitlist-entries` | `src/modules/scheduling/**`, `src/app/api/{waitlist,enrollments}/**` | backend-engineer / Sonnet |
-| `learning` | `lesson-progress`, `certificates`, `comments` | `src/modules/learning/**`, `src/app/api/{progress,certificates,comments}/**` | backend-engineer / Sonnet |
+| `scheduling` | `waitlist-entries`, `reminder-deliveries` (CCR-W3-5) | `src/modules/scheduling/**`, `src/app/api/{waitlist,enrollments}/**` | backend-engineer / Sonnet |
+| `learning` | `lesson-progress`, `certificates`, `comments` | `src/modules/learning/**`, `src/app/api/{progress,certificates,comments,materials}/**` (materials route moved from catalog, CCR-W3-6) | backend-engineer / Sonnet |
 | `video` | — | `src/modules/video/**`, `src/app/api/video/**` | backend-engineer / Sonnet |
 | `notifications` | — | `src/modules/notifications/**` (React Email templates, `.ics`, send) | backend-engineer / Sonnet |
 | `ui` | — | `src/styles/**`, `src/components/ui/**` (shadcn), `src/components/layout/**` | frontend-architect / Sonnet |
@@ -90,7 +90,7 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: Module
 |------------|-----------|
 | `courses` | `title` L, `slug` L unique, `format: CourseFormat`, `summary` L, `description` L (lexical), `level: 'beginner'\|'intermediate'\|'advanced'`, `durationMinutes`, `price: number` (cents, CAD, tax-exclusive), `heroImage → media`, `gallery[] → media`, `lessons[] → lessons` (online, ordered), `materials[] → materials`, `status: 'draft'\|'published'\|'archived'` (Payload drafts enabled), `stripeProductId` (readonly), `stripePriceId` (readonly), `stripeSyncStatus: 'pending'\|'synced'\|'error'`, `stripeSyncError`, `seo { title L, description L, image }`, `certificateEnabled: boolean` |
 | `sessions` | `course → courses` (in_person only), `startsAt`, `endsAt` (stored UTC, displayed America/Toronto), `location { name, address, city, postalCode, mapsUrl }` L name, `level` (override), `capacity: int ≥ 1`, `status: 'scheduled'\|'cancelled'\|'completed'`, `notes` L. Index `(course, startsAt)` |
-| `lessons` | `course → courses`, `title` L, `order: int`, `body` L (lexical), `video { provider: 'mux'\|'bunny', assetId, playbackId?, durationSec }` (no URLs), `materials[] → materials`, `isPreview: boolean` (free preview, still no public video URL — preview uses a signed URL too) |
+| `lessons` | `course → courses`, `title` L, `order: int`, `body` L (lexical), `video { provider: 'mux'\|'bunny'\|'fake', assetId, playbackId?, durationSec, uploadId?, status: 'none'\|'preparing'\|'ready'\|'errored' }` (no URLs; `uploadId`/`status` CCR-W3-1), `materials[] → materials`, `isPreview: boolean` (free preview, still no public video URL — preview uses a signed URL too) |
 | `materials` | `title` L, `file → media` (private bucket prefix), `kind: 'recipe'\|'pdf'\|'other'`, `locale?: Locale` |
 | `products` | `title` L, `slug` L, `description` L, `images[] → media`, `priceDisplay` L (text), `externalUrl?`, `status` — **display only** |
 | `pages` | `title` L, `slug` L, `layout: Block[]` (blocks: `hero`, `gallery`, `testimonials`, `cta`, `richText`), `seo` |
@@ -122,6 +122,7 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: Module
 
 ### 3.5 scheduling
 | `waitlist-entries` | `session`, `customer?`, `email`, `locale`, `status: 'waiting'\|'notified'\|'converted'\|'expired'\|'removed'`, `notifiedAt?`. UNIQUE `(session, email)` |
+| `reminder-deliveries` (CCR-W3-5) | `enrollment → enrollments`, `offsetHours: int ≥ 1`, `sentAt`, `jobId?`. **UNIQUE `(enrollment, offsetHours)`** (exactly-once reminders). Local API only; admin hidden |
 
 ### 3.6 learning
 | Collection | Key fields |
@@ -139,8 +140,8 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: { code: Module
 | users | — | — | read self | CRUD |
 | entitlements | — | read own | read, create `manual` | CRUD |
 | orders | — | read own | read | read, update |
-| enrollments | — | read own (`customer = self`; buyer read of guest seats via `order.customer` added by the W3 cancellation task) | read, update attendance | CRUD |
-| seat-holds, processed-stripe-events, magic-link-tokens | — | — | read | read |
+| enrollments | — | read own (`customer = self`; buyer read of guest seats via `order.customer` — W3-09, CCR-W3-4) | read, update attendance | CRUD |
+| seat-holds, processed-stripe-events, magic-link-tokens, reminder-deliveries | — | — | read | read |
 | comments | read `approved` | create, read approved + own | moderate | CRUD |
 | lesson-progress, certificates | — | read own (writes only via module) | read | CRUD |
 
@@ -167,6 +168,21 @@ export function recordCourseStripeSync(courseId: ID, patch: { status: 'pending'|
 //   CCR-W2-1; writes only the 4 sync fields with context { skipStripeSync: true }; never publishes drafts
 export function getSiteSettings(): Promise<SiteSettings>   // empty global → defaults of §3.1 (maxSeatsPerPurchase 4)
 export function getCancellationPolicy(): Promise<CancellationPolicy>
+// CCR-W3-1 (W3-07) — server-only seams for portal/learning/video/scheduling:
+export function listCoursesByIds(ids: ID[], locale: Locale): Promise<CourseCard[]>        // published only, input order kept, unknown dropped
+export function getCourseLessonsContent(courseId: ID, locale: Locale): Promise<LessonContent[]>  // published course only, ordered by `order`
+export type LessonContent = { id: ID; courseId: ID; title: string; order: number; isPreview: boolean; body: RichTextDoc | null
+  video: { status: 'none'|'preparing'|'ready'|'errored'; durationSec: number | null } | null   // never assetId/playbackId
+  materials: { id: ID; title: string; kind: 'recipe'|'pdf'|'other'; locale: Locale | null }[] }
+export function getLessonVideoRef(lessonId: ID): Promise<LessonVideoRef | null>
+export type LessonVideoRef = { lessonId: ID; courseId: ID; courseStatus: 'draft'|'published'|'archived'; isPreview: boolean
+  provider: 'mux'|'bunny'|'fake' | null; assetId: string | null; playbackId: string | null; uploadId: string | null
+  status: 'none'|'preparing'|'ready'|'errored'; durationSec: number | null }
+export function recordLessonVideo(lessonId: ID, patch: LessonVideoPatch): Promise<void>   // writes lessons.video.* only; never publishes drafts
+export type LessonVideoPatch = Partial<Pick<LessonVideoRef, 'provider'|'assetId'|'playbackId'|'uploadId'|'durationSec'>> & { status: LessonVideoRef['status'] }
+export function getMaterialDownload(materialId: ID): Promise<MaterialDownload | null>
+export type MaterialDownload = { id: ID; courseIds: ID[] /* via course.materials or lesson.materials */; storageKey: string; filename: string; mimeType: string }
+export function listSessionsStartingBetween(from: Date, to: Date): Promise<SessionView[]>   // status 'scheduled', [from, to)
 
 // @/modules/identity
 export const identityCollections: CollectionConfig[]
@@ -182,6 +198,10 @@ export function upsertCustomerByEmail(i: { email: string; locale: Locale; firstN
 export function consumeRateLimit(i: { scope: 'ip' | 'email'; namespace: string; key: string; limit: number; windowSeconds: number }):
   Promise<{ allowed: boolean; retryAfterSeconds: number }>   // CCR-W2-2; reuses auth-rate-limits, keyHash = sha256(`${namespace}:${normalizedKey}`), no schema change
 export function isStaff(user: unknown): boolean
+// CCR-W3-2 (W3-07):
+export function updateCustomerProfile(customerId: ID, patch: { firstName?: string; lastName?: string; phone?: string | null
+  preferredLocale?: Locale; marketingConsent?: boolean; dietaryNotes?: string | null }): Promise<Result<CustomerView>>  // email immutable
+// Magic-link email URL uses the localized pathname: /fr/connexion/verifier?token=… · /en/auth/verify?token=…
 
 // @/modules/access
 export const accessCollections: CollectionConfig[]
@@ -212,15 +232,40 @@ export type AttendeeInput = { firstName: string; lastName: string; email: string
 export type CartLine = { courseId: ID; sessionId?: ID; quantity: number; attendees?: AttendeeInput[] }  // attendees = guests only, buyer is always attendee #0
 export type AttendeeRow = { enrollmentId: ID; attendeeIndex: number; isBuyer: boolean; firstName: string; lastName: string; email: string;
   phone?: string; dietaryNotes?: string; bookedBy: { name: string; email: string }; orderNumber: string;
-  enrollmentStatus: 'confirmed' | 'cancelled' | 'refunded'; attendance: 'unknown' | 'present' | 'absent'; paidAt: ISODate }
+  enrollmentStatus: 'confirmed' | 'cancelled' | 'refunded'; attendance: 'unknown' | 'present' | 'absent'; paidAt: ISODate
+  locale: Locale /* CCR-W3-4: attendee preferredLocale, for reminders */ }
+// CCR-W3-4 (W3-09) — seat operations (sub-barrel commerce/seats). Policy is scheduling's; commerce executes.
+export type EnrollmentView = { id: ID; sessionId: ID; courseId: ID; orderId: ID; orderNumber: string; buyerCustomerId: ID
+  attendeeCustomerId: ID; attendeeIndex: number; attendeeName: string | null; seatAmount: number; refundedAmount: number
+  status: 'confirmed' | 'cancelled' | 'refunded'; attendance: 'unknown' | 'present' | 'absent'
+  cancelledAt: ISODate | null; cancellationOutcome: 'refund' | 'credit' | 'none' | null
+  isOwnSeat: boolean /* relative to the customer asked about */; bookedByMe: boolean }
+export function getEnrollmentView(enrollmentId: ID, forCustomerId?: ID): Promise<EnrollmentView | null>
+export function listCustomerEnrollments(customerId: ID): Promise<EnrollmentView[]>   // own seats + seats in orders I bought
+export type OrderSummary = { id: ID; number: string; status: 'paid'|'refunded'|'partially_refunded'|'cancelled'|'pending'; paidAt: ISODate | null
+  total: number; currency: 'cad'; items: { courseId: ID; sessionId?: ID; quantity: number; description: string }[]; hasReceipt: boolean }
+export function listCustomerOrders(customerId: ID): Promise<OrderSummary[]>          // buyer's orders, newest first
+export function executeSeatCancellation(i: { enrollmentId: ID; outcome: 'refund' | 'credit' | 'none'; amount: number; by: 'customer' | 'staff'; actorId: ID; reason: string }):
+  Promise<Result<{ enrollmentStatus: 'cancelled' | 'refunded'; refundRequested: boolean; creditCode?: string; creditExpiresAt?: ISODate }>>
+//   tx: lock enrollment, must be confirmed (else CONFLICT — except retry of a pending refund), mark cancelled + outcome, revoke that attendee's
+//   purchase entitlement, credit → personal discount code for the BUYER (single use, +365 d) in the same tx; commit; refund → refundOrder({ orderId,
+//   amount, enrollmentId }) with Stripe idempotency key `seat-cancel-<enrollmentId>`. amount ≤ seatAmount − refundedAmount (else VALIDATION).
+//   Stripe failure → UPSTREAM; re-call retries the refund only. charge.refunded with refunds[].enrollment → that enrollment 'refunded'.
+export function setEnrollmentAttendance(i: { enrollmentId: ID; attendance: 'present' | 'absent' | 'unknown'; staffId: ID }): Promise<Result<void>>
+// issueCreditCode (above) implemented by W3-09: code `CFF-CR-XXXXXXXX`, kind amount, maxRedemptions 1, personalFor customer, expiresAt +365 d.
 
 // @/modules/scheduling
 export const schedulingCollections: CollectionConfig[]
-export function joinWaitlist(i: { sessionId: ID; email: string; locale: Locale }): Promise<Result<void>>
-export function onSeatReleased(sessionId: ID): Promise<void>
-export function cancelEnrollment(i: { enrollmentId: ID; by: 'customer' | 'staff' }): Promise<Result<{ outcome: 'refund' | 'credit' | 'none'; amount: number }>>
-export function sendDueReminders(now?: Date): Promise<{ sent: number }>
-export function markAttendance(i: { enrollmentId: ID; attendance: 'present' | 'absent'; staffId: ID }): Promise<Result<void>>
+export function joinWaitlist(i: { sessionId: ID; email: string; locale: Locale }): Promise<Result<void>>   // duplicate → ok (no enumeration)
+export function onSeatReleased(sessionId: ID): Promise<void>   // W3: notifies next waitlistNotifyCount 'waiting' entries FIFO, each once
+export function cancelEnrollment(i: { enrollmentId: ID; by: 'customer' | 'staff'; actorId: ID /* CCR-W3-5 */ }): Promise<Result<{ outcome: 'refund' | 'credit' | 'none'; amount: number }>>
+//   customer actor must be the seat's BUYER (Q11); policy tiers from catalog.getCancellationPolicy; executes via commerce.executeSeatCancellation;
+//   then cancellation-confirmation emails (buyer + guest attendee) and onSeatReleased.
+export function previewCancellation(i: { enrollmentId: ID; actorCustomerId?: ID }): Promise<Result<{ allowed: boolean
+  reason?: 'NOT_BUYER' | 'SELF_CANCEL_DISABLED' | 'SESSION_STARTED' | 'NOT_CONFIRMED'; outcome: 'refund' | 'credit' | 'none'
+  percent: number; amount: number; hoursBefore: number }>>   // CCR-W3-5
+export function sendDueReminders(now?: Date): Promise<{ sent: number }>   // exactly-once per (enrollment, offset) via reminder-deliveries; buyer + guests
+export function markAttendance(i: { enrollmentId: ID; attendance: 'present' | 'absent' | 'unknown'; staffId: ID }): Promise<Result<void>>
 
 // @/modules/learning
 export const learningCollections: CollectionConfig[]
@@ -230,17 +275,50 @@ export function issueCertificateIfComplete(customerId: ID, courseId: ID): Promis
 export function renderCertificatePdf(certificateId: ID, locale: Locale): Promise<Buffer>
 export function verifyCertificate(code: string): Promise<CertificatePublicView | null>
 export function postComment(i: { customerId: ID; lessonId: ID; body: string; parentId?: ID }): Promise<Result<void>>
+// CCR-W3-6 (W3-03a / W3-04):
+export type CoursePlayerView = { courseId: ID; slug: string; title: string; certificateEnabled: boolean
+  lessons: (LessonContent & { completed: boolean; positionSec: number })[]; progress: { completed: number; total: number }
+  certificate: CertificateView | null }
+export type CertificateView = { id: ID; courseId: ID; courseTitle: string; verificationCode: string; issuedAt: ISODate }
+export type CertificatePublicView = { code: string; customerName: string; courseTitle: { fr: string; en: string }; issuedAt: ISODate }
+export function getCourseProgressSummaries(customerId: ID, locale: Locale): Promise<{ courseId: ID; slug: string; title: string
+  completedLessons: number; totalLessons: number; nextLessonId: ID | null; completed: boolean; certificateId: ID | null }[]>
+export function listCustomerCertificates(customerId: ID, locale: Locale): Promise<CertificateView[]>
+export type CommentView = { id: ID; body: string; authorDisplay: string; createdAt: ISODate; status: 'approved' | 'pending' | 'rejected'
+  isOwn: boolean; replies: CommentView[] }   // no emails, no customer ids
+export function listLessonComments(i: { lessonId: ID; customerId: ID }): Promise<Result<CommentView[]>>
+// Certificates are issued synchronously by recordProgress on completion (no `issue-certificate` job); online courses only (Q15).
 
 // @/modules/video
-export interface VideoProvider { /* see DISCOVERY §5 */ }
-export function getVideoProvider(): VideoProvider
-export function getLessonPlayback(i: { customerId: ID; lessonId: ID }): Promise<Result<{ url: string; posterUrl?: string; expiresAt: ISODate }>> // checks entitlement via access
+export interface VideoProvider {   // DISCOVERY §5 + CCR-W3-7
+  readonly name: 'mux' | 'bunny' | 'fake'
+  getPlayback(i: { assetId: string; playbackId?: string; viewerId: string; ttlSeconds: number }): Promise<{ url: string; posterUrl?: string; expiresAt: string }>
+  createUpload(i: { lessonId: string }): Promise<{ uploadUrl: string; uploadId: string }>
+  getAsset(assetIdOrUploadId: string): Promise<{ assetId: string; playbackId?: string; status: 'preparing' | 'ready' | 'errored'; durationSec?: number }>
+  verifyWebhook(rawBody: string, headers: Headers): Promise<Result<VideoWebhookEvent>>
+}
+export type VideoWebhookEvent = { type: 'upload.asset_created' | 'asset.ready' | 'asset.errored' | 'ignored'; lessonId?: string; uploadId?: string
+  assetId?: string; playbackId?: string; durationSec?: number }
+export function getVideoProvider(): VideoProvider | null   // null when VIDEO_PROVIDER=none
+export function getLessonPlayback(i: { customerId: ID; lessonId: ID }): Promise<Result<{ url: string; posterUrl?: string; expiresAt: ISODate }>>
+//   entitlement required; isPreview lessons → any signed-in customer (Q13); TTL 3600 s; none → UPSTREAM 'video'.
+//   VIDEO_PROVIDER: mux | bunny (adapter not built) | fake (non-prod; needs VIDEO_FAKE_ALLOWED=true) | none.
 
 // @/modules/notifications
 export type EmailTemplate =
   | 'magic-link' | 'order-confirmation' | 'enrollment-confirmation' | 'reminder'
   | 'waitlist-seat-available' | 'cancellation-confirmation' | 'refund-issued'
   | 'oversell-refund' | 'certificate-issued' | 'comment-approved'
+// CCR-W3-3 (W3-08): EmailData for the remaining templates (URLs built by the sender, absolute + localized):
+//   'reminder': { attendeeFirstName?: string; courseTitle: string; sessionStartsAt: ISODate; sessionEndsAt: ISODate; location: Location
+//                 hoursBefore: number; accountUrl: string; contactEmail?: string }        // .ics via enqueueEmail({ ics })
+//   'waitlist-seat-available': { courseTitle: string; sessionStartsAt: ISODate; location: Location; bookUrl: string }
+//   'cancellation-confirmation': { recipient: 'buyer' | 'attendee'; attendeeName: string; cancelledByName?: string; courseTitle: string
+//                 sessionStartsAt: ISODate; outcome: 'refund' | 'credit' | 'none'; amount: number; currency: 'cad'
+//                 creditCode?: string; creditExpiresAt?: ISODate; orderNumber?: string }   // attendee variant renders no amount/code/order
+//   'certificate-issued': { customerFirstName?: string; courseTitle: string; verificationCode: string; downloadUrl: string; verifyUrl: string }
+//   'comment-approved': { customerFirstName?: string; courseTitle: string; lessonTitle: string; lessonUrl: string }
+//   'order-confirmation' and 'enrollment-confirmation' gain optional `accountUrl: string` (login page link, never a token).
 export function sendEmail<T extends EmailTemplate>(i: { template: T; to: string; locale: Locale; data: EmailData[T]; attachments?: Attachment[]; idempotencyKey: string }): Promise<Result<{ id: string }>>
 export function buildIcs(i: { uid: string; title: string; description: string; location: string; startsAt: Date; endsAt: Date; url: string }): string
 // CCR-W2-3 (additive):
@@ -281,13 +359,18 @@ export type EmailData = {
 | `POST /api/checkout` | commerce | public (cart token cookie), Origin check, 10/IP/h (`consumeRateLimit` namespace `checkout`) | `{ lines: CartLine[] /* exactly 1 */, locale, email? /* required when quantity > 1 */ }` → `{ checkoutUrl, holdExpiresAt }` \| `400 VALIDATION` (issues with paths e.g. `lines.0.attendees.1.email`) \| `409 SOLD_OUT` (`details: { available }`, informational) \| `429` |
 | `POST /api/checkout/release` | commerce | public (cart token cookie), Origin check | → `200 { released }` (no cookie → `0`); releases the cart's active holds and expires their open Checkout sessions (CCR-W2-4) |
 | `POST /api/stripe/webhook` | commerce | Stripe signature | raw body → `200` (also on duplicate) |
-| `POST /api/waitlist` | scheduling | public | `{ sessionId, email, locale }` → `200` |
-| `POST /api/enrollments/:id/cancel` | scheduling | customer (owner) or staff | → `{ outcome, amount }` |
-| `GET /api/video/playback?lessonId=` | video | customer + entitlement | → `{ url, posterUrl?, expiresAt }` \| `403` |
-| `POST /api/progress` | learning | customer + entitlement | `{ lessonId, completed?, positionSec? }` → `{ courseCompleted }` |
+| `POST /api/waitlist` | scheduling | public, Origin check, 5/IP/h + 3/email/h | `{ sessionId, email, locale }` → `200 { ok: true }` always on valid input |
+| `POST /api/enrollments/:id/cancel` | scheduling | customer (**buyer** of the seat's order) or staff, Origin check | → `{ outcome, amount }` \| `403/404` \| `409 CONFLICT` \| `502 UPSTREAM` (retryable) |
+| `POST /api/enrollments/:id/attendance` | scheduling | staff, Origin check | `{ attendance }` → `200` \| `409` — CCR-W3-5 |
+| `GET /api/video/playback?lessonId=` | video | customer + entitlement (preview: any customer) | → `{ url, posterUrl?, expiresAt }` \| `401` \| `403` \| `503` (none); `private, no-store`; 120/customer/h |
+| `POST /api/video/webhook` | video | provider signature (`MUX_WEBHOOK_SECRET`; absent → 503) | raw body → `200` (also on replay/unknown lesson) — CCR-W3-7 |
+| `POST /api/video/uploads` | video | staff, Origin check | `{ lessonId }` → `{ uploadUrl, uploadId }` — CCR-W3-7 |
+| `GET /api/video/uploads/:uploadId?lessonId=` | video | staff | → `{ status, assetId?, durationSec? }` (polls provider, records on lesson) — CCR-W3-7 |
+| `GET /api/video/fake`, `PUT /api/video/fake-upload/:id` | video | signed query (fake) / staff | 404 unless `VIDEO_PROVIDER=fake` — CCR-W3-7 |
+| `POST /api/progress` | learning | customer + entitlement, Origin check, 600/customer/h | `{ lessonId, completed?, positionSec? }` → `{ courseCompleted, certificateId? }` |
 | `GET /api/certificates/:id/pdf?locale=` | learning | customer (owner) | → `application/pdf` |
-| `POST /api/comments` | learning | customer + entitlement | `{ lessonId, body, parentId? }` → `201` (status pending) |
-| `GET /api/materials/:id` | catalog | customer + entitlement for any course containing it | → `302` to signed R2 URL (TTL 5 min) |
+| `POST /api/comments` | learning | customer + entitlement, Origin check, 10/customer/h | `{ lessonId, body, parentId? }` → `201` (status pending) |
+| `GET /api/materials/:id` | **learning** (CCR-W3-6; was catalog) | customer + entitlement for any course containing it, or staff | → `302` to presigned R2 URL (TTL 5 min, `lib/r2.presignR2Get`) \| `404` |
 | `GET /api/sessions/:id/attendees.csv` | commerce | staff | → `text/csv` (UTF-8 BOM for Excel FR) |
 | `GET /api/orders/:id/receipt` | commerce | customer (owner) or staff | → `302` to Stripe invoice PDF |
 | `GET /api/cron/expire-holds` | platform → commerce.expireStaleHolds | `Authorization: Bearer CRON_SECRET` | every 5 min |
@@ -331,7 +414,7 @@ Processing envelope (applies to every event):
 | `charge.refunded` | Update `order.refunds` (dedupe by `stripeRefundId`; copy `metadata.enrollmentId` → `refunds[].enrollment`), set the status. Full refund → revoke the purchase entitlements of **every** attendee + all N enrollments `refunded` → `onSeatReleased` (once). Partial refund → `partially_refunded`; no access/enrollment change in Wave 2 (the W3 per-seat cancellation updates the one enrollment + entitlement itself before calling `refundOrder({ enrollmentId })`). `refund-issued` email to the buyer only. |
 | `invoice.finalized` | Store `stripeInvoiceId` and `invoicePdfUrl` on the order (receipts). |
 
-Internal jobs (Payload Jobs Queue, task slugs): `stripe-sync-course`, `stripe-sync-discount`, `send-email`, `waitlist-notify`, `issue-certificate`.
+Internal jobs (Payload Jobs Queue, task slugs): `stripe-sync-course`, `stripe-sync-discount`, `send-email`. `waitlist-notify` and `issue-certificate` are **dropped** (CCR-W3-5/6): waitlist notices and certificate emails are enqueued directly as `send-email` jobs inside the caller's transaction, so Wave 3 adds no job slug (no jobs-enum migration).
 
 ---
 
@@ -356,3 +439,4 @@ Internal jobs (Payload Jobs Queue, task slugs): `stripe-sync-course`, `stripe-sy
 | 2026-10-19 | 1.2 | CCR-W2-4 approved by Erick: `POST /api/checkout/release` + `releaseCartHolds`, `commerceJobTasks`, commerce owns `api/{sessions,orders}/**`, §7 read exceptions (locked sessions read, customers read-only for attendees) (§1, §4, §5.1, §7) | architect |
 | 2026-10-19 | 1.2 | CCR-W2-5 approved by Erick: modules export `<module>JobTasks`, `payload.config.ts` composes `jobs.tasks` (§1) | architect |
 | 2026-10-19 | 1.2 | CCR-W2-6 approved by Erick (D9 change, client-confirmed): multi-seat purchase. `site-settings.maxSeatsPerPurchase` default 4 (max 10); `seat-holds.attendees[]` + PII retention; `enrollments.seatAmount`; `orders.refunds[].enrollment`; `CartLine.attendees`, `AttendeeInput`, `AttendeeRow`; checkout validation rules; `refundOrder.enrollmentId`; `EmailData` `enrollment-confirmation` + `quantity`/`attendees`; webhook: guest customer upsert, N enrollments + per-attendee entitlements, whole-order refund on oversell; availability sums hold quantity (§3.1, §3.3, §3.4, §3.7, §4, §5.1, §6). Schema lands in one migration owned by W2-02b | architect |
+| 2026-11-08 | 1.3 | **Pending Erick approval** — Wave 3 plan. CCR-W3-1 catalog seams (`listCoursesByIds`, `getCourseLessonsContent`, `getLessonVideoRef`, `recordLessonVideo`, `getMaterialDownload`, `listSessionsStartingBetween`; `lessons.video.{uploadId,status}`, provider `fake`). CCR-W3-2 identity `updateCustomerProfile`, localized magic-link URL. CCR-W3-3 notifications `EmailData` for 5 W3 templates + `accountUrl`. CCR-W3-4 commerce seats (`executeSeatCancellation`, `issueCreditCode` impl, `getEnrollmentView`, `listCustomerEnrollments`, `listCustomerOrders`, `setEnrollmentAttendance`, `AttendeeRow.locale`, buyer read of guest seats). CCR-W3-5 scheduling (`reminder-deliveries`, `cancelEnrollment.actorId`, `previewCancellation`, attendance route, `waitlist-notify` slug dropped). CCR-W3-6 learning (`/api/materials/:id` moved from catalog, player/progress/certificate/comment views, `issue-certificate` slug dropped). CCR-W3-7 video (provider interface + `fake`, `verifyWebhook`, webhook/upload routes, preview rule). CCR-W3-8 platform (DEP-W3 pins `@mux/mux-node@15.5.0`, `@mux/mux-player-react@3.14.1`, `@react-pdf/renderer@4.9.0`, `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` at lockfile-resolved versions; `lib/r2.ts`; env `VIDEO_FAKE_ALLOWED`, `SEO_INDEXABLE_HOSTS`). One migration `w3_schema` owned by W3-07 (§1, §3.1, §3.5, §3.7, §4, §5.1, §6) | architect |
