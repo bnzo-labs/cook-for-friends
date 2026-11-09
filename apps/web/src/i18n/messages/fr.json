@@ -360,5 +360,20 @@
     "offline_title": "Vous êtes hors ligne",
     "offline_body": "Impossible de joindre Cook for Friends pour le moment. Vérifiez votre connexion, puis réessayez.",
     "offline_retry": "Réessayer"
+  },
+  "learning": {
+    "certificate": {
+      "title": "Certificat de réussite",
+      "awardedTo": "Décerné à",
+      "forCompleting": "pour avoir terminé le cours",
+      "issuedOn": "Délivré le {date}",
+      "codeLabel": "Code de vérification",
+      "verifyAt": "Vérifiez l’authenticité sur {url}",
+      "issuer": "Cook For Friends",
+      "logoPlaceholder": "Logo"
+    },
+    "errors": {
+      "rateLimited": "Trop de mises à jour de progression. Réessayez plus tard."
+    }
   }
 }

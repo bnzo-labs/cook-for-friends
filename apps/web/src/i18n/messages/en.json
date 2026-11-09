@@ -360,5 +360,20 @@
     "offline_title": "You are offline",
     "offline_body": "We cannot reach Cook for Friends right now. Check your connection, then try again.",
     "offline_retry": "Try again"
+  },
+  "learning": {
+    "certificate": {
+      "title": "Certificate of completion",
+      "awardedTo": "Awarded to",
+      "forCompleting": "for completing the course",
+      "issuedOn": "Issued on {date}",
+      "codeLabel": "Verification code",
+      "verifyAt": "Verify authenticity at {url}",
+      "issuer": "Cook For Friends",
+      "logoPlaceholder": "Logo"
+    },
+    "errors": {
+      "rateLimited": "Too many progress updates. Please try again later."
+    }
   }
 }
