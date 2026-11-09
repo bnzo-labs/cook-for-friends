@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-21
-status: pending
+status: complete
 wave: 2
 module: commerce (webhook)
 agent: backend-engineer
@@ -29,13 +29,13 @@ Fix W2-11 finding **H-1**. A 100 % promotion code (or an amount-off code ≥ the
 - No reference to `no_payment_required` anywhere in `apps/`.
 
 ## Acceptance criteria
-- [ ] `prepareCompleted` treats `paid` **and** `no_payment_required` as fulfillable; `unpaid` stays `skipped` (async methods are off: `payment_method_types: ["card"]`).
-- [ ] Zero-amount fulfilment = the normal path: order `paid` with `total = 0`, `stripePaymentIntentId = null`, N enrollments (`seatAmount` 0 each, Σ = 0), N entitlements, `order-confirmation` + guest `enrollment-confirmation` emails, hold `converted`.
-- [ ] Zero-amount oversell (hold expired, < N seats left): no Stripe refund call; order status `cancelled` (no `refunds[]` row), hold `expired`, `oversell-refund` email with `refundAmount: 0`, outcome `refunded`. Never throws for a missing PaymentIntent when `amount_total === 0`. Non-zero total without a PaymentIntent still throws (unchanged).
-- [ ] `refundOrder` on a zero-total order → `CONFLICT ORDER_NOT_REFUNDABLE` (already true via `stripePaymentIntentId` check — add a test).
-- [ ] Integration tests (Neon branch, real DB) in `webhook.test.ts`: (a) 100 %-off single seat → 1 order total 0, 1 enrollment, 1 entitlement, 1 job; replayed twice → still 1 of each; (b) quantity 3 at total 0 → 3 enrollments, Σ seatAmount = 0, 1 + 2 jobs; (c) zero-amount oversell → 0 enrollments, 0 Stripe refund calls on the fake, order `cancelled`, oversell email queued.
-- [ ] Unit test: `prepareCompleted` returns `paid` kind for `no_payment_required`, `unpaid` for `unpaid`.
-- [ ] CI integration job runs the new tests (not skipped); link the run in the PR.
+- [x] `prepareCompleted` treats `paid` **and** `no_payment_required` as fulfillable; `unpaid` stays `skipped` (async methods are off: `payment_method_types: ["card"]`).
+- [x] Zero-amount fulfilment = the normal path: order `paid` with `total = 0`, `stripePaymentIntentId = null`, N enrollments (`seatAmount` 0 each, Σ = 0), N entitlements, `order-confirmation` + guest `enrollment-confirmation` emails, hold `converted`.
+- [x] Zero-amount oversell (hold expired, < N seats left): no Stripe refund call; order status `cancelled` (no `refunds[]` row), hold `expired`, `oversell-refund` email with `refundAmount: 0`, outcome `refunded`. Never throws for a missing PaymentIntent when `amount_total === 0`. Non-zero total without a PaymentIntent still throws (unchanged).
+- [x] `refundOrder` on a zero-total order → `CONFLICT ORDER_NOT_REFUNDABLE` (already true via `stripePaymentIntentId` check — add a test).
+- [x] Integration tests (Neon branch, real DB) in `webhook.test.ts`: (a) 100 %-off single seat → 1 order total 0, 1 enrollment, 1 entitlement, 1 job; replayed twice → still 1 of each; (b) quantity 3 at total 0 → 3 enrollments, Σ seatAmount = 0, 1 + 2 jobs; (c) zero-amount oversell → 0 enrollments, 0 Stripe refund calls on the fake, order `cancelled`, oversell email queued.
+- [x] Unit test: `prepareCompleted` returns `paid` kind for `no_payment_required`, `unpaid` for `unpaid`.
+- [x] CI integration job runs the new tests (not skipped); link the run in the PR.
 
 ## Implementation steps
 1. Worktree from `origin/main`, env copy, throwaway Neon branch from `dev` (never `production`; never boot dev-mode Payload against Neon `dev`).
@@ -56,3 +56,18 @@ All criteria ticked, CI green with integration job run, W2-11 updated (H-1 close
 
 ## Communication
 Caveman. English only.
+
+---
+
+## Result (2026-11-08, backend-engineer, Opus)
+
+Scope widened by the orchestrator to H-1 + M-1 + L-1 + L-2 (one PR). Paths relative to `apps/web/src/`.
+
+- **H-1** `modules/commerce/webhook/handlers/completed-prepare.ts` — `FULFILLABLE_PAYMENT_STATUSES = {paid, no_payment_required}`; `unpaid` stays skipped. `completed-apply.ts` — `oversell()` branches to `oversellZeroAmount()` when `amount_total === 0`: no Stripe refund, order `cancelled` (no `refunds[]`), hold `expired`, `oversell-refund` email `refundAmount: 0`, outcome `refunded`. Non-zero total without PaymentIntent still throws.
+- **M-1** `webhook/shared.ts` `isAppObject(metadata)` (= `cartToken` present). Foreign Checkout session → prepare kind `foreign` → `skipped`; foreign charge (`charge-refunded.ts`: charge metadata, else PaymentIntent metadata via `paymentIntents.retrieve`) → `skipped`; foreign invoice (`invoice-finalized.ts`: invoice metadata) → `skipped`. Ours-but-unmatched still throws (500, retry). Ours with malformed metadata still throws.
+- **L-1** `lib/jobs-access.ts` → `isStaff(req.user)` (customers denied).
+- **L-2** `modules/commerce/webhook/receipt.ts` → foreign order = NOT_FOUND (404), same as unknown id.
+
+Tests: `webhook.test.ts` (+6), `webhook-events.test.ts` (+4), `webhook-receipt.test.ts` (403 → 404), new `webhook-prepare-unit.test.ts` (5), `lib/jobs-access.test.ts` (+2). RED verified against `main` before the fix.
+
+Residual (not in scope): the `oversell-refund` template (notifications) shows a "refund" of 0 $ for a zero-amount order; copy tweak can ride on M-2/M-3.

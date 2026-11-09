@@ -38,7 +38,7 @@ describe.skipIf(!hasTestDb)("W2-07 receipt route (integration)", () => {
       params: Promise.resolve({ id: String(id) }),
     })
 
-  it("owner → 302 to invoice PDF; other customer → 403; anonymous → 404; staff → 302; no PDF / unknown → 404", async () => {
+  it("owner → 302 to invoice PDF; other customer → 404 (L-2, no existence leak); anonymous → 404; staff → 302; no PDF / unknown → 404", async () => {
     const course = await makePurchasableCourse(payload, "online")
     const owner = await makeCustomer(payload)
     const order = await makeOrder(payload, owner.id, course.id)
@@ -53,7 +53,10 @@ describe.skipIf(!hasTestDb)("W2-07 receipt route (integration)", () => {
     expect((await get(bare.id, ownerCookie)).status).toBe(404)
 
     const other = await makeCustomer(payload)
-    expect((await get(order.id, await customerCookie(other.email))).status).toBe(403)
+    const otherCookie = await customerCookie(other.email)
+    expect((await get(order.id, otherCookie)).status).toBe(404)
+    // same response as an order that does not exist
+    expect((await get(999_999_998, otherCookie)).status).toBe(404)
 
     expect((await get(order.id)).status).toBe(404)
     expect((await get(999_999_999)).status).toBe(404)
