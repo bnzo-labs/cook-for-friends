@@ -47,7 +47,9 @@ export type IcsInput = {
 
 /**
  * Per-template data shapes. CONTRACT §4.
- * Wave 2 defines the first 5 entries; Wave 3 will add the rest.
+ * Wave 2 defined the first 5 entries; CCR-W3-3 adds the rest.
+ * URLs (accountUrl, bookUrl, downloadUrl, verifyUrl, lessonUrl) are built by the
+ * sender: absolute + localized. Templates never build URLs.
  */
 export type EmailData = {
   "magic-link": {
@@ -76,6 +78,8 @@ export type EmailData = {
     currency: "cad"
     receiptUrl?: string
     contactEmail?: string
+    /** CCR-W3-3: login page link (never a token). Account block renders only when set. */
+    accountUrl?: string
   }
   /** CCR-W2-6: guest-seat notice sent to each attendee (index ≥ 1). */
   "enrollment-confirmation": {
@@ -86,6 +90,8 @@ export type EmailData = {
     sessionEndsAt: ISODate
     location: Location
     contactEmail?: string
+    /** CCR-W3-3: login page link (never a token). Account block renders only when set. */
+    accountUrl?: string
   }
   "oversell-refund": {
     orderNumber: string
@@ -102,19 +108,49 @@ export type EmailData = {
     currency: "cad"
     full: boolean
   }
-  // Wave 3 templates — data types TBD; calling sendEmail for these returns VALIDATION.
-  reminder: Record<string, never>
-  "waitlist-seat-available": Record<string, never>
-  "cancellation-confirmation": Record<string, never>
-  "certificate-issued": Record<string, never>
-  "comment-approved": Record<string, never>
+  /** CCR-W3-3. `.ics` comes from enqueueEmail({ ics }). */
+  reminder: {
+    attendeeFirstName?: string
+    courseTitle: string
+    sessionStartsAt: ISODate
+    sessionEndsAt: ISODate
+    location: Location
+    hoursBefore: number
+    accountUrl: string
+    contactEmail?: string
+  }
+  "waitlist-seat-available": {
+    courseTitle: string
+    sessionStartsAt: ISODate
+    location: Location
+    bookUrl: string
+  }
+  /** attendee variant renders no amount, code or order number. */
+  "cancellation-confirmation": {
+    recipient: "buyer" | "attendee"
+    attendeeName: string
+    cancelledByName?: string
+    courseTitle: string
+    sessionStartsAt: ISODate
+    outcome: "refund" | "credit" | "none"
+    amount: number
+    currency: "cad"
+    creditCode?: string
+    creditExpiresAt?: ISODate
+    orderNumber?: string
+  }
+  "certificate-issued": {
+    customerFirstName?: string
+    courseTitle: string
+    verificationCode: string
+    downloadUrl: string
+    verifyUrl: string
+  }
+  "comment-approved": {
+    customerFirstName?: string
+    courseTitle: string
+    lessonTitle: string
+    lessonUrl: string
+  }
 }
 
-/** Wave 2 templates that have real implementations. */
-export const WAVE2_TEMPLATES = new Set<EmailTemplate>([
-  "magic-link",
-  "order-confirmation",
-  "enrollment-confirmation",
-  "oversell-refund",
-  "refund-issued",
-] as const)

@@ -31,14 +31,16 @@ const colors = {
 // Shared layout component
 // ---------------------------------------------------------------------------
 interface EmailLayoutProps {
+  /** Document language. Defaults to "fr" (legacy templates). */
+  locale?: "fr" | "en"
   preview: string
   footer: string
   children: React.ReactNode
 }
 
-export function EmailLayout({ preview, footer, children }: EmailLayoutProps) {
+export function EmailLayout({ locale = "fr", preview, footer, children }: EmailLayoutProps) {
   return (
-    <Html lang="fr" dir="ltr">
+    <Html lang={locale} dir="ltr">
       <Head />
       <Preview>{preview}</Preview>
       <EmailBody
