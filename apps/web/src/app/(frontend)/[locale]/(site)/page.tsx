@@ -3,6 +3,7 @@ import { getPayload } from "@/lib/payload"
 import { assertLocale } from "@/i18n/locale"
 import { BlockRenderer } from "@/components/storefront/blocks/BlockRenderer"
 import { FallbackHomePage } from "@/components/storefront/FallbackHomePage"
+import { buildPageMetadata, staticPaths } from "@/components/storefront/seo/metadata"
 import { pickHomePage } from "@/lib/storefront/pick-home-page"
 import type { Metadata } from "next"
 import type { Page } from "@/payload-types"
@@ -29,7 +30,7 @@ export async function generateMetadata({
     },
     locale,
     fallbackLocale: "fr",
-    depth: 0,
+    depth: 1,
     limit: 1,
     pagination: false,
     overrideAccess: true,
@@ -39,10 +40,15 @@ export async function generateMetadata({
   const page = res.docs[0] as Page | undefined
   const t = await getTranslations({ locale, namespace: "common" })
 
-  return {
+  const image = page?.seo?.image
+  return buildPageMetadata({
+    locale,
+    paths: staticPaths("/"),
     title: page?.seo?.title ?? t("site_name"),
     description: page?.seo?.description ?? t("tagline"),
-  }
+    image: typeof image === "object" && image !== null ? image.url : null,
+    siteName: t("site_name"),
+  })
 }
 
 export default async function HomePage({

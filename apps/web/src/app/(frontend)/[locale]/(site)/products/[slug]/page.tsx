@@ -5,6 +5,8 @@ import { getPayload } from "@/lib/payload"
 import { assertLocale } from "@/i18n/locale"
 import { Button } from "@/components/ui/button"
 import { Section, Container } from "@/components/layout"
+import { buildPageMetadata, slugPaths } from "@/components/storefront/seo/metadata"
+import { loadLocalizedSlugs } from "@/components/storefront/seo/slugs"
 import type { Metadata } from "next"
 import type { Media, Product } from "@/payload-types"
 
@@ -26,16 +28,28 @@ export async function generateMetadata({
     },
     locale,
     fallbackLocale: "fr",
-    depth: 0,
+    depth: 1,
     limit: 1,
     pagination: false,
     overrideAccess: true,
-    select: { title: true },
+    select: { title: true, description: true, images: true },
   })
 
   const product = res.docs[0] as Product | undefined
   if (!product) return {}
-  return { title: product.title }
+  const [slugs, t] = await Promise.all([
+    loadLocalizedSlugs("products", product.id),
+    getTranslations({ locale, namespace: "common" }),
+  ])
+  const first = product.images?.[0]
+  return buildPageMetadata({
+    locale,
+    paths: slugPaths("/products/[slug]", slugs),
+    title: product.title,
+    description: product.description,
+    image: typeof first === "object" && first !== null ? first.url : null,
+    siteName: t("site_name"),
+  })
 }
 
 export default async function ProductDetailPage({

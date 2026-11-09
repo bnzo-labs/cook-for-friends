@@ -97,7 +97,11 @@ export async function sendEmail<T extends EmailTemplate>(i: {
         error: { code: "VALIDATION", issues: [{ path: "template", message: err.message }] },
       }
     }
-    console.error("[sendEmail] render failed", { template: i.template, locale: i.locale }, err)
+    console.error("[sendEmail] render failed", {
+      template: i.template,
+      locale: i.locale,
+      error: err instanceof Error ? err.name : "unknown",
+    })
     return {
       ok: false,
       error: {
@@ -120,7 +124,13 @@ export async function sendEmail<T extends EmailTemplate>(i: {
     })
     return { ok: true, data: { id: result.id } }
   } catch (err) {
-    console.error("[sendEmail] transport failed", { template: i.template, to: i.to }, err)
+    // No recipient in logs (D9 no-PII). Log template, locale, idempotency key, error name only.
+    console.error("[sendEmail] transport failed", {
+      template: i.template,
+      locale: i.locale,
+      idempotencyKey: i.idempotencyKey,
+      error: err instanceof Error ? err.name : "unknown",
+    })
     return {
       ok: false,
       error: {

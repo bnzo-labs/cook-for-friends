@@ -118,9 +118,9 @@
       "accountCta": "Access my account"
     },
     "enrollmentConfirmation": {
-      "subject": "{buyerName} booked a seat for you — {courseTitle}",
+      "subject": "You have been invited to a class — {courseTitle}",
       "heading": "Your seat has been booked!",
-      "preview": "{buyerName} booked a seat for you in {courseTitle}",
+      "preview": "A seat has been booked for you in {courseTitle}",
       "bookedBy": "{buyerName} booked a seat for you in this class.",
       "courseLabel": "Course:",
       "dateLabel": "Date:",
@@ -143,6 +143,13 @@
       "refundAmount": "Amount refunded: {amount}",
       "timeline": "The refund will appear on your account within 5–10 business days.",
       "contact": "Need help? Contact us at {email}.",
+      "subjectZero": "Booking not confirmed — order #{orderNumber}",
+      "headingZero": "We're sorry — your booking could not be confirmed",
+      "previewZero": "Your booking for order #{orderNumber} could not be confirmed",
+      "introZero": "Unfortunately, the session you selected was full by the time your booking was processed. Your booking could not be confirmed.",
+      "seatsOneZero": "1 seat not confirmed",
+      "seatsManyZero": "{quantity} seats not confirmed",
+      "notCharged": "You were not charged.",
       "footer": "Cook for Friends — Pastry classes in Montreal"
     },
     "refundIssued": {
@@ -345,5 +352,13 @@
     "webhook": {
       "ics_description": "Your seat at the Cook for Friends class: {course}. See you in the kitchen!"
     }
+  },
+  "pwa": {
+    "name": "Cook for Friends",
+    "short_name": "Cook for Friends",
+    "description": "Pastry and baking classes in Montreal.",
+    "offline_title": "You are offline",
+    "offline_body": "We cannot reach Cook for Friends right now. Check your connection, then try again.",
+    "offline_retry": "Try again"
   }
 }

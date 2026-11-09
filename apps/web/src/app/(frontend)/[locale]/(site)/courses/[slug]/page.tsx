@@ -3,10 +3,10 @@ import { connection } from "next/server"
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import { getTranslations } from "next-intl/server"
-import { getPublishedCourse, getSiteSettings } from "@/modules/catalog"
+import { getCourseCommerceRecord, getPublishedCourse, getSiteSettings } from "@/modules/catalog"
 import type { CourseView, SiteSettings } from "@/modules/catalog"
 import { getAvailableSeats } from "@/modules/commerce"
-import { Link } from "@/i18n/navigation"
+import { Link, getPathname } from "@/i18n/navigation"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatMoney } from "@/lib/storefront/format"
@@ -15,6 +15,10 @@ import { LexicalRenderer } from "@/components/storefront/lexical/LexicalRenderer
 import { SessionList } from "@/components/storefront/SessionList"
 import { Badge } from "@/components/ui/badge"
 import { Section, Container } from "@/components/layout"
+import { buildPageMetadata, slugPaths } from "@/components/storefront/seo/metadata"
+import { absoluteUrl, siteOrigin } from "@/components/storefront/seo/indexable"
+import { JsonLd } from "@/components/storefront/seo/JsonLd"
+import { buildCourseJsonLd, buildEventJsonLd } from "@/components/storefront/seo/schema-org"
 import type { Locale } from "@/modules/_shared"
 import type { Metadata } from "next"
 
@@ -30,10 +34,23 @@ export async function generateMetadata({
   const locale = assertLocale(rawLocale)
   const course = await getPublishedCourse(slug, locale)
   if (!course) return {}
-  return {
+  const [record, t] = await Promise.all([
+    getCourseCommerceRecord(course.id),
+    getTranslations({ locale, namespace: "common" }),
+  ])
+  // Slugs differ per locale; the commerce record carries both (fr fallback).
+  const slugs = record?.slug ?? { fr: slug, en: slug }
+  return buildPageMetadata({
+    locale,
+    paths: slugPaths("/courses/[slug]", {
+      fr: slugs.fr || slug,
+      en: slugs.en || slugs.fr || slug,
+    }),
     title: course.seo.title ?? course.title,
-    description: course.seo.description ?? course.summary ?? undefined,
-  }
+    description: course.seo.description ?? course.summary,
+    image: course.heroImageUrl,
+    siteName: t("site_name"),
+  })
 }
 
 /**
@@ -51,11 +68,27 @@ async function LiveSessionList({
 }) {
   await connection()
   const t = await getTranslations({ locale, namespace: "storefront" })
+  const tc = await getTranslations({ locale, namespace: "common" })
   const counts = await Promise.all(
     course.upcomingSessions.map(async (s) => [String(s.id), await getAvailableSeats(s.id)] as const),
   )
+  const seatsById = new Map(counts)
+  const events = course.upcomingSessions.map((session) =>
+    buildEventJsonLd({
+      course,
+      session,
+      availableSeats: seatsById.get(String(session.id)) ?? 0,
+      locale,
+      url: courseUrl(course, locale),
+      providerName: tc("site_name"),
+      providerUrl: siteOrigin(),
+      image: course.heroImageUrl ? absoluteUrl(course.heroImageUrl) : null,
+    }),
+  )
   return (
-    <SessionList
+    <>
+      {events.length > 0 && <JsonLd data={events} />}
+      <SessionList
       sessions={course.upcomingSessions}
       locale={locale}
       maxSeatsPerPurchase={settings.maxSeatsPerPurchase}
@@ -68,6 +101,14 @@ async function LiveSessionList({
         location: t("sessions.location"),
       }}
     />
+    </>
+  )
+}
+
+/** Absolute canonical URL of a course in its locale (translated slug). */
+function courseUrl(course: CourseView, locale: Locale): string {
+  return absoluteUrl(
+    getPathname({ locale, href: { pathname: "/courses/[slug]", params: { slug: course.slug } } }),
   )
 }
 
@@ -98,12 +139,23 @@ export default async function CourseDetailPage({
   }
 
   const tb = await getTranslations({ locale, namespace: "storefront.booking" })
+  const tcommon = await getTranslations({ locale, namespace: "common" })
 
   const price = formatMoney(course.price.amount, locale)
   const isInPerson = course.format === "in_person"
 
   return (
     <>
+      <JsonLd
+        data={buildCourseJsonLd({
+          course,
+          locale,
+          url: courseUrl(course, locale),
+          providerName: tcommon("site_name"),
+          providerUrl: siteOrigin(),
+          image: course.heroImageUrl ? absoluteUrl(course.heroImageUrl) : null,
+        })}
+      />
       {/* Hero */}
       <Section spacing="hero" tone="bg">
         <Container>
