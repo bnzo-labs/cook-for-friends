@@ -72,6 +72,48 @@ export type CourseView = Omit<CourseCard, "nextSessionAt"> & {
   lessons: LessonOutline[]
 }
 
+export type VideoStatus = "none" | "preparing" | "ready" | "errored"
+export type VideoProviderName = "mux" | "bunny" | "fake"
+
+/** CCR-W3-1. Player-facing: never carries `assetId` / `playbackId`. */
+export type LessonContent = {
+  id: ID
+  courseId: ID
+  title: string
+  order: number
+  isPreview: boolean
+  body: RichTextDoc | null
+  video: { status: VideoStatus; durationSec: number | null } | null
+  materials: { id: ID; title: string; kind: "recipe" | "pdf" | "other"; locale: Locale | null }[]
+}
+
+/** CCR-W3-1. Server-only (video module): raw provider ids. */
+export type LessonVideoRef = {
+  lessonId: ID
+  courseId: ID
+  courseStatus: "draft" | "published" | "archived"
+  isPreview: boolean
+  provider: VideoProviderName | null
+  assetId: string | null
+  playbackId: string | null
+  uploadId: string | null
+  status: VideoStatus
+  durationSec: number | null
+}
+
+export type LessonVideoPatch = Partial<
+  Pick<LessonVideoRef, "provider" | "assetId" | "playbackId" | "uploadId" | "durationSec">
+> & { status: LessonVideoRef["status"] }
+
+/** CCR-W3-1. No URLs: the learning route presigns `storageKey` itself. */
+export type MaterialDownload = {
+  id: ID
+  courseIds: ID[]
+  storageKey: string
+  filename: string
+  mimeType: string
+}
+
 export type Localized<T = string> = { fr: T; en: T }
 
 /** Published version only. Consumed by commerce (Stripe sync, checkout). */

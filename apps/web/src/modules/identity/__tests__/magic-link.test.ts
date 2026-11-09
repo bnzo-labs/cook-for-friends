@@ -141,7 +141,7 @@ describe.skipIf(!hasTestDb)("identity magic-link (integration)", () => {
   it("verify: valid token → 303 + cookie → payload.auth resolves a customer", async () => {
     const { email, res, cookie } = await signIn()
     expect(res.status).toBe(303)
-    expect(res.headers.get("location")).toBe("/fr/account")
+    expect(res.headers.get("location")).toBe("/fr/compte")
     const setCookie = res.headers.get("set-cookie") ?? ""
     expect(setCookie).toMatch(/^payload-token=/)
     expect(setCookie).toMatch(/HttpOnly/i)
@@ -214,7 +214,7 @@ describe.skipIf(!hasTestDb)("identity magic-link (integration)", () => {
   it("next: open redirects fall back to the default; same-origin paths are honored", async () => {
     for (const next of ["https://evil.com", "//evil.com", "/\\evil.com", "javascript:alert(1)"]) {
       const { res } = await signIn({ next })
-      expect(res.headers.get("location")).toBe("/fr/account")
+      expect(res.headers.get("location")).toBe("/fr/compte")
     }
     const { res } = await signIn({ next: "/en/account/orders?page=2" })
     expect(res.headers.get("location")).toBe("/en/account/orders?page=2")

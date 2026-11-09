@@ -86,6 +86,7 @@ export interface Config {
     'discount-codes': DiscountCode;
     'processed-stripe-events': ProcessedStripeEvent;
     'waitlist-entries': WaitlistEntry;
+    'reminder-deliveries': ReminderDelivery;
     'lesson-progress': LessonProgress;
     certificates: Certificate;
     comments: Comment;
@@ -115,6 +116,7 @@ export interface Config {
     'discount-codes': DiscountCodesSelect<false> | DiscountCodesSelect<true>;
     'processed-stripe-events': ProcessedStripeEventsSelect<false> | ProcessedStripeEventsSelect<true>;
     'waitlist-entries': WaitlistEntriesSelect<false> | WaitlistEntriesSelect<true>;
+    'reminder-deliveries': ReminderDeliveriesSelect<false> | ReminderDeliveriesSelect<true>;
     'lesson-progress': LessonProgressSelect<false> | LessonProgressSelect<true>;
     certificates: CertificatesSelect<false> | CertificatesSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
@@ -285,10 +287,12 @@ export interface Lesson {
     [k: string]: unknown;
   } | null;
   video?: {
-    provider?: ('mux' | 'bunny') | null;
+    provider?: ('mux' | 'bunny' | 'fake') | null;
     assetId?: string | null;
     playbackId?: string | null;
     durationSec?: number | null;
+    uploadId?: string | null;
+    status?: ('none' | 'preparing' | 'ready' | 'errored') | null;
   };
   materials?: (number | Material)[] | null;
   isPreview?: boolean | null;
@@ -714,6 +718,19 @@ export interface WaitlistEntry {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reminder-deliveries".
+ */
+export interface ReminderDelivery {
+  id: number;
+  enrollment: number | Enrollment;
+  offsetHours: number;
+  sentAt: string;
+  jobId?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "lesson-progress".
  */
 export interface LessonProgress {
@@ -950,6 +967,10 @@ export interface PayloadLockedDocument {
         value: number | WaitlistEntry;
       } | null)
     | ({
+        relationTo: 'reminder-deliveries';
+        value: number | ReminderDelivery;
+      } | null)
+    | ({
         relationTo: 'lesson-progress';
         value: number | LessonProgress;
       } | null)
@@ -1087,6 +1108,8 @@ export interface LessonsSelect<T extends boolean = true> {
         assetId?: T;
         playbackId?: T;
         durationSec?: T;
+        uploadId?: T;
+        status?: T;
       };
   materials?: T;
   isPreview?: T;
@@ -1438,6 +1461,18 @@ export interface WaitlistEntriesSelect<T extends boolean = true> {
   locale?: T;
   status?: T;
   notifiedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "reminder-deliveries_select".
+ */
+export interface ReminderDeliveriesSelect<T extends boolean = true> {
+  enrollment?: T;
+  offsetHours?: T;
+  sentAt?: T;
+  jobId?: T;
   updatedAt?: T;
   createdAt?: T;
 }
