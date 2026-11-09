@@ -139,10 +139,17 @@ d("stripe catalog sync", () => {
     expect(fake.promos.get(row2.stripePromotionCodeId!)?.active).toBe(false)
   })
 
-  it("discount: personalFor skipped", async () => {
+  it("discount: personalFor (W3-09 credit) enqueues and syncs without a Stripe customer restriction", async () => {
     const cust = await payload.create({ collection: "customers", data: { email: `p-${uid()}@example.com`, preferredLocale: "fr" } })
-    const dc = await payload.create({ collection: "discount-codes", data: { code: `PERS${uid().toUpperCase()}`, kind: "amount", value: 500, personalFor: cust.id }, overrideAccess: true })
-    expect(await jobsFor("stripe-sync-discount", dc.id)).toHaveLength(0)
-    expect(await syncDiscountToStripe(dc.id)).toMatchObject({ ok: true, data: { status: "skipped" } })
+    const code = `PERS${uid().toUpperCase()}`
+    const dc = await payload.create({ collection: "discount-codes", data: { code, kind: "amount", value: 500, maxRedemptions: 1, personalFor: cust.id }, overrideAccess: true })
+    expect(await jobsFor("stripe-sync-discount", dc.id)).toHaveLength(1)
+    const r = await syncDiscountToStripe(dc.id)
+    expect(r).toMatchObject({ ok: true, data: { status: "synced" } })
+    const row = await payload.findByID({ collection: "discount-codes", id: dc.id, depth: 0, overrideAccess: true })
+    expect(fake.coupons.get(row.stripeCouponId!)).toMatchObject({ amount_off: 500, max_redemptions: 1 })
+    const promo = fake.promos.get(row.stripePromotionCodeId!) as Record<string, unknown> | undefined
+    expect(promo).toMatchObject({ code, active: true })
+    expect(promo?.customer ?? null).toBeNull()
   })
 })

@@ -70,6 +70,18 @@ async function enrollmentBelongsTo(orderId: number, enrollmentId: number): Promi
  * `amount` defaults to the remaining refundable amount; more than that → VALIDATION.
  */
 export async function refundOrder(i: { orderId: ID; amount?: number; reason: string; enrollmentId?: ID }): Promise<Result<void>> {
+  return requestOrderRefund(i)
+}
+
+/**
+ * `refundOrder` with an optional caller-chosen Stripe idempotency key (internal:
+ * W3-09 seat cancellation uses `seat-cancel-<enrollmentId>` so a retry after a
+ * Stripe failure can never refund the same seat twice).
+ */
+export async function requestOrderRefund(
+  i: { orderId: ID; amount?: number; reason: string; enrollmentId?: ID },
+  opts: { idempotencyKey?: string } = {},
+): Promise<Result<void>> {
   const parsed = refundInputSchema.safeParse(i)
   if (!parsed.success) {
     return fail({ code: "VALIDATION", issues: parsed.error.issues.map((x) => ({ path: x.path.join("."), message: x.message })) })
@@ -98,7 +110,7 @@ export async function refundOrder(i: { orderId: ID; amount?: number; reason: str
     await createStripeRefund({
       paymentIntentId: order.stripePaymentIntentId,
       amount,
-      idempotencyKey: `refund-${orderId}-${scope}-${already}-${amount}`,
+      idempotencyKey: opts.idempotencyKey ?? `refund-${orderId}-${scope}-${already}-${amount}`,
       metadata: {
         orderId: String(orderId),
         reason: parsed.data.reason,

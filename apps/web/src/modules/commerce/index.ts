@@ -38,3 +38,5 @@ export {
 export * from "./sync"
 export * from "./webhook"
 export * from "./attendees"
+// Sub-barrel owned by W3-09 (seat cancellation, issueCreditCode, customer reads, attendance)
+export * from "./seats"

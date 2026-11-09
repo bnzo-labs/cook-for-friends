@@ -29,3 +29,59 @@ export type CheckoutMetadata = {
   locale: "fr" | "en"
   quantity: string
 }
+
+// ---------------------------------------------------------------------------
+// CCR-W3-4 (W3-09) — seat operations. CONTRACT §4. Policy is scheduling's.
+// ---------------------------------------------------------------------------
+
+export type EnrollmentStatus = "confirmed" | "cancelled" | "refunded"
+export type Attendance = "unknown" | "present" | "absent"
+export type CancellationOutcome = "refund" | "credit" | "none"
+
+export type EnrollmentView = {
+  id: ID
+  sessionId: ID
+  courseId: ID
+  orderId: ID
+  orderNumber: string
+  buyerCustomerId: ID
+  attendeeCustomerId: ID
+  attendeeIndex: number
+  attendeeName: string | null
+  seatAmount: number
+  refundedAmount: number
+  status: EnrollmentStatus
+  attendance: Attendance
+  cancelledAt: ISODate | null
+  cancellationOutcome: CancellationOutcome | null
+  /** Relative to the customer asked about. */
+  isOwnSeat: boolean
+  bookedByMe: boolean
+}
+
+export type OrderSummary = {
+  id: ID
+  number: string
+  status: "paid" | "refunded" | "partially_refunded" | "cancelled" | "pending"
+  paidAt: ISODate | null
+  total: number
+  currency: "cad"
+  items: { courseId: ID; sessionId?: ID; quantity: number; description: string }[]
+  hasReceipt: boolean
+}
+
+export type ExecuteSeatCancellationInput = {
+  enrollmentId: ID
+  outcome: CancellationOutcome
+  amount: number
+  by: "customer" | "staff"
+  actorId: ID
+  reason: string
+}
+
+export type SeatCancellationResult = {
+  enrollmentStatus: "cancelled" | "refunded"
+  refundRequested: boolean
+  creditCode?: string
+  creditExpiresAt?: ISODate
+}

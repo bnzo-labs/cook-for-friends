@@ -14,6 +14,7 @@ type CustomerDoc = {
   lastName?: string | null
   phone?: string | null
   dietaryNotes?: string | null
+  preferredLocale?: string | null
 }
 
 type OrderDoc = {
@@ -80,6 +81,7 @@ function toEntry(e: EnrollmentDoc, seatCount: number): AttendeeEntry {
     enrollmentStatus: e.status,
     attendance: e.attendance,
     paidAt: order?.paidAt || e.createdAt,
+    locale: customer?.preferredLocale === "en" ? "en" : "fr",
   }
   return { row, seatCount }
 }

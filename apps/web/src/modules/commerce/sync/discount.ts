@@ -35,10 +35,10 @@ export async function syncDiscountToStripe(discountCodeId: ID): Promise<Result<D
     .findByID({ collection: "discount-codes", id: discountCodeId, depth: 0, overrideAccess: true })
     .catch(() => null)
   if (!doc) return { ok: false, error: { code: "NOT_FOUND", entity: "discount-code" } }
-  if (doc.personalFor) {
-    // Personal credits are W3 (issueCreditCode); nothing to mirror.
-    return { ok: true, data: { status: "skipped", reason: "personalFor codes are synced by W3 credits" } }
-  }
+  // Personal credits (W3-09 issueCreditCode) are mirrored like any code, with NO
+  // Stripe `customer` restriction: Checkout identifies buyers by `customer_email`
+  // only, so a customer-restricted promotion code would be unusable. Protection =
+  // code secrecy (CFF-CR- + 8 Crockford chars, ~1.1e12) + max_redemptions 1.
 
   const stripe = getStripe()
   try {
