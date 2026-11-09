@@ -238,6 +238,123 @@ describe.skipIf(!hasTestDb)("W2-07 webhook: checkout.session.completed (integrat
     expect((await holdsOf(payload, session.id, "converted")).map((h) => h.id)).toEqual([holdA.id])
   })
 
+  it("W2-21 zero-amount (100 % promo) single seat: order paid total 0, no PI, 1 enrollment/entitlement/job, hold converted; replays no-op", async () => {
+    const { course, session } = await makeBookableSession(payload, 4)
+    const hold = await addHold(payload, session.id, { quantity: 1 })
+    const c = completedEvent(fake, { courseId: course.id, sessionId: session.id, holdId: hold.id, zeroAmount: true })
+    const event = c.event()
+    const refundsBefore = fake.refunds.length
+
+    expect(await outcomeOf(event)).toBe("applied")
+    expect(await outcomeOf(event)).toBe("skipped")
+    expect(await outcomeOf(event)).toBe("skipped")
+
+    const orders = await ordersFor(payload, c.csId)
+    expect(orders).toHaveLength(1)
+    const order = orders[0]!
+    expect(order.status).toBe("paid")
+    expect(order.total).toBe(0)
+    expect(order.discountTotal).toBe(Number(order.subtotal))
+    expect(order.stripePaymentIntentId ?? null).toBeNull()
+    const enrollments = await enrollmentsOf(payload, { order: order.id })
+    expect(enrollments).toHaveLength(1)
+    expect(enrollments[0]!.seatAmount).toBe(0)
+    expect(await entitlementsOf(payload, order.id)).toHaveLength(1)
+    expect(await countJobs(`order-confirmation-${order.id}`)).toBe(1)
+    expect(await ledger(event.id)).toEqual([{ outcome: "applied" }])
+    expect((await holdsOf(payload, session.id, "converted")).map((h) => h.id)).toEqual([hold.id])
+    expect(fake.refunds.length).toBe(refundsBefore)
+
+    // refundOrder on a zero-total order → CONFLICT ORDER_NOT_REFUNDABLE, no Stripe call
+    const r = await commerce.refundOrder({ orderId: order.id, reason: "test" })
+    expect(r.ok).toBe(false)
+    expect(!r.ok && r.error).toMatchObject({ code: "CONFLICT", reason: "ORDER_NOT_REFUNDABLE" })
+    expect(fake.refunds.length).toBe(refundsBefore)
+  })
+
+  it("W2-21 zero-amount quantity 3: 3 enrollments Σ seatAmount 0, 3 entitlements, 1 + 2 jobs", async () => {
+    const { course, session } = await makeBookableSession(payload, 4)
+    const hold = await addHold(payload, session.id, { quantity: 3, attendees: guests(2) })
+    const c = completedEvent(fake, { courseId: course.id, sessionId: session.id, holdId: hold.id, quantity: 3, zeroAmount: true })
+    const event = c.event()
+    expect(await outcomeOf(event)).toBe("applied")
+    expect(await outcomeOf(event)).toBe("skipped")
+
+    const [order] = await ordersFor(payload, c.csId)
+    expect(order!.total).toBe(0)
+    const enrollments = await enrollmentsOf(payload, { order: order!.id })
+    expect(enrollments.map((e) => e.attendeeIndex)).toEqual([0, 1, 2])
+    expect(enrollments.map((e) => Number(e.seatAmount))).toEqual([0, 0, 0])
+    expect(await entitlementsOf(payload, order!.id)).toHaveLength(3)
+    expect(await countJobs(`order-confirmation-${order!.id}`)).toBe(1)
+    const guestJobs = await jobsLike("enrollment-confirmation-", "enrollment-confirmation")
+    expect(guestJobs.filter((j) => enrollments.slice(1).some((e) => j.key === `enrollment-confirmation-${e.id}`))).toHaveLength(2)
+  })
+
+  it("W2-21 zero-amount oversell: no Stripe refund, order cancelled without refunds, hold expired, oversell email refundAmount 0, outcome refunded", async () => {
+    const { course, session } = await makeBookableSession(payload, 1)
+    const holdA = await addHold(payload, session.id, { quantity: 1, expiresAt: new Date(Date.now() - 60_000) })
+    const holdB = await addHold(payload, session.id, { quantity: 1 })
+    expect(await outcomeOf(completedEvent(fake, { courseId: course.id, sessionId: session.id, holdId: holdB.id }).event())).toBe("applied")
+
+    const refundsBefore = fake.refunds.length
+    const a = completedEvent(fake, { courseId: course.id, sessionId: session.id, holdId: holdA.id, zeroAmount: true })
+    const eventA = a.event()
+    expect(await outcomeOf(eventA)).toBe("refunded")
+    expect(await outcomeOf(eventA)).toBe("skipped")
+    expect(fake.refunds.length).toBe(refundsBefore)
+
+    const [orderA] = await ordersFor(payload, a.csId)
+    expect(orderA!.status).toBe("cancelled")
+    expect(orderA!.total).toBe(0)
+    expect(orderA!.refunds ?? []).toHaveLength(0)
+    expect(await enrollmentsOf(payload, { order: orderA!.id })).toHaveLength(0)
+    expect(await entitlementsOf(payload, orderA!.id)).toHaveLength(0)
+    expect(await enrollmentsOf(payload, { session: session.id })).toHaveLength(1)
+    expect((await holdsOf(payload, session.id, "expired")).map((h) => h.id)).toContain(holdA.id)
+    const oversell = await jobsLike(`oversell-refund-${orderA!.id}`, "oversell-refund")
+    expect(oversell).toHaveLength(1)
+    expect(oversell[0]!.data.refundAmount).toBe(0)
+    expect(await countJobs(`order-confirmation-${orderA!.id}`)).toBe(0)
+    expect(await ledger(eventA.id)).toEqual([{ outcome: "refunded" }])
+  })
+
+  it("W2-21 non-zero total without a PaymentIntent on oversell still throws (500), nothing written", async () => {
+    const { course, session } = await makeBookableSession(payload, 1)
+    const holdA = await addHold(payload, session.id, { quantity: 1, expiresAt: new Date(Date.now() - 60_000) })
+    const holdB = await addHold(payload, session.id, { quantity: 1 })
+    expect(await outcomeOf(completedEvent(fake, { courseId: course.id, sessionId: session.id, holdId: holdB.id }).event())).toBe("applied")
+    const a = completedEvent(fake, { courseId: course.id, sessionId: session.id, holdId: holdA.id })
+    const event = a.event()
+    ;(event.data.object as { payment_intent: string | null }).payment_intent = null
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    await expect(deliver(event)).rejects.toThrow(/payment intent/)
+    spy.mockRestore()
+    expect(await ordersFor(payload, a.csId)).toHaveLength(0)
+    expect(await ledger(event.id)).toHaveLength(0)
+  })
+
+  it("M-1 foreign Checkout session (Payment Link, no cartToken) → skipped 200, no order", async () => {
+    const course = await makePurchasableCourse(payload, "online")
+    const c = completedEvent(fake, { courseId: course.id })
+    const event = c.event()
+    ;(event.data.object as { metadata: Record<string, string> }).metadata = {}
+    expect(await outcomeOf(event)).toBe("skipped")
+    expect(await ordersFor(payload, c.csId)).toHaveLength(0)
+    expect(await ledger(event.id)).toEqual([{ outcome: "skipped" }])
+  })
+
+  it("M-1 our session (cartToken) with malformed metadata still throws (500)", async () => {
+    const course = await makePurchasableCourse(payload, "online")
+    const c = completedEvent(fake, { courseId: course.id })
+    const event = c.event()
+    ;(event.data.object as { metadata: Record<string, string> }).metadata.quantity = "0"
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    await expect(deliver(event)).rejects.toThrow(/metadata/)
+    spy.mockRestore()
+    expect(await ledger(event.id)).toHaveLength(0)
+  })
+
   it("unpaid completion (async method pending) → skipped, no order", async () => {
     const { course, session } = await makeBookableSession(payload, 4)
     const hold = await addHold(payload, session.id, { quantity: 1 })

@@ -6,6 +6,19 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-11-08 — W2-21 zero-amount checkout + M-1/L-1/L-2 (backend-engineer, Opus)
+**Done**
+- H-1: `checkout.session.completed` with `payment_status = no_payment_required` (100 % promo) now fulfils like `paid` (order total 0, no PaymentIntent, N enrollments seatAmount 0, entitlements, emails). Zero-amount oversell → no Stripe refund, order `cancelled`, hold `expired`, `oversell-refund` email amount 0, outcome `refunded` (no 500 loop).
+- M-1: Stripe objects without our `cartToken` metadata (Payment Link session, Dashboard refund of a non-app charge, manual invoice) → ledger `skipped`, 200. Ours-but-unmatched still 500 (retry).
+- L-1: `/api/payload-jobs/run` staff only (`isStaff`). L-2: receipt route returns 404 for another customer's order.
+- Tests: integration (webhook, webhook-events, receipt) + unit (prepare, jobs-access). No migration, no CONTRACT change.
+
+**Blocked** — none.
+
+**Next step** — orchestrator reviews/merges the W2-21 PR; then W2-11 → `complete`. Erick: keep avoiding 100 % codes until merged. M-2/M-3 queued after W3-08.
+
+---
+
 ## 2026-11-08 — Wave 3 plan (Portal & operations) — AWAITING ERICK REVIEW (architect, Opus)
 Planning only. Briefs `tasks/W3-00` … `tasks/W3-11` (+ `W3-01b`, `W3-03a/b`). CONTRACT 1.2 → **1.3** (CCR-W3-1…8, pending approval). Base `main` 875a54e; W2-11, W2-12 and hardening PR #12 still open — W3-07 rebases on #12 before generating its migration.
 

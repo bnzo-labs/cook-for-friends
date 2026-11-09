@@ -68,10 +68,32 @@ async function createOrder(p: Paid, { tx }: ApplyScope, now: Date): Promise<{ id
   return { id, number }
 }
 
+/**
+ * W2-21: zero-amount order (100 % promo) lost the seat race. Nothing was
+ * charged → no Stripe refund; order `cancelled` (no `refunds[]` row), hold
+ * expired, `oversell-refund` email with `refundAmount: 0`. Never throws for the
+ * missing PaymentIntent, so the event cannot loop on 500.
+ */
+async function oversellZeroAmount(p: Paid, scope: ApplyScope, order: { id: number; number: string }): Promise<ApplyResult> {
+  await scope.tx.req.payload.update({
+    collection: "orders",
+    id: order.id,
+    data: { status: "cancelled" },
+    depth: 0,
+    overrideAccess: true,
+    req: scope.tx.req,
+  })
+  if (p.hold && p.hold.status === "active") await setHoldStatus(scope.db, p.hold.id, "expired")
+  await enqueueOversellRefund(p, order, 0, scope.tx)
+  logEvent("warn", "webhook.oversell.zero_amount", { orderId: order.id, sessionId: p.meta.sessionId, quantity: p.quantity })
+  return { outcome: "refunded", note: "oversell zero-amount: cancelled, nothing to refund", after: { queuedEmails: true } }
+}
+
 /** Whole-order refund, no enrollment, no entitlement (D9: no partial fulfilment). */
 async function oversell(p: Paid, scope: ApplyScope, order: { id: number; number: string }, now: Date): Promise<ApplyResult> {
-  if (!p.paymentIntentId) throw new Error("[commerce] oversell without payment intent")
   const total = Number(p.session.amount_total ?? 0)
+  if (total === 0) return oversellZeroAmount(p, scope, order)
+  if (!p.paymentIntentId) throw new Error("[commerce] oversell without payment intent")
   const refund = await createStripeRefund({
     paymentIntentId: p.paymentIntentId,
     amount: total,
@@ -130,6 +152,7 @@ async function grantAll(p: Paid, { tx }: ApplyScope, orderId: number): Promise<v
 
 /** In the transaction (CONTRACT §6 `checkout.session.completed`). */
 export async function applyCompleted(p: CompletedPrepared, scope: ApplyScope, event: Stripe.Event): Promise<ApplyResult> {
+  if (p.kind === "foreign") return { outcome: "skipped", note: "foreign checkout session (no cartToken)" }
   if (p.kind === "unpaid") return { outcome: "skipped", note: "payment_status not paid" }
   await lockCheckoutSession(scope.db, p.session.id)
   const existing = await findOrderByCheckoutSession(scope.tx.req.payload, p.session.id, scope.tx.req)
