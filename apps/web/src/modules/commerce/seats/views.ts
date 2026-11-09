@@ -74,7 +74,8 @@ export async function listCustomerEnrollments(customerId: ID): Promise<Enrollmen
     where,
     depth: 1,
     pagination: false,
-    sort: ["-createdAt", "attendeeIndex"],
+    // newest order first (ids are monotonic), then seat order within the order
+    sort: ["-order", "attendeeIndex"],
     overrideAccess: true,
     populate: { orders: { number: true, customer: true, items: true, refunds: true } },
   })
