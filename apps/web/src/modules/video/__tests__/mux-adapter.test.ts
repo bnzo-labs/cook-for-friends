@@ -10,13 +10,13 @@ const { publicKey, privateKey } = generateKeyPairSync("rsa", {
   modulusLength: 2048,
   publicKeyEncoding: { type: "spki", format: "pem" },
   privateKeyEncoding: { type: "pkcs8", format: "pem" },
-})
+}) as { publicKey: string; privateKey: string }
 const KEY_ID = "test-kid-1"
 
 const b64 = (s: string) => JSON.parse(Buffer.from(s, "base64url").toString("utf8")) as Record<string, unknown>
 /** Verify an RS256 JWT with the test public key; returns header + payload. */
 function verifyJwt(token: string): { header: Record<string, unknown>; payload: Record<string, unknown> } {
-  const [h, p, sig] = token.split(".")
+  const [h, p, sig] = token.split(".") as [string, string, string]
   const ok = createVerify("RSA-SHA256").update(`${h}.${p}`).verify(publicKey, Buffer.from(sig, "base64url"))
   if (!ok) throw new Error("bad jwt signature")
   return { header: b64(h), payload: b64(p) }

@@ -1,6 +1,5 @@
 "use client"
 
-import { useDocumentInfo, useForm, useFormFields, useTranslation } from "@payloadcms/ui"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 type Lang = "fr" | "en"
@@ -40,7 +39,6 @@ const T = {
 } as const
 
 const POLL_MS = 5000
-const FIELDS = ["provider", "assetId", "playbackId", "durationSec", "uploadId", "status"] as const
 
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60)
@@ -50,33 +48,49 @@ function formatDuration(sec: number): string {
 
 /** Admin field for `lessons.video`: status, upload (XHR PUT with progress), replace, poll, preview. */
 export function LessonVideoField() {
-  const { id } = useDocumentInfo()
-  const { i18n } = useTranslation()
-  const { dispatchFields } = useForm()
-  const lang: Lang = i18n?.language?.startsWith("en") ? "en" : "fr"
+  // @payloadcms/ui is not a direct dependency (pnpm strict), so the lesson id and
+  // language come from the admin URL / <html lang> and state from the REST API.
+  const [lessonId, setLessonId] = useState<string | null>(null)
+  const [lang, setLang] = useState<Lang>("fr")
+  const [status, setStatus] = useState<Status>("none")
+  const [duration, setDuration] = useState<number | undefined>()
+  const [uploadId, setUploadId] = useState<string | undefined>()
   const t = T[lang]
-
-  const status = (useFormFields(([f]) => f["video.status"]?.value) as Status | undefined) ?? "none"
-  const duration = useFormFields(([f]) => f["video.durationSec"]?.value) as number | undefined
-  const uploadId = useFormFields(([f]) => f["video.uploadId"]?.value) as string | undefined
 
   const [progress, setProgress] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<{ url: string; expiresAt: string; fake: boolean } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const lessonId = id === undefined || id === null ? null : String(id)
 
-  /** Mirror the server-recorded video group into the form without marking it dirty (a later save must not clobber it). */
-  const syncFromServer = useCallback(async () => {
-    if (!lessonId) return
+  useEffect(() => {
+    const m = /\/collections\/lessons\/(\d+)/.exec(window.location.pathname)
+    setLessonId(m?.[1] ?? null)
+    setLang(document.documentElement.lang.startsWith("en") ? "en" : "fr")
+  }, [])
+
+  /** Read the server-recorded video group. Returns the status read. */
+  const syncFromServer = useCallback(async (): Promise<Status | null> => {
+    if (!lessonId) return null
     const res = await fetch(`/api/lessons/${lessonId}?depth=0`, { credentials: "include" })
-    if (!res.ok) return
-    const doc = (await res.json()) as { video?: Record<string, unknown> }
-    for (const key of FIELDS) {
-      const value = doc.video?.[key] ?? null
-      dispatchFields({ type: "UPDATE", path: `video.${key}`, value, initialValue: value })
-    }
-  }, [lessonId, dispatchFields])
+    if (!res.ok) return null
+    const doc = (await res.json()) as { video?: { status?: Status; durationSec?: number | null; uploadId?: string | null } }
+    const next = doc.video?.status ?? "none"
+    setStatus(next)
+    setDuration(doc.video?.durationSec ?? undefined)
+    setUploadId(doc.video?.uploadId ?? undefined)
+    return next
+  }, [lessonId])
+
+  useEffect(() => {
+    void syncFromServer()
+  }, [syncFromServer])
+
+  /**
+   * The lesson form holds the video group as loaded; saving it later would write
+   * those stale values over what the upload recorded. Reloading resets the form
+   * from the database once a state change is final.
+   */
+  const reloadForm = () => window.location.reload()
 
   useEffect(() => {
     if (!lessonId || status !== "preparing" || !uploadId || progress !== null) return
@@ -85,7 +99,7 @@ export function LessonVideoField() {
         const res = await fetch(`/api/video/uploads/${encodeURIComponent(uploadId)}?lessonId=${lessonId}`, {
           credentials: "include",
         })
-        if (res.ok) await syncFromServer()
+        if (res.ok && (await syncFromServer()) === "ready") reloadForm()
       } catch {
         // Transient network error: the next tick retries.
       }
@@ -122,7 +136,7 @@ export function LessonVideoField() {
           xhr.onerror = () => reject(new Error("put"))
           xhr.send(file)
         })
-        await syncFromServer()
+        reloadForm()
       } catch {
         setError(t.failed)
       } finally {
