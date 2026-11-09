@@ -2,8 +2,8 @@
  * Unit tests for sendEmail() — CONTRACT §4 surface.
  *
  * Validates:
- * - Returns VALIDATION error for Wave 3 (non-Wave-2) templates
- * - Returns ok:true for valid Wave 2 templates (via test transport)
+ * - Returns VALIDATION error for unknown templates and invalid Wave 3 data
+ * - Returns ok:true for valid templates (via test transport)
  * - Dispatches correct template renderer (subject line contains expected text)
  * - XSS: user-supplied data is NOT interpreted as HTML in plain-text output
  */
@@ -14,13 +14,13 @@ import { buildTestTransport, setEmailTransportForTests } from "../server/transpo
 describe("sendEmail — validation guard", () => {
   afterEach(() => setEmailTransportForTests(null))
 
-  it("returns VALIDATION error for a Wave-3 template (reminder)", async () => {
+  it("returns VALIDATION error for an unknown template", async () => {
     const { transport } = buildTestTransport()
     setEmailTransportForTests(transport)
 
     const result = await sendEmail({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      template: "reminder" as any,
+      template: "not-a-template" as any,
       to: "test@example.com",
       locale: "en",
       data: {} as never,
@@ -33,7 +33,7 @@ describe("sendEmail — validation guard", () => {
     }
   })
 
-  it("returns VALIDATION error for certificate-issued (Wave-3)", async () => {
+  it("returns VALIDATION error with data paths for empty certificate-issued data", async () => {
     const { transport } = buildTestTransport()
     setEmailTransportForTests(transport)
 
@@ -47,8 +47,10 @@ describe("sendEmail — validation guard", () => {
     })
 
     expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error.code).toBe("VALIDATION")
+    if (!result.ok && result.error.code === "VALIDATION") {
+      expect(result.error.issues.some((i) => i.path === "data.downloadUrl")).toBe(true)
+    } else {
+      throw new Error("expected VALIDATION")
     }
   })
 })

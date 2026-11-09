@@ -5,7 +5,7 @@
  * - Happy path: valid input → test transport receives email with correct locale + template
  * - ICS attachment: ics[] in input → captured email has attachment with .ics filename
  * - Invalid input (Zod): handler throws with descriptive message (Payload retries)
- * - Wave-3 template: VALIDATION error from sendEmail causes handler to throw
+ * - unknown template: VALIDATION error from sendEmail causes handler to throw
  *
  * Tests run in both unit mode (mocking payload.jobs.run) and the stub below.
  * Integration with a real DB (payload.jobs.queue + run) is guarded by hasTestDb.
@@ -172,15 +172,15 @@ describe("send-email task handler", () => {
     ).rejects.toThrow(/invalid input/i)
   })
 
-  it("throws on Wave-3 template so Payload does NOT retry silently", async () => {
+  it("throws on unknown template so Payload does NOT retry silently", async () => {
     await expect(
       getHandler()(
         makeArgs({
-          template: "reminder",
+          template: "not-a-template",
           to: "user@example.com",
           locale: "en",
           data: {},
-          idempotencyKey: "job-wave3-001",
+          idempotencyKey: "job-unknown-001",
         }) as never,
       ),
     ).rejects.toThrow()
