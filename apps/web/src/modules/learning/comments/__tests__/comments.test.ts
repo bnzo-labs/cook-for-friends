@@ -62,7 +62,7 @@ describe.skipIf(!hasTestDb)("W3-04 comments (integration)", () => {
     (await payload.find({ collection: "payload-jobs", where: { "input.idempotencyKey": { equals: key } }, overrideAccess: true, pagination: false })).docs
 
   async function moderate(staffUser: { id: number }, id: number | string, status: "approved" | "rejected" | "pending") {
-    return payload.update({ collection: "comments", id, data: { status }, user: asUser(staffUser, "users"), overrideAccess: false })
+    return payload.update({ collection: "comments", id, data: { status }, user: asUser(staffUser, "users"), overrideAccess: false, depth: 0 })
   }
 
   it("postComment: pending, trimmed; unentitled → FORBIDDEN; validation", async () => {
