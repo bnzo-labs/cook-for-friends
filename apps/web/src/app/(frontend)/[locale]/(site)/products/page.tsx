@@ -3,6 +3,7 @@ import { getPayload } from "@/lib/payload"
 import { assertLocale } from "@/i18n/locale"
 import { ProductCard, type ProductCardData } from "@/components/storefront/ProductCard"
 import { Section, Container } from "@/components/layout"
+import { buildPageMetadata, staticPaths } from "@/components/storefront/seo/metadata"
 import type { Metadata } from "next"
 import type { Media, Product } from "@/payload-types"
 
@@ -16,7 +17,14 @@ export async function generateMetadata({
   const { locale: rawLocale } = await params
   const locale = assertLocale(rawLocale)
   const t = await getTranslations({ locale, namespace: "storefront.products" })
-  return { title: t("meta_title"), description: t("meta_description") }
+  const tc = await getTranslations({ locale, namespace: "common" })
+  return buildPageMetadata({
+    locale,
+    paths: staticPaths("/products"),
+    title: t("meta_title"),
+    description: t("meta_description"),
+    siteName: tc("site_name"),
+  })
 }
 
 function toProductCard(doc: Product): ProductCardData {

@@ -5,6 +5,7 @@ import { locales } from "@/i18n/locales"
 import { routing } from "@/i18n/routing"
 import { SiteFooter, SiteHeader } from "@/components/layout"
 import { Toaster } from "@/components/ui/sonner"
+import { RegisterSW } from "@/components/pwa"
 import { fontBody, fontDisplay } from "@/styles/fonts"
 import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
@@ -51,6 +52,7 @@ export default async function LocaleLayout({
           </main>
           <SiteFooter locale={locale} />
           <Toaster />
+          <RegisterSW />
         </NextIntlClientProvider>
       </body>
     </html>
