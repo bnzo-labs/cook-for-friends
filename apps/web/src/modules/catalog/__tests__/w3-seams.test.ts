@@ -60,11 +60,10 @@ describe.skipIf(!hasTestDb)("catalog W3 seams (integration)", { timeout: 60_000 
   }
 
   async function material(kind: "recipe" | "pdf" | "other" = "pdf", locale?: "fr" | "en") {
-    const media = await payload.create({
+    // Row only (no R2 upload): the seam reads filename/mimeType, never the bytes.
+    const media = await payload.db.create({
       collection: "media",
-      overrideAccess: true,
-      data: { alt: "x" },
-      file: { data: Buffer.from("%PDF-1.4 test"), name: `mat-${uid()}.pdf`, mimetype: "application/pdf", size: 13 },
+      data: { filename: `mat-${uid()}.pdf`, mimeType: "application/pdf", filesize: 13 },
     })
     return payload.create({
       collection: "materials",
@@ -248,7 +247,7 @@ describe.skipIf(!hasTestDb)("catalog W3 seams (integration)", { timeout: 60_000 
       const cancelled = await at(base + 6 * HOUR, "cancelled")
       const done = await at(base + 7 * HOUR, "completed")
 
-      const out = await listSessionsStartingBetween(from, to)
+      const out = (await listSessionsStartingBetween(from, to)).filter((x) => x.courseId === c.doc.id)
       const ids = out.map((s) => s.id)
       expect(ids).toEqual([onFrom.id, inside.id])
       for (const excluded of [before, onTo, cancelled, done]) expect(ids).not.toContain(excluded.id)
