@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-00
-status: pending
+status: complete
 wave: 3
 batch: 3a
 module: platform
@@ -27,14 +27,14 @@ Land every shared platform change Wave 3 needs in one PR so feature tasks never 
 - **D2 (video provider) late-bound:** `VIDEO_PROVIDER` enum becomes `mux | bunny | fake | none`. `fake` is accepted only when `VIDEO_FAKE_ALLOWED=true` (set in CI, local, staging-until-Mux-keys; **never production** — W4 deploy checklist). `none` = video disabled (playback returns UPSTREAM). Mux vars required only when `mux`. Missing Mux keys never break build or tests.
 
 ## Acceptance criteria
-- [ ] `apps/web/package.json` adds exactly the DEP-W3 pins (exact versions, no `^`); `pnpm install` updates `pnpm-lock.yaml`; `pnpm build` green. `@react-pdf/renderer` imported in a server-only smoke test (render a 1-page PDF to a Buffer, assert `%PDF-` header) to prove it works under Next 16 / Node 22 (no Chromium). If it needs `serverExternalPackages`, add it to `next.config.ts` and say why.
-- [ ] `env.ts`: enum `mux|bunny|fake|none`, default `none`; `VIDEO_FAKE_ALLOWED` (`"true"` → boolean, default false); superRefine: `fake` without `VIDEO_FAKE_ALLOWED=true` → boot error; `mux` requires `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_SIGNING_KEY_ID`, `MUX_SIGNING_KEY_PRIVATE` (webhook secret stays optional — webhook route answers 503 when absent). Unit tests cover all 5 branches.
-- [ ] `src/lib/r2.ts` (new, platform-owned): `presignR2Get(i: { key: string; ttlSeconds: number; filename?: string; contentType?: string }): Promise<{ url: string; expiresAt: ISODate }>` using the R2 env + `@aws-sdk/s3-request-presigner`; TTL clamped 60..900 s; `ResponseContentDisposition` attachment with RFC 5987 filename when given. Unit test with dummy creds (presign is offline): URL host = R2 endpoint, `X-Amz-Expires` = ttl, key path-encoded. Server-only (`import "server-only"` or equivalent guard).
-- [ ] `env.ts` also adds `SEO_INDEXABLE_HOSTS` (optional, comma-separated hostnames, default empty → nothing indexable; consumed by W3-06 robots/metadata).
-- [ ] `.env.example`: `SEO_INDEXABLE_HOSTS=` (empty), `VIDEO_PROVIDER=fake`, `VIDEO_FAKE_ALLOWED=true`, comment block on D2 and on never setting `fake` in production; Mux vars documented with where to find them. `.github/workflows/ci.yml`: build/test/integration jobs use `VIDEO_PROVIDER=fake` + `VIDEO_FAKE_ALLOWED=true` (replaces `none`).
-- [ ] `next.config.ts`: `images.remotePatterns` adds `image.mux.com` (posters) only. No CSP added here (W4); record "CSP must allow `stream.mux.com`, `*.mux.com` media/connect, `image.mux.com` img" in Completion notes for W4.
-- [ ] `payload.config.ts`, `src/i18n/**`, `vercel.json`, `infra/**` unchanged (PR #12 owns `payload.config.ts` push change; pathnames for every Wave 3 page already exist).
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test` green; CI green on the PR (integration job not skipped). Vercel preview `Ready`.
+- [x] `apps/web/package.json` adds exactly the DEP-W3 pins (exact versions, no `^`); `pnpm install` updates `pnpm-lock.yaml`; `pnpm build` green. `@react-pdf/renderer` imported in a server-only smoke test (render a 1-page PDF to a Buffer, assert `%PDF-` header) to prove it works under Next 16 / Node 22 (no Chromium). If it needs `serverExternalPackages`, add it to `next.config.ts` and say why.
+- [x] `env.ts`: enum `mux|bunny|fake|none`, default `none`; `VIDEO_FAKE_ALLOWED` (`"true"` → boolean, default false); superRefine: `fake` without `VIDEO_FAKE_ALLOWED=true` → boot error; `mux` requires `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET`, `MUX_SIGNING_KEY_ID`, `MUX_SIGNING_KEY_PRIVATE` (webhook secret stays optional — webhook route answers 503 when absent). Unit tests cover all 5 branches.
+- [x] `src/lib/r2.ts` (new, platform-owned): `presignR2Get(i: { key: string; ttlSeconds: number; filename?: string; contentType?: string }): Promise<{ url: string; expiresAt: ISODate }>` using the R2 env + `@aws-sdk/s3-request-presigner`; TTL clamped 60..900 s; `ResponseContentDisposition` attachment with RFC 5987 filename when given. Unit test with dummy creds (presign is offline): URL host = R2 endpoint, `X-Amz-Expires` = ttl, key path-encoded. Server-only (`import "server-only"` or equivalent guard).
+- [x] `env.ts` also adds `SEO_INDEXABLE_HOSTS` (optional, comma-separated hostnames, default empty → nothing indexable; consumed by W3-06 robots/metadata).
+- [x] `.env.example`: `SEO_INDEXABLE_HOSTS=` (empty), `VIDEO_PROVIDER=fake`, `VIDEO_FAKE_ALLOWED=true`, comment block on D2 and on never setting `fake` in production; Mux vars documented with where to find them. `.github/workflows/ci.yml`: build/test/integration jobs use `VIDEO_PROVIDER=fake` + `VIDEO_FAKE_ALLOWED=true` (replaces `none`).
+- [x] `next.config.ts`: `images.remotePatterns` adds `image.mux.com` (posters) only. No CSP added here (W4); record "CSP must allow `stream.mux.com`, `*.mux.com` media/connect, `image.mux.com` img" in Completion notes for W4.
+- [x] `payload.config.ts`, `src/i18n/**`, `vercel.json`, `infra/**` unchanged (PR #12 owns `payload.config.ts` push change; pathnames for every Wave 3 page already exist).
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test` green; CI green on the PR (integration job not skipped). Vercel preview `Ready`.
 
 ## Files to create / edit
 - Edit: `apps/web/package.json`, `pnpm-lock.yaml`, `apps/web/src/lib/env.ts`, `apps/web/.env.example`, `.github/workflows/ci.yml`, `apps/web/next.config.ts` (images + externals only).
@@ -69,3 +69,10 @@ Criteria ticked, PR open with CI green + Vercel preview Ready, `status: complete
 ## Communication
 Caveman. English only.
 
+
+## Completion notes
+- PR #16. CI green after one `gh run rerun --failed` (first Build attempt: transient next/font/google fetch failure, unrelated; main green). Integration job ran (not skipped).
+- Deviations: `server-only` pkg not an approved dep, so r2.ts uses a runtime `typeof window` guard. `serverSchema` exported from env.ts for tests. No `serverExternalPackages` change needed for `@react-pdf/renderer` (smoke passes on Node 22; CI build green).
+- Local `pnpm build` not completed (machine overloaded by parallel batch); CI build is the evidence.
+- W4 CSP: must allow `stream.mux.com`, `*.mux.com` media/connect, `image.mux.com` img. Never set `VIDEO_PROVIDER=fake` / `VIDEO_FAKE_ALLOWED` in production.
+- Erick/orchestrator: set `VIDEO_PROVIDER=fake` + `VIDEO_FAKE_ALLOWED=true` in Vercel Preview/staging env (not Production). Workaround: default `none`, video routes answer UPSTREAM.

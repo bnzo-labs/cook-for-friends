@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
   // @payloadcms/richtext-lexical must stay bundled: its RSC entry imports CSS,
   // which Node cannot load when the package is externalized (W1-02).
   serverExternalPackages: ["sharp"],
+  images: {
+    // Mux poster images only. CSP is added in W4.
+    remotePatterns: [{ protocol: "https", hostname: "image.mux.com" }],
+  },
   experimental: {},
   // NEXT_PUBLIC_* vars are automatically forwarded to all Turbopack workers
   // by Next.js — no explicit env block needed for them.

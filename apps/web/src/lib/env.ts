@@ -12,10 +12,13 @@ import { z } from "zod"
 // Schema
 // ---------------------------------------------------------------------------
 
-// "none" = video not yet configured (Wave 1–2); Wave 3 sets mux or bunny.
-const videoProviderEnum = z.enum(["mux", "bunny", "none"])
+// D2 (late-bound): mux | bunny | fake | none.
+//  - none = video disabled (playback returns UPSTREAM)
+//  - fake = in-memory adapter for CI/local/staging; boot error unless VIDEO_FAKE_ALLOWED=true.
+//           NEVER set in production (W4 deploy checklist).
+const videoProviderEnum = z.enum(["mux", "bunny", "fake", "none"])
 
-const serverSchema = z.object({
+export const serverSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DATABASE_URL_DIRECT: z.string().min(1, "DATABASE_URL_DIRECT is required"),
@@ -52,7 +55,14 @@ const serverSchema = z.object({
   CRON_SECRET: z.string().min(32, "CRON_SECRET must be at least 32 chars"),
 
   // Video provider
-  VIDEO_PROVIDER: videoProviderEnum.default("mux"),
+  VIDEO_PROVIDER: videoProviderEnum.default("none"),
+  VIDEO_FAKE_ALLOWED: z
+    .string()
+    .transform((v) => v === "true")
+    .default("false"),
+
+  // SEO — comma-separated hostnames allowed to be indexed (empty = nothing indexable)
+  SEO_INDEXABLE_HOSTS: z.string().optional().default(""),
 })
   .merge(
     // Mux — required when VIDEO_PROVIDER=mux
@@ -82,20 +92,29 @@ const serverSchema = z.object({
   )
   .superRefine((data, ctx) => {
     // Validate video-provider-specific vars
-    if (data.VIDEO_PROVIDER === "mux") {
-      if (!data.MUX_TOKEN_ID) {
+    if (data.VIDEO_PROVIDER === "fake") {
+      if (!data.VIDEO_FAKE_ALLOWED) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "MUX_TOKEN_ID is required when VIDEO_PROVIDER=mux",
-          path: ["MUX_TOKEN_ID"],
+          message: "VIDEO_PROVIDER=fake requires VIDEO_FAKE_ALLOWED=true (never in production)",
+          path: ["VIDEO_PROVIDER"],
         })
       }
-      if (!data.MUX_TOKEN_SECRET) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "MUX_TOKEN_SECRET is required when VIDEO_PROVIDER=mux",
-          path: ["MUX_TOKEN_SECRET"],
-        })
+    } else if (data.VIDEO_PROVIDER === "mux") {
+      const required = [
+        "MUX_TOKEN_ID",
+        "MUX_TOKEN_SECRET",
+        "MUX_SIGNING_KEY_ID",
+        "MUX_SIGNING_KEY_PRIVATE",
+      ] as const
+      for (const key of required) {
+        if (!data[key]) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `${key} is required when VIDEO_PROVIDER=mux`,
+            path: [key],
+          })
+        }
       }
     } else if (data.VIDEO_PROVIDER === "bunny") {
       if (!data.BUNNY_LIBRARY_ID) {
