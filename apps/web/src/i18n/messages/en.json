@@ -353,6 +353,10 @@
       "ics_description": "Your seat at the Cook for Friends class: {course}. See you in the kitchen!"
     }
   },
+  "scheduling": {
+    "ics_description": "Reminder: your Cook for Friends class, {course}. See you in the kitchen!",
+    "WAITLIST_RATE_LIMITED": "Too many requests. Please try again later."
+  },
   "pwa": {
     "name": "Cook for Friends",
     "short_name": "Cook for Friends",

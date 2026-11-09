@@ -353,6 +353,10 @@
       "ics_description": "Votre place au cours Cook for Friends : {course}. À bientôt en cuisine !"
     }
   },
+  "scheduling": {
+    "ics_description": "Rappel : votre cours Cook for Friends, {course}. À bientôt en cuisine !",
+    "WAITLIST_RATE_LIMITED": "Trop de demandes. Veuillez réessayer plus tard."
+  },
   "pwa": {
     "name": "Cook for Friends",
     "short_name": "Cook for Friends",
