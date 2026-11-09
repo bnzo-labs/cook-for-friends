@@ -38,7 +38,7 @@ Build the five remaining email templates in FR and EN with their `EmailData` typ
   - `comment-approved`: lesson + course title, `lessonUrl`. No comment body echoed (keep it short; body may be long).
 - [x] `order-confirmation` / `enrollment-confirmation` render the account link block only when `accountUrl` is set (W2 senders unchanged → no visual diff until the webhook passes it; see notes).
 - [x] Render tests FR + EN for each new template; `cancellation-confirmation` attendee variant contains no currency string and no code; names with `<script>` escaped; no names in subject lines; ICU placeholders all supplied (test renders every key with values — no raw `{x}` in output).
-- [ ] EN/FR key parity test green. `pnpm typecheck/lint/test` green; CI green; Vercel preview Ready.
+- [x] EN/FR key parity test green. `pnpm typecheck/lint/test` green; CI green; Vercel preview Ready.
 
 ## Files to create / edit
 - Edit/create: `apps/web/src/modules/notifications/**` (types, templates, send registry, tests).
