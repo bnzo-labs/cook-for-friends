@@ -229,6 +229,39 @@ describe.skipIf(!hasTestDb)("W2-07 webhook: refunds, close events, invoices, rol
     expect(orders[0]!.number).toMatch(/^CFF-\d{6,}$/)
   })
 
+  it("M-1 foreign charge.refunded (Dashboard refund of a non-app charge) → skipped 200, ledger skipped", async () => {
+    const pi = `pi_test_${uid()}`
+    const event = chargeRefundedEvent({ pi, amount: 2000, refunded: 2000, refunds: [stripeRefund(pi, 2000)], foreign: true })
+    expect(await outcomeOf(event)).toBe("skipped")
+    expect(await ledger(event.id)).toEqual([{ outcome: "skipped" }])
+  })
+
+  it("M-1 charge without metadata whose PaymentIntent is ours (cartToken) and has no order yet → still 500 (retry)", async () => {
+    const pi = `pi_test_${uid()}`
+    fake.paymentIntents.set(pi, { cartToken: `cart_${uid()}` })
+    const event = chargeRefundedEvent({ pi, amount: 2000, refunded: 2000, refunds: [stripeRefund(pi, 2000)], foreign: true })
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    await expect(deliver(event)).rejects.toThrow(/no order for payment intent/)
+    spy.mockRestore()
+    expect(await ledger(event.id)).toHaveLength(0)
+  })
+
+  it("M-1 our charge (cartToken) with no order yet → still 500 (retry)", async () => {
+    const pi = `pi_test_${uid()}`
+    const event = chargeRefundedEvent({ pi, amount: 2000, refunded: 2000, refunds: [stripeRefund(pi, 2000)] })
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    await expect(deliver(event)).rejects.toThrow(/no order for payment intent/)
+    spy.mockRestore()
+    expect(await ledger(event.id)).toHaveLength(0)
+  })
+
+  it("M-1 foreign invoice.finalized (manual Dashboard invoice) → skipped 200, ledger skipped", async () => {
+    const invoiceId = `in_test_${uid()}`
+    const event = invoiceFinalizedEvent({ invoiceId, pdf: "https://pay.stripe.com/x.pdf", foreign: true })
+    expect(await outcomeOf(event)).toBe("skipped")
+    expect(await ledger(event.id)).toEqual([{ outcome: "skipped" }])
+  })
+
   it("unknown event type → recorded skipped", async () => {
     const event = { id: `evt_${uid()}`, object: "event", type: "customer.created", created: 0, data: { object: { id: "cus_x" } } }
     expect(await outcomeOf(event)).toBe("skipped")

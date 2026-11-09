@@ -13,7 +13,7 @@ import { upsertCustomerByEmail, type CustomerView } from "@/modules/identity"
 import { getStripe } from "../../server/stripe-port"
 import { executorFor } from "../../server/tx"
 import { readHold, readHoldAttendees, type HoldRow } from "../orders"
-import { logEvent, normalizeEmail, parseCheckoutMetadata, stripeId, type ParsedMetadata } from "../shared"
+import { isAppObject, logEvent, normalizeEmail, parseCheckoutMetadata, stripeId, type ParsedMetadata } from "../shared"
 
 /** One seat: index 0 = buyer, i = hold attendees[i − 1]. */
 export type ResolvedAttendee = {
@@ -28,6 +28,8 @@ export type ResolvedAttendee = {
 
 export type CompletedPrepared =
   | { kind: "unpaid" }
+  /** M-1: a Checkout session this app did not create (Payment Link, Dashboard): no `cartToken`. */
+  | { kind: "foreign" }
   | {
       kind: "paid"
       session: Stripe.Checkout.Session
@@ -159,10 +161,21 @@ async function resolveAttendees(
   return out
 }
 
+/**
+ * W2-21 (H-1): `no_payment_required` = 100 % promotion code (or amount-off ≥
+ * line total) → fulfil like `paid` (total 0, no PaymentIntent). `unpaid` stays
+ * skipped (async payment methods are off).
+ */
+export const FULFILLABLE_PAYMENT_STATUSES: ReadonlySet<string> = new Set(["paid", "no_payment_required"])
+
 /** Before the transaction: Stripe reads, hold snapshot, customer upserts, catalog reads. */
 export async function prepareCompleted(event: Stripe.Event): Promise<CompletedPrepared> {
   const session = event.data.object as Stripe.Checkout.Session
-  if (session.payment_status !== "paid") return { kind: "unpaid" }
+  if (!isAppObject(session.metadata)) {
+    logEvent("info", "webhook.foreign.skipped", { eventId: event.id, type: event.type })
+    return { kind: "foreign" }
+  }
+  if (!FULFILLABLE_PAYMENT_STATUSES.has(String(session.payment_status))) return { kind: "unpaid" }
 
   const meta = parseCheckoutMetadata(session.metadata, session.id)
   const { quantity, line } = await readLine(session.id)

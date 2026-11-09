@@ -61,6 +61,19 @@ export type ParsedMetadata = {
   quantity: number
 }
 
+/**
+ * M-1: true when a Stripe object (Checkout session, PaymentIntent, Charge,
+ * Invoice) carries our `cartToken` metadata, i.e. this app created it. Objects
+ * without it (Dashboard refunds, manual invoices, Payment Links) are foreign:
+ * handlers record `skipped` and return 200 instead of throwing (no 3-day retry
+ * storm, endpoint never disabled). A present `cartToken` with malformed
+ * metadata is still ours and still throws.
+ */
+export function isAppObject(metadata: Stripe.Metadata | null | undefined): boolean {
+  const token = metadata?.cartToken
+  return typeof token === "string" && token.length > 0
+}
+
 /** Never trust a malformed metadata block: throw → 500 → logged, Stripe retries. */
 export function parseCheckoutMetadata(metadata: Stripe.Metadata | null | undefined, context: string): ParsedMetadata {
   const parsed = checkoutMetadataSchema.safeParse(metadata ?? {})
