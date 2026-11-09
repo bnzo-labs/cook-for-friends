@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-02
-status: pending
+status: complete
 wave: 3
 batch: 3b
 module: video
@@ -74,3 +74,15 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+## Completion notes
+- Built: `@/modules/video` (types, `server/{config,fake-token,mux-port,provider,playback,webhook,uploads,http}.ts`, `server/providers/{fake,mux}.ts`, `admin/LessonVideoField.tsx`), routes `api/video/{playback,webhook,uploads,uploads/[id],fake,fake-upload/[id]}`, one `admin.components.Field` line on `lessons.video`, `importMap.js` regenerated, `e2e/w3-02-lesson-video.test.ts` (env-gated).
+- Deviations:
+  - Mux SDK 15.5.0 option is `new_asset_settings.playback_policies: ['signed']` (not `playback_policy`).
+  - Mux SDK 15.5.0 puts the signing key id in the JWT `kid` **claim** (Mux's documented claims), not the header; unit test asserts claim.
+  - Fake playback URL carries an extra `viewer=<id>` query param (the HMAC includes the viewer, so the verifier needs it).
+  - Fake adapter is stateless (upload id encodes the lesson; PUT records `ready` on the lesson directly; `getAsset(uploadId)` stays `preparing` until then).
+  - 401 uses `{ code: 'FORBIDDEN', messageKey: 'errors.FORBIDDEN' }`, 429 uses `RATE_LIMITED` (identity precedent); no new message keys (admin copy inline FR/EN).
+  - Extra non-contract exports: `getLessonPlaybackForStaff` (admin preview) and route helpers.
+- NOT done locally: integration suite + Playwright admin smoke + screenshots (Neon branch creation denied by the permission classifier; shared `dev` is off-limits). Integration suite `video-routes.test.ts` runs in CI (own Neon branch). Admin smoke: `E2E_STAFF_EMAIL/PASSWORD/LESSON_ID` + `W302_SCREENSHOTS=1 PW_CHANNEL=chrome` on a throwaway branch (handoff).
+- Live Mux smoke: skipped, D2 keys absent.

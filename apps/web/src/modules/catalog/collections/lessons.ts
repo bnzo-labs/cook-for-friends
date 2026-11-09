@@ -51,6 +51,8 @@ export const Lessons: CollectionConfig = {
       name: "video",
       type: "group",
       label: { fr: "Vidéo", en: "Video" },
+      // W3-02: upload / status / preview UI (approved single-line exception).
+      admin: { components: { Field: "/modules/video/admin/LessonVideoField#LessonVideoField" } },
       fields: [
         {
           name: "provider",
