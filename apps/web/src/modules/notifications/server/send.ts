@@ -6,12 +6,12 @@
  * CONTRACT §4 signature:
  *   sendEmail<T extends EmailTemplate>(i: { template, to, locale, data, attachments?, idempotencyKey }): Promise<Result<{ id: string }>>
  *
- * For Wave 3 templates (not yet implemented) returns VALIDATION error.
+ * Unknown template or invalid Wave 3 data returns a VALIDATION error.
  */
 import type { Locale } from "@/modules/_shared"
 import type { Result } from "@/modules/_shared"
 import type { EmailTemplate, EmailData, Attachment } from "../types"
-import { WAVE2_TEMPLATES } from "../types"
+import { validateTemplateData } from "./validate"
 import { getEmailTransport } from "./transport"
 
 import { renderMagicLink } from "../templates/magic-link"
@@ -19,10 +19,22 @@ import { renderOrderConfirmation } from "../templates/order-confirmation"
 import { renderEnrollmentConfirmation } from "../templates/enrollment-confirmation"
 import { renderOversellRefund } from "../templates/oversell-refund"
 import { renderRefundIssued } from "../templates/refund-issued"
+import { renderReminder } from "../templates/reminder"
+import { renderWaitlistSeatAvailable } from "../templates/waitlist-seat-available"
+import { renderCancellationConfirmation } from "../templates/cancellation-confirmation"
+import { renderCertificateIssued } from "../templates/certificate-issued"
+import { renderCommentApproved } from "../templates/comment-approved"
 
 // ---------------------------------------------------------------------------
-// Renderer dispatch (Wave 2 only)
+// Renderer dispatch
 // ---------------------------------------------------------------------------
+
+class UnknownTemplateError extends Error {
+  constructor(template: string) {
+    super(`Unknown email template "${template}"`)
+    this.name = "UnknownTemplateError"
+  }
+}
 
 async function renderTemplate<T extends EmailTemplate>(
   template: T,
@@ -40,8 +52,21 @@ async function renderTemplate<T extends EmailTemplate>(
       return renderOversellRefund(locale, data as EmailData["oversell-refund"])
     case "refund-issued":
       return renderRefundIssued(locale, data as EmailData["refund-issued"])
+    case "reminder":
+      return renderReminder(locale, data as EmailData["reminder"])
+    case "waitlist-seat-available":
+      return renderWaitlistSeatAvailable(locale, data as EmailData["waitlist-seat-available"])
+    case "cancellation-confirmation":
+      return renderCancellationConfirmation(
+        locale,
+        data as EmailData["cancellation-confirmation"],
+      )
+    case "certificate-issued":
+      return renderCertificateIssued(locale, data as EmailData["certificate-issued"])
+    case "comment-approved":
+      return renderCommentApproved(locale, data as EmailData["comment-approved"])
     default:
-      throw new Error(`Unreachable: template "${template}" slipped past WAVE2_TEMPLATES guard`)
+      throw new UnknownTemplateError(String(template))
   }
 }
 
@@ -57,26 +82,26 @@ export async function sendEmail<T extends EmailTemplate>(i: {
   attachments?: Attachment[]
   idempotencyKey: string
 }): Promise<Result<{ id: string }>> {
-  if (!WAVE2_TEMPLATES.has(i.template)) {
-    return {
-      ok: false,
-      error: {
-        code: "VALIDATION",
-        issues: [
-          {
-            path: "template",
-            message: `Template "${i.template}" is not implemented in Wave 2`,
-          },
-        ],
-      },
-    }
+  const issues = validateTemplateData(i.template, i.data)
+  if (issues.length > 0) {
+    return { ok: false, error: { code: "VALIDATION", issues } }
   }
 
   let rendered: { subject: string; html: string; text: string }
   try {
     rendered = await renderTemplate(i.template, i.locale, i.data)
   } catch (err) {
-    console.error("[sendEmail] render failed", { template: i.template, locale: i.locale }, err)
+    if (err instanceof UnknownTemplateError) {
+      return {
+        ok: false,
+        error: { code: "VALIDATION", issues: [{ path: "template", message: err.message }] },
+      }
+    }
+    console.error("[sendEmail] render failed", {
+      template: i.template,
+      locale: i.locale,
+      error: err instanceof Error ? err.name : "unknown",
+    })
     return {
       ok: false,
       error: {
@@ -99,7 +124,13 @@ export async function sendEmail<T extends EmailTemplate>(i: {
     })
     return { ok: true, data: { id: result.id } }
   } catch (err) {
-    console.error("[sendEmail] transport failed", { template: i.template, to: i.to }, err)
+    // No recipient in logs (D9 no-PII). Log template, locale, idempotency key, error name only.
+    console.error("[sendEmail] transport failed", {
+      template: i.template,
+      locale: i.locale,
+      idempotencyKey: i.idempotencyKey,
+      error: err instanceof Error ? err.name : "unknown",
+    })
     return {
       ok: false,
       error: {

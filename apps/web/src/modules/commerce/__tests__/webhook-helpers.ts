@@ -24,6 +24,8 @@ export type WebhookFake = {
   invoices: Map<string, { id: string; invoice_pdf: string | null }>
   refunds: { params: Stripe.RefundCreateParams; key?: string; refund: FakeRefund }[]
   invoicePayments: Map<string, string>
+  /** PaymentIntent metadata by id (`paymentIntents.retrieve`); unknown id → `{}` (foreign). */
+  paymentIntents: Map<string, Record<string, string>>
   reset: () => void
 }
 
@@ -33,11 +35,13 @@ export function makeWebhookFake(): WebhookFake {
     invoices: new Map(),
     refunds: [],
     invoicePayments: new Map(),
+    paymentIntents: new Map(),
     reset: () => {
       fake.lineItems.clear()
       fake.invoices.clear()
       fake.refunds.length = 0
       fake.invoicePayments.clear()
+      fake.paymentIntents.clear()
     },
     client: {} as Stripe,
   }
@@ -57,6 +61,9 @@ export function makeWebhookFake(): WebhookFake {
         retrieve: async (id: string) => ({ id, total_details: { amount_tax: 0, breakdown: { taxes: [], discounts: [] } } }),
         expire: async (id: string) => ({ id, status: "expired" }),
       },
+    },
+    paymentIntents: {
+      retrieve: async (id: string) => ({ id, object: "payment_intent", metadata: fake.paymentIntents.get(id) ?? {} }),
     },
     invoices: {
       retrieve: async (id: string) => fake.invoices.get(id) ?? { id, invoice_pdf: null },
@@ -105,6 +112,8 @@ type CompletedOpts = {
   pi?: string
   invoice?: string | null
   type?: "checkout.session.completed" | "checkout.session.async_payment_succeeded"
+  /** 100 % promotion code: `no_payment_required`, `amount_total` 0, no PaymentIntent (W2-21). */
+  zeroAmount?: boolean
 }
 
 export function completedEvent(fake: WebhookFake, o: CompletedOpts) {
@@ -112,10 +121,12 @@ export function completedEvent(fake: WebhookFake, o: CompletedOpts) {
   const quantity = o.quantity ?? 1
   const unit = o.unit ?? 5000
   fake.lineItems.set(csId, { quantity, unit, description: "Test course" })
-  const total = unit * quantity
+  const subtotal = unit * quantity
+  const total = o.zeroAmount ? 0 : subtotal
   return {
     csId,
     total,
+    /** Unused when `zeroAmount` (the session carries no PaymentIntent). */
     pi: o.pi ?? `pi_test_${uid()}`,
     event(id = `evt_${uid()}`) {
       return {
@@ -127,13 +138,13 @@ export function completedEvent(fake: WebhookFake, o: CompletedOpts) {
           object: {
             id: csId,
             object: "checkout.session",
-            payment_status: "paid",
-            amount_subtotal: total,
+            payment_status: o.zeroAmount ? "no_payment_required" : "paid",
+            amount_subtotal: subtotal,
             amount_total: total,
-            total_details: { amount_discount: 0, amount_shipping: 0, amount_tax: 0 },
+            total_details: { amount_discount: subtotal - total, amount_shipping: 0, amount_tax: 0 },
             customer_details: { email: o.email ?? `buyer-${uid()}@example.com`, name: o.name ?? "Buyer Person" },
             customer_email: null,
-            payment_intent: this.pi,
+            payment_intent: o.zeroAmount ? null : this.pi,
             invoice: o.invoice ?? null,
             discounts: [],
             metadata: {
@@ -181,7 +192,11 @@ export function closedEvent(type: "checkout.session.expired" | "checkout.session
   }
 }
 
-export function chargeRefundedEvent(o: { pi: string; amount: number; refunded: number; refunds: FakeRefund[] }) {
+/**
+ * Stripe copies PaymentIntent metadata onto the Charge, so an app charge carries
+ * `cartToken`. `foreign: true` → a charge this app never created (no metadata).
+ */
+export function chargeRefundedEvent(o: { pi: string; amount: number; refunded: number; refunds: FakeRefund[]; foreign?: boolean }) {
   return {
     id: `evt_${uid()}`,
     object: "event",
@@ -195,19 +210,21 @@ export function chargeRefundedEvent(o: { pi: string; amount: number; refunded: n
         amount_refunded: o.refunded,
         refunded: o.refunded >= o.amount,
         payment_intent: o.pi,
+        metadata: o.foreign ? {} : { cartToken: `cart_${uid()}` },
         refunds: { object: "list", data: o.refunds, has_more: false },
       },
     },
   }
 }
 
-export function invoiceFinalizedEvent(o: { invoiceId: string; pdf: string }) {
+/** App invoices carry the checkout metadata (`invoice_creation.invoice_data.metadata`); `foreign` → none. */
+export function invoiceFinalizedEvent(o: { invoiceId: string; pdf: string; foreign?: boolean }) {
   return {
     id: `evt_${uid()}`,
     object: "event",
     type: "invoice.finalized",
     created: Math.floor(Date.now() / 1000),
-    data: { object: { id: o.invoiceId, object: "invoice", invoice_pdf: o.pdf } },
+    data: { object: { id: o.invoiceId, object: "invoice", invoice_pdf: o.pdf, metadata: o.foreign ? {} : { cartToken: `cart_${uid()}` } } },
   }
 }
 

@@ -5,7 +5,7 @@
  * Sent to each guest attendee (index ≥ 1) after a multi-seat purchase.
  *
  * Rules per acceptance criteria:
- * - Shows "<buyerName> booked a seat for you"
+ * - Body shows "<buyerName> booked a seat for you" (sanitized). Name NEVER in subject/preview (W2-22 M-3)
  * - Course title, date/time in America/Toronto, location + maps link, Google Calendar link
  * - How to sign in with this email (text only — no magic link in Wave 2)
  * - NO prices, totals, order number or receipt
@@ -17,6 +17,8 @@ import { render, toPlainText } from "@react-email/components"
 import type { Locale } from "@/modules/_shared"
 import type { EmailData } from "../types"
 import { EmailLayout, Heading, BodyText, Muted, brandColors } from "./shared"
+import { AccountBlock } from "./blocks"
+import { sanitizeDisplayName } from "./sanitize"
 
 import frMsg from "@/i18n/messages/fr.json"
 import enMsg from "@/i18n/messages/en.json"
@@ -76,12 +78,12 @@ function EnrollmentConfirmationEmail({ locale, data }: Props) {
 
   return (
     <EmailLayout
-      preview={t(m.preview, { buyerName: data.buyerName, courseTitle: data.courseTitle })}
+      preview={t(m.preview, { courseTitle: data.courseTitle })}
       footer={m.footer}
     >
       <Heading>{m.heading}</Heading>
 
-      <BodyText>{t(m.bookedBy, { buyerName: data.buyerName })}</BodyText>
+      <BodyText>{t(m.bookedBy, { buyerName: sanitizeDisplayName(data.buyerName) })}</BodyText>
 
       <Section
         style={{
@@ -146,6 +148,8 @@ function EnrollmentConfirmationEmail({ locale, data }: Props) {
 
       <BodyText>{m.signInInfo}</BodyText>
 
+      <AccountBlock url={data.accountUrl} intro={m.accountIntro} cta={m.accountCta} />
+
       {data.contactEmail && (
         <Muted>{t(m.contact, { email: data.contactEmail })}</Muted>
       )}
@@ -162,7 +166,7 @@ export async function renderEnrollmentConfirmation(
   const html = await render(element)
   const text = toPlainText(html)
   return {
-    subject: t(m.subject, { buyerName: data.buyerName, courseTitle: data.courseTitle }),
+    subject: t(m.subject, { courseTitle: data.courseTitle }),
     html,
     text,
   }

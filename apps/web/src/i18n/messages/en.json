@@ -113,12 +113,14 @@
       "total": "Total",
       "viewReceipt": "View receipt",
       "contact": "Questions? Contact us at {email}.",
-      "footer": "Cook for Friends — Pastry classes in Montreal"
+      "footer": "Cook for Friends — Pastry classes in Montreal",
+      "accountIntro": "Access your account to see your classes, receipts and more.",
+      "accountCta": "Access my account"
     },
     "enrollmentConfirmation": {
-      "subject": "{buyerName} booked a seat for you — {courseTitle}",
+      "subject": "You have been invited to a class — {courseTitle}",
       "heading": "Your seat has been booked!",
-      "preview": "{buyerName} booked a seat for you in {courseTitle}",
+      "preview": "A seat has been booked for you in {courseTitle}",
       "bookedBy": "{buyerName} booked a seat for you in this class.",
       "courseLabel": "Course:",
       "dateLabel": "Date:",
@@ -127,7 +129,9 @@
       "addToCalendar": "Add to Google Calendar",
       "signInInfo": "To access your course account, you can sign in with this email address on the sign-in page.",
       "contact": "Questions? Contact us at {email}.",
-      "footer": "Cook for Friends — Pastry classes in Montreal"
+      "footer": "Cook for Friends — Pastry classes in Montreal",
+      "accountIntro": "Access your account to see your classes, receipts and more.",
+      "accountCta": "Access my account"
     },
     "oversellRefund": {
       "subject": "Refund — order #{orderNumber}",
@@ -139,6 +143,13 @@
       "refundAmount": "Amount refunded: {amount}",
       "timeline": "The refund will appear on your account within 5–10 business days.",
       "contact": "Need help? Contact us at {email}.",
+      "subjectZero": "Booking not confirmed — order #{orderNumber}",
+      "headingZero": "We're sorry — your booking could not be confirmed",
+      "previewZero": "Your booking for order #{orderNumber} could not be confirmed",
+      "introZero": "Unfortunately, the session you selected was full by the time your booking was processed. Your booking could not be confirmed.",
+      "seatsOneZero": "1 seat not confirmed",
+      "seatsManyZero": "{quantity} seats not confirmed",
+      "notCharged": "You were not charged.",
       "footer": "Cook for Friends — Pastry classes in Montreal"
     },
     "refundIssued": {
@@ -149,6 +160,74 @@
       "partial": "A partial refund of {amount} for order #{orderNumber} has been issued.",
       "timeline": "The refund will appear on your account within 5–10 business days.",
       "contact": "Need help? Contact us at {email}.",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "reminder": {
+      "subject": "Reminder: {courseTitle} starts in {hoursBefore, plural, one {# hour} other {# hours}}",
+      "preview": "Your class starts in {hoursBefore, plural, one {# hour} other {# hours}}",
+      "heading": "See you soon!",
+      "greeting": "Hello {name},",
+      "greetingAnon": "Hello,",
+      "intro": "Your class {courseTitle} starts in {hoursBefore, plural, one {# hour} other {# hours}}.",
+      "dateLabel": "Date:",
+      "locationLabel": "Location:",
+      "mapsLink": "View on Google Maps",
+      "addToCalendar": "Add to Google Calendar",
+      "accountIntro": "Access your account to see your classes and details.",
+      "accountCta": "Access my account",
+      "contact": "Questions? Contact us at {email}.",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "waitlistSeatAvailable": {
+      "subject": "A seat opened up — {courseTitle}",
+      "preview": "A seat is available for {courseTitle}",
+      "heading": "A seat just opened up!",
+      "intro": "Good news: a seat is now available for {courseTitle}, which you were waiting for.",
+      "dateLabel": "Date:",
+      "locationLabel": "Location:",
+      "mapsLink": "View on Google Maps",
+      "firstToPay": "Seats are not reserved: the first person to complete payment gets the seat.",
+      "cta": "Book my seat",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "cancellationConfirmation": {
+      "subject": "Seat cancelled — {courseTitle}",
+      "preview": "Your cancellation for {courseTitle} is confirmed",
+      "heading": "Cancellation confirmed",
+      "buyerIntro": "The seat for {attendeeName} in {courseTitle} on {date} has been cancelled.",
+      "outcomeRefund": "A refund of {amount} will be issued to your original payment method within 5–10 business days.",
+      "outcomeCredit": "You receive a credit of {amount}, usable toward a future booking.",
+      "outcomeNone": "Under our cancellation policy, no refund or credit applies to this cancellation.",
+      "creditCodeLabel": "Your credit code:",
+      "creditExpires": "Valid until {date}.",
+      "orderNumber": "Order #{orderNumber}",
+      "attendeeIntroBy": "Your seat for {courseTitle} on {date} was cancelled by {cancelledByName}.",
+      "attendeeIntro": "Your seat for {courseTitle} on {date} was cancelled.",
+      "attendeeContact": "If you have questions, please reach out to the person who booked your seat.",
+      "contact": "Need help? Contact us at {email}.",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "certificateIssued": {
+      "subject": "Your certificate for {courseTitle}",
+      "preview": "Your certificate for {courseTitle} is ready",
+      "heading": "Congratulations!",
+      "greeting": "Hello {name},",
+      "greetingAnon": "Hello,",
+      "intro": "You completed {courseTitle}. Your certificate is ready.",
+      "downloadCta": "Download my certificate",
+      "downloadNote": "Sign in to your account to download it.",
+      "verifyIntro": "Anyone can verify its authenticity with this code:",
+      "verifyLink": "Verify this certificate",
+      "footer": "Cook for Friends — Pastry classes in Montreal"
+    },
+    "commentApproved": {
+      "subject": "Your comment is now published",
+      "preview": "Your comment on {lessonTitle} was approved",
+      "heading": "Your comment is live",
+      "greeting": "Hello {name},",
+      "greetingAnon": "Hello,",
+      "intro": "Your comment on the lesson {lessonTitle} ({courseTitle}) was approved and is now visible to other students.",
+      "cta": "View the lesson",
       "footer": "Cook for Friends — Pastry classes in Montreal"
     }
   },
@@ -273,5 +352,13 @@
     "webhook": {
       "ics_description": "Your seat at the Cook for Friends class: {course}. See you in the kitchen!"
     }
+  },
+  "pwa": {
+    "name": "Cook for Friends",
+    "short_name": "Cook for Friends",
+    "description": "Pastry and baking classes in Montreal.",
+    "offline_title": "You are offline",
+    "offline_body": "We cannot reach Cook for Friends right now. Check your connection, then try again.",
+    "offline_retry": "Try again"
   }
 }

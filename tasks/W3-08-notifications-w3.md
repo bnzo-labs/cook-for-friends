@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-08
-status: pending
+status: complete
 wave: 3
 batch: 3a
 module: notifications
@@ -29,16 +29,16 @@ Build the five remaining email templates in FR and EN with their `EmailData` typ
 - URLs (`accountUrl`, `bookUrl`, `downloadUrl`, `verifyUrl`, `lessonUrl`) are built by the **sender** and passed in data (absolute, localized). Templates never build URLs.
 
 ## Acceptance criteria
-- [ ] `EmailData` extended exactly per CONTRACT 1.3 for `reminder`, `waitlist-seat-available`, `cancellation-confirmation`, `certificate-issued`, `comment-approved`; `order-confirmation` and `enrollment-confirmation` gain optional `accountUrl`. `sendEmail` no longer returns VALIDATION for any `EmailTemplate` member.
-- [ ] Templates (React Email 1.0.12, HTML + text, FR + EN, copy under `notifications.*` only):
+- [x] `EmailData` extended exactly per CONTRACT 1.3 for `reminder`, `waitlist-seat-available`, `cancellation-confirmation`, `certificate-issued`, `comment-approved`; `order-confirmation` and `enrollment-confirmation` gain optional `accountUrl`. `sendEmail` no longer returns VALIDATION for any `EmailTemplate` member.
+- [x] Templates (React Email 1.0.12, HTML + text, FR + EN, copy under `notifications.*` only):
   - `reminder`: "in <hoursBefore> h" phrasing via ICU plural, course, date/time `America/Toronto`, location + maps link, Google Calendar link, `accountUrl`, contact email. `.ics` comes from `enqueueEmail({ ics })` (no template change needed).
   - `waitlist-seat-available`: seat freed, first to pay wins (no reservation), `bookUrl` CTA, date/location.
   - `cancellation-confirmation`: `recipient: 'buyer'` → attendee name, outcome text per `refund|credit|none`, amount (fr-CA/en-CA), `creditCode` in mono + expiry when credit, order number; `recipient: 'attendee'` → "your seat for <course> on <date> was cancelled by <cancelledByName>", **no amount, code or order number**.
   - `certificate-issued`: course, `downloadUrl` (portal, auth required), `verifyUrl`, verification code.
   - `comment-approved`: lesson + course title, `lessonUrl`. No comment body echoed (keep it short; body may be long).
-- [ ] `order-confirmation` / `enrollment-confirmation` render the account link block only when `accountUrl` is set (W2 senders unchanged → no visual diff until the webhook passes it; see notes).
-- [ ] Render tests FR + EN for each new template; `cancellation-confirmation` attendee variant contains no currency string and no code; names with `<script>` escaped; no names in subject lines; ICU placeholders all supplied (test renders every key with values — no raw `{x}` in output).
-- [ ] EN/FR key parity test green. `pnpm typecheck/lint/test` green; CI green; Vercel preview Ready.
+- [x] `order-confirmation` / `enrollment-confirmation` render the account link block only when `accountUrl` is set (W2 senders unchanged → no visual diff until the webhook passes it; see notes).
+- [x] Render tests FR + EN for each new template; `cancellation-confirmation` attendee variant contains no currency string and no code; names with `<script>` escaped; no names in subject lines; ICU placeholders all supplied (test renders every key with values — no raw `{x}` in output).
+- [x] EN/FR key parity test green. `pnpm typecheck/lint/test` green; CI green; Vercel preview Ready.
 
 ## Files to create / edit
 - Edit/create: `apps/web/src/modules/notifications/**` (types, templates, send registry, tests).
@@ -73,3 +73,14 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+## Completion notes
+- `EmailData` per CONTRACT 1.3; `WAVE2_TEMPLATES` guard removed. `sendEmail` now returns VALIDATION only for an unknown template string or invalid Wave 3 data (Zod, `server/validate.ts`; the send-email job passes `data` untyped, so it is re-validated at the send boundary).
+- ICU: new templates use next-intl `createTranslator` (real ICU plural) with `onError: throw`, so a missing value fails render (UPSTREAM) instead of leaking `{x}`. Wave 2 templates keep their naive `t()` (untouched except the account block).
+- `EmailLayout` gained optional `locale` prop (html `lang`); default `fr` keeps Wave 2 output unchanged.
+- Copy: `notifications.{reminder,waitlistSeatAvailable,cancellationConfirmation,certificateIssued,commentApproved}` + `accountIntro`/`accountCta` in `orderConfirmation`/`enrollmentConfirmation`, FR+EN. Parity test added (`__tests__/w3-templates.test.ts`).
+- No i18n parity test existed at repo level; added one scoped to `notifications.*`.
+- Tests reworded: `send.test.ts` / `send-email-job.test.ts` "Wave-3 template -> VALIDATION" now use an unknown template / empty data.
+- Live delivery smoke skipped (no `W2_TEST_EMAIL`).
+- **Follow-up for W3-09 owner / Wave 4 (no CCR):** pass `accountUrl` (login page, absolute + localized: `/fr/connexion`, `/en/auth/login`) in the `order-confirmation` and `enrollment-confirmation` `enqueueEmail` calls in `commerce/webhook`. Until then Wave 2 emails render unchanged.
+- Senders must build `accountUrl` for `reminder` (required).

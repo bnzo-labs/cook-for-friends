@@ -7,19 +7,32 @@ import type { Enrollment, Order } from "@/payload-types"
 import { getStripe } from "../../server/stripe-port"
 import { findOrderByPaymentIntent, lockOrder } from "../orders"
 import { attendeeCustomerIds } from "../refund"
-import { logEvent, relId, stripeId, type ApplyResult, type ApplyScope, type EventHandler } from "../shared"
+import { isAppObject, logEvent, relId, stripeId, type ApplyResult, type ApplyScope, type EventHandler } from "../shared"
 
-type RefundedPrepared = { charge: Stripe.Charge; paymentIntentId: string | null; refunds: Stripe.Refund[] }
+type RefundedPrepared = { charge: Stripe.Charge; paymentIntentId: string | null; refunds: Stripe.Refund[]; foreign: boolean }
 
 const COUNTED = new Set(["succeeded", "pending", "requires_action"])
 
 /** Before the transaction: the charge's refunds (not expanded on the event since 2022-11-15). */
+/**
+ * M-1: ours = the charge (copied from the PaymentIntent) or, failing that, its
+ * PaymentIntent carries our `cartToken`. A failed PaymentIntent read throws
+ * (Stripe retries) rather than guessing.
+ */
+async function isAppCharge(charge: Stripe.Charge, paymentIntentId: string | null): Promise<boolean> {
+  if (isAppObject(charge.metadata)) return true
+  if (!paymentIntentId) return false
+  const pi = await getStripe().paymentIntents.retrieve(paymentIntentId)
+  return isAppObject(pi.metadata)
+}
+
 async function prepare(event: Stripe.Event): Promise<RefundedPrepared> {
   const charge = event.data.object as Stripe.Charge
   const paymentIntentId = stripeId(charge.payment_intent as string | { id: string } | null)
+  if (!(await isAppCharge(charge, paymentIntentId))) return { charge, paymentIntentId, refunds: [], foreign: true }
   let refunds = charge.refunds && !charge.refunds.has_more ? charge.refunds.data : null
   if (!refunds) refunds = (await getStripe().refunds.list({ charge: charge.id, limit: 100 })).data
-  return { charge, paymentIntentId, refunds: refunds.filter((r) => COUNTED.has(String(r.status))) }
+  return { charge, paymentIntentId, refunds: refunds.filter((r) => COUNTED.has(String(r.status))), foreign: false }
 }
 
 async function orderEnrollments(scope: ApplyScope, orderId: number): Promise<Enrollment[]> {
@@ -102,11 +115,15 @@ async function markCancelledSeatsRefunded(scope: ApplyScope, added: RefundRow[],
 }
 
 async function apply(p: RefundedPrepared, scope: ApplyScope): Promise<ApplyResult> {
+  if (p.foreign) {
+    logEvent("info", "webhook.foreign.skipped", { type: "charge.refunded", chargeId: p.charge.id })
+    return { outcome: "skipped", note: "foreign charge (no cartToken)" }
+  }
   if (!p.paymentIntentId) return { outcome: "skipped", note: "charge has no payment intent" }
   const payload = scope.tx.req.payload
   const found = await findOrderByPaymentIntent(payload, p.paymentIntentId, scope.tx.req)
   if (!found) {
-    // Stripe retries; the order may not be committed yet.
+    // Ours (cartToken) but no order: completion may not be committed yet → Stripe retries.
     logEvent("error", "webhook.refund.order_missing", { chargeId: p.charge.id })
     throw new Error("[commerce] charge.refunded: no order for payment intent")
   }
