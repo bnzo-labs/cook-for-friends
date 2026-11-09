@@ -118,9 +118,9 @@
       "accountCta": "Accéder à mon compte"
     },
     "enrollmentConfirmation": {
-      "subject": "{buyerName} vous a réservé une place — {courseTitle}",
+      "subject": "Vous êtes invité(e) à un cours — {courseTitle}",
       "heading": "Votre place a été réservée !",
-      "preview": "{buyerName} vous a réservé une place pour {courseTitle}",
+      "preview": "Une place a été réservée pour vous : {courseTitle}",
       "bookedBy": "{buyerName} vous a réservé une place pour ce cours.",
       "courseLabel": "Cours :",
       "dateLabel": "Date :",
@@ -143,6 +143,13 @@
       "refundAmount": "Montant remboursé : {amount}",
       "timeline": "Le remboursement apparaîtra sur votre compte dans 5 à 10 jours ouvrables.",
       "contact": "Besoin d'aide ? Contactez-nous à {email}.",
+      "subjectZero": "Réservation non confirmée — commande #{orderNumber}",
+      "headingZero": "Nous sommes désolés — votre réservation n'a pas pu être confirmée",
+      "previewZero": "Votre réservation (commande #{orderNumber}) n'a pas pu être confirmée",
+      "introZero": "Malheureusement, la session que vous avez choisie était complète au moment du traitement de votre réservation. Votre réservation n'a pas pu être confirmée.",
+      "seatsOneZero": "1 place non confirmée",
+      "seatsManyZero": "{quantity} places non confirmées",
+      "notCharged": "Aucun montant ne vous a été facturé.",
       "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
     },
     "refundIssued": {
