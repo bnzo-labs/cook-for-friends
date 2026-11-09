@@ -273,5 +273,13 @@
     "webhook": {
       "ics_description": "Votre place au cours Cook for Friends : {course}. À bientôt en cuisine !"
     }
+  },
+  "pwa": {
+    "name": "Cook for Friends",
+    "short_name": "Cook for Friends",
+    "description": "Cours de pâtisserie et boulangerie à Montréal.",
+    "offline_title": "Vous êtes hors ligne",
+    "offline_body": "Impossible de joindre Cook for Friends pour le moment. Vérifiez votre connexion, puis réessayez.",
+    "offline_retry": "Réessayer"
   }
 }

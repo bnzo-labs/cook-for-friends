@@ -273,5 +273,13 @@
     "webhook": {
       "ics_description": "Your seat at the Cook for Friends class: {course}. See you in the kitchen!"
     }
+  },
+  "pwa": {
+    "name": "Cook for Friends",
+    "short_name": "Cook for Friends",
+    "description": "Pastry and baking classes in Montreal.",
+    "offline_title": "You are offline",
+    "offline_body": "We cannot reach Cook for Friends right now. Check your connection, then try again.",
+    "offline_retry": "Try again"
   }
 }

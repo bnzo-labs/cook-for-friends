@@ -4,6 +4,7 @@ import { assertLocale } from "@/i18n/locale"
 import { CourseCard } from "@/components/storefront/CourseCard"
 import { CourseFormatFilter } from "@/components/storefront/CourseFormatFilter"
 import { Section, Container } from "@/components/layout"
+import { buildPageMetadata, staticPaths } from "@/components/storefront/seo/metadata"
 import type { CourseFormat } from "@/modules/_shared"
 import type { Metadata } from "next"
 
@@ -17,7 +18,14 @@ export async function generateMetadata({
   const { locale: rawLocale } = await params
   const locale = assertLocale(rawLocale)
   const t = await getTranslations({ locale, namespace: "storefront.courses" })
-  return { title: t("meta_title"), description: t("meta_description") }
+  const tc = await getTranslations({ locale, namespace: "common" })
+  return buildPageMetadata({
+    locale,
+    paths: staticPaths("/courses"),
+    title: t("meta_title"),
+    description: t("meta_description"),
+    siteName: tc("site_name"),
+  })
 }
 
 function isValidFormat(v: unknown): v is CourseFormat {

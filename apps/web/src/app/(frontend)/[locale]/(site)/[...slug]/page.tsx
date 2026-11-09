@@ -2,6 +2,9 @@ import { notFound } from "next/navigation"
 import { getPayload } from "@/lib/payload"
 import { assertLocale } from "@/i18n/locale"
 import { BlockRenderer } from "@/components/storefront/blocks/BlockRenderer"
+import { getTranslations } from "next-intl/server"
+import { buildPageMetadata, pagePaths } from "@/components/storefront/seo/metadata"
+import { loadLocalizedSlugs } from "@/components/storefront/seo/slugs"
 import type { Metadata } from "next"
 import type { Page } from "@/payload-types"
 
@@ -24,7 +27,7 @@ export async function generateMetadata({
     },
     locale,
     fallbackLocale: "fr",
-    depth: 0,
+    depth: 1,
     limit: 1,
     pagination: false,
     overrideAccess: true,
@@ -33,11 +36,19 @@ export async function generateMetadata({
 
   const page = res.docs[0] as Page | undefined
   if (!page) return {}
-
-  return {
+  const [slugs, t] = await Promise.all([
+    loadLocalizedSlugs("pages", page.id),
+    getTranslations({ locale, namespace: "common" }),
+  ])
+  const image = page.seo?.image
+  return buildPageMetadata({
+    locale,
+    paths: pagePaths(slugs),
     title: page.seo?.title ?? page.title,
-    description: page.seo?.description ?? undefined,
-  }
+    description: page.seo?.description,
+    image: typeof image === "object" && image !== null ? image.url : null,
+    siteName: t("site_name"),
+  })
 }
 
 export default async function PayloadPage({
