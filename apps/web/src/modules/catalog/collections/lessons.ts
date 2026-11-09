@@ -58,11 +58,27 @@ export const Lessons: CollectionConfig = {
           options: [
             { value: "mux", label: "Mux" },
             { value: "bunny", label: "Bunny Stream" },
+            { value: "fake", label: "Fake (dev/test)" },
           ],
         },
         { name: "assetId", type: "text" },
         { name: "playbackId", type: "text" },
         { name: "durationSec", type: "number", min: 0, validate: (v: unknown) => validateInteger(0)(v) },
+        // CCR-W3-1: set by the video module (direct upload + provider webhook).
+        { name: "uploadId", type: "text", admin: { readOnly: true } },
+        {
+          name: "status",
+          type: "select",
+          required: true,
+          defaultValue: "none",
+          admin: { readOnly: true },
+          options: [
+            { value: "none", label: { fr: "Aucune", en: "None" } },
+            { value: "preparing", label: { fr: "En préparation", en: "Preparing" } },
+            { value: "ready", label: { fr: "Prête", en: "Ready" } },
+            { value: "errored", label: { fr: "En erreur", en: "Errored" } },
+          ],
+        },
       ],
     },
     { name: "materials", type: "relationship", relationTo: "materials", hasMany: true, label: { fr: "Matériel", en: "Materials" } },

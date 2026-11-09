@@ -32,6 +32,8 @@ export {
   upsertCustomerByEmail,
   verifyMagicLink,
 } from "./server/magic-link"
+export { updateCustomerProfile } from "./server/profile"
+export type { ProfilePatch } from "./server/profile"
 export { endCustomerSession, getCurrentCustomer, requireCustomer } from "./server/session"
 
 // HTTP helpers for src/app/api/auth/** route handlers

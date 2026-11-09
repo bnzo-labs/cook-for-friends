@@ -6,6 +6,7 @@ import { addSessionToUser, generatePayloadCookie } from "payload/shared"
 
 import type { Customer } from "@/payload-types"
 import { defaultLocale, locales } from "@/i18n/locales"
+import { getPathname } from "@/i18n/navigation"
 import { getPayload } from "./payload"
 import type { ID, Locale, Result } from "@/modules/_shared"
 import type { CustomerView } from "../types"
@@ -76,6 +77,17 @@ function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/+$/, "")
 }
 
+/** Absolute, localized verify URL: `/fr/connexion/verifier?token=…`, `/en/auth/verify?token=…`. */
+export function magicLinkUrl(locale: Locale, token: string): string {
+  const path = getPathname({ locale, href: { pathname: "/auth/verify", query: { token } } })
+  return `${siteUrl()}${path}`
+}
+
+/** Default post-login destination, localized (`/fr/compte`, `/en/account`). */
+export function defaultNextPath(locale: Locale): string {
+  return getPathname({ locale, href: "/account" })
+}
+
 /**
  * Step 1 of the flow. Always resolves `ok` for valid input regardless of whether
  * the email is known (no enumeration); only rate limiting returns an error.
@@ -114,7 +126,7 @@ export async function requestMagicLink(i: {
     await sendMagicLinkEmail({
       to: customer.email,
       locale: customer.preferredLocale,
-      link: `${siteUrl()}/${customer.preferredLocale}/auth/verify?token=${encodeURIComponent(token)}`,
+      link: magicLinkUrl(customer.preferredLocale, token),
       expiresInMinutes: MAGIC_LINK_TTL_MINUTES,
     })
   } catch (error) {
@@ -179,6 +191,6 @@ export async function verifyMagicLink(
     token: jwt,
   })
 
-  const next = sanitizeNext(consumed.next) ?? `/${view.preferredLocale}/account`
+  const next = sanitizeNext(consumed.next) ?? defaultNextPath(view.preferredLocale)
   return { ok: true, data: { customerId: view.id, setCookie, next } }
 }

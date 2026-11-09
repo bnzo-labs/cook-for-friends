@@ -197,3 +197,46 @@ export async function getCourseCommerceRecord(courseId: ID): Promise<CourseComme
   const doc = res.docs[0] as unknown as Rec | undefined
   return doc ? mapCommerceRecord(doc) : null
 }
+
+/**
+ * Published courses by id, in the order of `ids`. Duplicates collapse to the
+ * first occurrence; unknown, draft and archived courses are dropped (CCR-W3-1).
+ */
+export async function listCoursesByIds(ids: ID[], locale: Locale): Promise<CourseCard[]> {
+  const unique = [...new Map(ids.map((id) => [String(id), id])).values()]
+  if (unique.length === 0) return []
+  const payload = await getPayload()
+  const res = await payload.find({
+    collection: "courses",
+    where: { and: [PUBLISHED, { id: { in: unique } }] },
+    locale: "all",
+    depth: 1,
+    limit: 0,
+    pagination: false,
+    select: {
+      slug: true,
+      title: true,
+      summary: true,
+      format: true,
+      level: true,
+      durationMinutes: true,
+      price: true,
+      heroImage: true,
+    },
+    populate: MEDIA_POPULATE,
+    overrideAccess: true,
+  })
+  const docs = res.docs as unknown as Rec[]
+  const inPersonIds = docs.filter((d) => d.format === "in_person").map((d) => d.id as ID)
+  const upcoming = await upcomingSessionsByCourse(inPersonIds, locale)
+  const byId = new Map(
+    docs.map((d) => [
+      String(d.id),
+      mapCourseCard(d, locale, upcoming.get(String(d.id))?.[0]?.startsAt ?? null),
+    ]),
+  )
+  return unique.flatMap((id) => {
+    const card = byId.get(String(id))
+    return card ? [card] : []
+  })
+}

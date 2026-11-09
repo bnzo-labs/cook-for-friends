@@ -25,9 +25,12 @@ export const catalogGlobals: GlobalConfig[] = [SiteSettings, CancellationPolicy]
 export {
   getCourseCommerceRecord,
   getPublishedCourse,
+  listCoursesByIds,
   listPublishedCourses,
 } from "./server/courses"
-export { getSessionView } from "./server/sessions"
+export { getCourseLessonsContent, getLessonVideoRef, recordLessonVideo } from "./server/lessons"
+export { getMaterialDownload } from "./server/materials"
+export { getSessionView, listSessionsStartingBetween } from "./server/sessions"
 export { getCancellationPolicy, getSiteSettings } from "./server/settings"
 export { recordCourseStripeSync } from "./server/stripe-sync-record"
 export type {
@@ -37,7 +40,11 @@ export type {
   CourseCommerceRecord,
   CourseStripeSyncPatch,
   CourseView,
+  LessonContent,
   LessonOutline,
+  LessonVideoPatch,
+  LessonVideoRef,
+  MaterialDownload,
   RichTextDoc,
   SessionLocation,
   SessionStatus,
