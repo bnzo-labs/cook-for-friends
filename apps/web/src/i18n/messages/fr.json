@@ -360,5 +360,164 @@
     "offline_title": "Vous êtes hors ligne",
     "offline_body": "Impossible de joindre Cook for Friends pour le moment. Vérifiez votre connexion, puis réessayez.",
     "offline_retry": "Réessayer"
+  },
+  "auth": {
+    "login": {
+      "meta_title": "Connexion",
+      "title": "Connexion à votre compte",
+      "intro": "Entrez votre courriel. Nous vous envoyons un lien de connexion, sans mot de passe.",
+      "email_label": "Courriel",
+      "email_placeholder": "vous@exemple.com",
+      "submit": "Recevoir mon lien de connexion",
+      "sending": "Envoi en cours…",
+      "sent_title": "Vérifiez votre boîte de réception",
+      "sent_body": "Si l'adresse {email} peut recevoir un lien, il arrivera dans quelques minutes. Il expire dans 15 minutes et ne sert qu'une fois.",
+      "sent_hint": "Rien reçu? Vérifiez vos courriels indésirables.",
+      "use_other": "Utiliser une autre adresse",
+      "error_email": "Entrez une adresse courriel valide.",
+      "error_rate": "Trop de demandes. Réessayez plus tard.",
+      "error_generic": "Impossible d'envoyer le lien pour le moment. Réessayez.",
+      "no_account_note": "Pas encore de compte? Il est créé automatiquement à votre première réservation."
+    },
+    "verify": {
+      "meta_title": "Confirmer la connexion",
+      "title": "Confirmer votre connexion",
+      "intro": "Un clic pour ouvrir votre compte. Ce lien ne fonctionne qu'une seule fois.",
+      "submit": "Se connecter",
+      "submitting": "Connexion…",
+      "invalid_title": "Lien invalide ou expiré",
+      "invalid_body": "Ce lien de connexion n'est plus valide. Demandez-en un nouveau.",
+      "request_new": "Recevoir un nouveau lien",
+      "error_generic": "Connexion impossible pour le moment. Réessayez."
+    }
+  },
+  "portal": {
+    "meta_title": "Mon compte",
+    "skip_label": "Espace client",
+    "greeting_named": "Bonjour {name}",
+    "greeting": "Bonjour",
+    "nav": {
+      "label": "Menu du compte",
+      "dashboard": "Tableau de bord",
+      "courses": "Mes cours",
+      "sessions": "Mes séances",
+      "history": "Historique",
+      "receipts": "Reçus",
+      "profile": "Profil",
+      "logout": "Déconnexion"
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "intro": "Vos séances, vos cours en ligne et vos reçus, au même endroit.",
+      "next_sessions": "Prochaines séances",
+      "no_sessions": "Aucune séance à venir",
+      "all_sessions": "Toutes mes séances",
+      "my_courses": "Mes cours en ligne",
+      "no_courses": "Aucun cours en ligne",
+      "all_courses": "Voir mes cours"
+    },
+    "courses": {
+      "title": "Mes cours",
+      "intro": "Les cours en ligne auxquels vous avez accès.",
+      "open": "Ouvrir le cours",
+      "format_online": "En ligne",
+      "empty_title": "Aucun cours en ligne pour l'instant",
+      "empty_body": "Vos cours en ligne apparaîtront ici dès votre achat.",
+      "empty_cta": "Découvrir les cours"
+    },
+    "sessions": {
+      "title": "Mes séances",
+      "intro": "Les séances en personne que vous avez réservées, pour vous ou pour vos invités.",
+      "empty_title": "Aucune séance à venir",
+      "empty_body": "Réservez une séance en personne pour la retrouver ici.",
+      "empty_cta": "Découvrir les cours",
+      "see_history": "Voir les séances passées",
+      "order_label": "Commande {number}",
+      "guest_badge": "Invité·e : {name}",
+      "guest_badge_unnamed": "Invité·e",
+      "booked_by_me": "Réservé par vous",
+      "location_label": "Lieu",
+      "status": {
+        "confirmed": "Confirmée",
+        "cancelled": "Annulée",
+        "refunded": "Remboursée"
+      },
+      "attendance": {
+        "present": "Présent·e",
+        "absent": "Absent·e"
+      }
+    },
+    "history": {
+      "title": "Historique",
+      "intro": "Vos séances passées.",
+      "empty_title": "Aucune séance passée",
+      "empty_body": "Vos séances terminées s'afficheront ici.",
+      "empty_cta": "Découvrir les cours",
+      "past_sessions": "Séances passées",
+      "certificates_label": "Certificats"
+    },
+    "receipts": {
+      "title": "Reçus",
+      "intro": "Vos commandes, de la plus récente à la plus ancienne.",
+      "empty_title": "Aucun reçu pour l'instant",
+      "empty_body": "Vos reçus apparaîtront ici après un achat.",
+      "empty_cta": "Découvrir les cours",
+      "col_number": "Commande",
+      "col_date": "Date",
+      "col_total": "Total",
+      "col_status": "Statut",
+      "col_receipt": "Reçu",
+      "download": "Reçu",
+      "download_aria": "Reçu de la commande {number}",
+      "preparing": "En préparation",
+      "no_date": "—",
+      "status": {
+        "paid": "Payée",
+        "refunded": "Remboursée",
+        "partially_refunded": "Remboursée en partie",
+        "cancelled": "Annulée",
+        "pending": "En attente"
+      }
+    },
+    "profile": {
+      "title": "Profil",
+      "intro": "Vos coordonnées et vos préférences.",
+      "email_label": "Courriel",
+      "email_help": "Contactez-nous pour modifier votre adresse courriel.",
+      "first_name": "Prénom",
+      "last_name": "Nom",
+      "phone": "Téléphone",
+      "phone_help": "Facultatif. Utilisé seulement pour joindre les participants avant une séance.",
+      "dietary": "Restrictions alimentaires et allergies",
+      "dietary_help": "Facultatif. Transmis à l'équipe pour vos séances en personne. Laissez vide pour conserver vos notes actuelles.",
+      "language": "Langue préférée",
+      "language_help": "Langue de vos courriels et de votre compte.",
+      "lang_fr": "Français",
+      "lang_en": "English",
+      "consent": "J'accepte de recevoir des nouvelles et des offres de Cook for Friends par courriel.",
+      "consent_help": "Facultatif. Vous pouvez retirer votre consentement à tout moment.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Profil enregistré.",
+      "error_summary": "Corrigez les champs indiqués.",
+      "error_generic": "Impossible d'enregistrer pour le moment. Réessayez.",
+      "errors": {
+        "too_long": "Maximum {max} caractères.",
+        "phone_invalid": "Entrez un numéro de téléphone valide.",
+        "invalid": "Valeur invalide."
+      }
+    },
+    "community": {
+      "title": "Rejoindre la communauté",
+      "body": "Échangez avec les autres cuisinières et cuisiniers de Cook for Friends.",
+      "cta": "Ouvrir la communauté",
+      "new_tab": "(s'ouvre dans un nouvel onglet)"
+    },
+    "loading": "Chargement de votre compte…",
+    "error": {
+      "title": "Impossible d'afficher cette page",
+      "body": "Une erreur est survenue. Réessayez dans un instant.",
+      "retry": "Réessayer"
+    }
   }
 }
