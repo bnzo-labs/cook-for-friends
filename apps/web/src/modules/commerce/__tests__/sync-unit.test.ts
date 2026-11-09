@@ -78,7 +78,7 @@ describe("change detection", () => {
     expect(discountNeedsSync(d, { ...d, appliesTo: [1] })).toBe(true)
     expect(discountNeedsSync(null, { ...d, stripePromotionCodeId: null })).toBe(true)
   })
-  it("discount: personalFor skipped", () => expect(discountNeedsSync(null, { ...d, personalFor: 3 })).toBe(false))
+  it("discount: personalFor (W3-09 credit) syncs like any code", () => expect(discountNeedsSync(null, { ...d, personalFor: 3, stripePromotionCodeId: null })).toBe(true))
 })
 
 describe("coupon mapping", () => {

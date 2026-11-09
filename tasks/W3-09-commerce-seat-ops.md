@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-09
-status: pending
+status: complete
 wave: 3
 batch: 3a
 module: commerce
@@ -34,13 +34,13 @@ Give scheduling and the portal the commerce primitives Wave 3 needs (CCR-W3-4): 
 - Enrollments access (CONTRACT §3.7): customer reads `customer = self` **or** `order.customer = self`.
 
 ## Acceptance criteria
-- [ ] All CCR-W3-4 exports implemented with the exact signatures; `commerce/index.ts` re-exports (new sub-barrel `commerce/seats/**` owned by this task; `index.ts` gains one `export * from "./seats"` line).
-- [ ] Integration (real Postgres): refund path on a 3-seat order cancels seat #2 only → enrollment #2 `cancelled`, guest #2 entitlement revoked, others untouched, Stripe refund requested with `amount` + `metadata.enrollmentId` + idempotency key (Stripe port test double at the network seam, same as W2-07); replaying `charge.refunded` for it → enrollment `refunded`, `orders.refunds[].enrollment` linked, order `partially_refunded`; cancel same seat twice concurrently (`Promise.all`) → exactly one success, one `CONFLICT`, one Stripe call; Stripe failure → `UPSTREAM`, seat cancelled, retry call refunds once; `amount > seatAmount` → `VALIDATION`.
-- [ ] Credit path: code row created in the tx (rollback test: forced throw after insert → no code, seat still confirmed); code format; `personalFor` = buyer; expiry +365 d; `stripe-sync-discount` job enqueued.
-- [ ] `listCustomerEnrollments(buyer)` returns own seat + guest seats flagged `bookedByMe`; `listCustomerEnrollments(guest)` returns only the guest's seat (`isOwnSeat`). `listCustomerOrders` returns paid/refunded/partially_refunded orders newest first with `hasReceipt`. `getEnrollmentView` includes `buyerCustomerId`, `sessionId`, `courseId`, `seatAmount`, `refundedAmount`.
-- [ ] Access: customer REST read of a guest seat in **own** order → visible; of another order's seat → not visible (test).
-- [ ] `setEnrollmentAttendance` staff-only callers (function takes `staffId`; route-level auth is scheduling's), `cancelled` seat → `CONFLICT`. `AttendeeRow.locale` populated from attendee `preferredLocale`; CSV unchanged (no new column).
-- [ ] Unit + integration green in CI (not skipped); typecheck/lint green; Vercel preview Ready. Existing W2-07 replay/oversell tests still green.
+- [x] All CCR-W3-4 exports implemented with the exact signatures; `commerce/index.ts` re-exports (new sub-barrel `commerce/seats/**` owned by this task; `index.ts` gains one `export * from "./seats"` line).
+- [x] Integration (real Postgres): refund path on a 3-seat order cancels seat #2 only → enrollment #2 `cancelled`, guest #2 entitlement revoked, others untouched, Stripe refund requested with `amount` + `metadata.enrollmentId` + idempotency key (Stripe port test double at the network seam, same as W2-07); replaying `charge.refunded` for it → enrollment `refunded`, `orders.refunds[].enrollment` linked, order `partially_refunded`; cancel same seat twice concurrently (`Promise.all`) → exactly one success, one `CONFLICT`, one Stripe call; Stripe failure → `UPSTREAM`, seat cancelled, retry call refunds once; `amount > seatAmount` → `VALIDATION`.
+- [x] Credit path: code row created in the tx (rollback test: forced throw after insert → no code, seat still confirmed); code format; `personalFor` = buyer; expiry +365 d; `stripe-sync-discount` job enqueued.
+- [x] `listCustomerEnrollments(buyer)` returns own seat + guest seats flagged `bookedByMe`; `listCustomerEnrollments(guest)` returns only the guest's seat (`isOwnSeat`). `listCustomerOrders` returns paid/refunded/partially_refunded orders newest first with `hasReceipt`. `getEnrollmentView` includes `buyerCustomerId`, `sessionId`, `courseId`, `seatAmount`, `refundedAmount`.
+- [x] Access: customer REST read of a guest seat in **own** order → visible; of another order's seat → not visible (test).
+- [x] `setEnrollmentAttendance` staff-only callers (function takes `staffId`; route-level auth is scheduling's), `cancelled` seat → `CONFLICT`. `AttendeeRow.locale` populated from attendee `preferredLocale`; CSV unchanged (no new column).
+- [x] Unit + integration green in CI (not skipped); typecheck/lint green; Vercel preview Ready. Existing W2-07 replay/oversell tests still green.
 
 ## Files to create / edit
 - Create: `apps/web/src/modules/commerce/seats/**` (+ `__tests__`), credit implementation in `seats/credit.ts`.
@@ -76,3 +76,14 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+## Completion notes (W3-09)
+- `commerce/seats/**` sub-barrel: `executeSeatCancellation`, `issueCreditCode`, `getEnrollmentView`, `listCustomerEnrollments`, `listCustomerOrders`, `setEnrollmentAttendance`; types `EnrollmentView`, `OrderSummary` in `commerce/types.ts`. `index.ts` +1 `export * from "./seats"`.
+- Money path: per-enrollment advisory xact lock (`cff_seat:<id>`, guard tx) serializes cancel + refund for one seat → tx (`FOR UPDATE`, confirmed check, cancel, revoke attendee entitlement, credit row for buyer) → commit → Stripe refund key `seat-cancel-<id>`. Re-call on a cancelled/`refund`/unlinked seat = retry: Stripe `refunds.list` by PI checked first (live refund with `metadata.enrollmentId` → CONFLICT `REFUND_ALREADY_REQUESTED`), else refund with the same key. Concurrent duplicate → CONFLICT, one Stripe refund.
+- `webhook/refund.ts`: internal `requestOrderRefund(i, { idempotencyKey })`; public `refundOrder` signature unchanged (deviation: file not in the edit list; needed for the mandated key).
+- `charge.refunded` partial branch: linked seat in `cancelled` → `refunded`; confirmed seats untouched (W2-07 test unchanged).
+- Credits: `personalFor` codes are now synced by `stripe-sync-discount` (removed the W2-08 skip in `sync/{mapping,discount}.ts`; 2 sync tests updated). **No Stripe `customer` restriction**: Checkout uses `customer_email`, so a customer-restricted promo code would be unusable → protection = code secrecy (CSPRNG, 32^8) + `max_redemptions 1` + 365 d expiry.
+- `getEnrollmentView(id, forCustomerId)` returns `null` when that customer neither occupies nor bought the seat (no IDOR). `seatAmount` null (pre-CCR-W2-6 rows) is treated as 0 → any positive amount = VALIDATION.
+- `setEnrollmentAttendance`: `staffId` must be a `users` staff/admin row (else FORBIDDEN); non-confirmed seat → CONFLICT.
+- Enrollments read access: `customer = self OR order.customer = self` (custom access in `collections/enrollments.ts`, no field change).
+- No schema change, no migration. Local integration not run: creating a throwaway Neon branch was permission-denied in this session; integration evidence = CI integration job (own Neon branch).

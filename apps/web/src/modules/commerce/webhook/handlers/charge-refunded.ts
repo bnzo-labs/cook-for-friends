@@ -81,6 +81,26 @@ function newRefundRows(p: RefundedPrepared, order: Order, enrollments: Enrollmen
     })
 }
 
+/**
+ * W3-09 (CCR-W3-4): a partial refund linked to a seat (`refunds[].enrollment`)
+ * that was cancelled by `executeSeatCancellation` → that seat `refunded`.
+ * Confirmed seats are left alone (staff partial refunds, W2-07 behavior).
+ */
+async function markCancelledSeatsRefunded(scope: ApplyScope, added: RefundRow[], enrollments: Enrollment[]): Promise<void> {
+  const linked = new Set(added.map((r) => r.enrollment).filter((x): x is number => typeof x === "number"))
+  for (const e of enrollments) {
+    if (!linked.has(Number(e.id)) || e.status !== "cancelled") continue
+    await scope.tx.req.payload.update({
+      collection: "enrollments",
+      id: e.id,
+      data: { status: "refunded" },
+      depth: 0,
+      overrideAccess: true,
+      req: scope.tx.req,
+    })
+  }
+}
+
 async function apply(p: RefundedPrepared, scope: ApplyScope): Promise<ApplyResult> {
   if (!p.paymentIntentId) return { outcome: "skipped", note: "charge has no payment intent" }
   const payload = scope.tx.req.payload
@@ -111,6 +131,7 @@ async function apply(p: RefundedPrepared, scope: ApplyScope): Promise<ApplyResul
   if (wasRefunded) return { outcome: "applied", note: "order already refunded: recorded only" }
 
   const released = full ? await applyFullRefund(scope, order, enrollments) : []
+  if (!full) await markCancelledSeatsRefunded(scope, added, enrollments)
   const refundAmount = added.reduce((sum, r) => sum + Number(r.amount), 0)
   await enqueueEmail({
     template: "refund-issued",

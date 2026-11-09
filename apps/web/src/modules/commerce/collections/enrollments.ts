@@ -1,6 +1,6 @@
-import type { CollectionConfig, Field, FieldAccess } from "payload"
+import type { Access, CollectionConfig, Field, FieldAccess, Where } from "payload"
 
-import { isAdmin, isAdminField, isStaffOrAdmin, ownsDocument } from "@/modules/identity"
+import { isAdmin, isAdminField, isCustomerUser, isStaff, isStaffOrAdmin } from "@/modules/identity"
 import { salesGroup } from "../labels"
 import { moneyField, validateInteger } from "../money"
 
@@ -65,6 +65,18 @@ const fields: Field[] = [
 ]
 
 /**
+ * Read (CONTRACT §3.7, CCR-W3-4): staff all; a customer reads seats they occupy
+ * (`customer = self`) and every seat of orders they bought (`order.customer = self`).
+ */
+export const readOwnOrBoughtSeats: Access = ({ req }) => {
+  if (isStaff(req.user)) return true
+  if (!isCustomerUser(req.user) || !req.user) return false
+  const self = req.user.id
+  const where: Where = { or: [{ customer: { equals: self } }, { "order.customer": { equals: self } }] }
+  return where
+}
+
+/**
  * `enrollments` — one row per attendee seat. CONTRACT §3.4.
  * UNIQUE `(order, session, attendeeIndex)`. Access §3.7: customer reads own;
  * staff read + update attendance; admin CRUD.
@@ -80,7 +92,7 @@ export const Enrollments: CollectionConfig = {
     group: salesGroup,
   },
   access: {
-    read: ownsDocument("customer"),
+    read: readOwnOrBoughtSeats,
     create: isAdmin,
     update: isStaffOrAdmin,
     delete: isAdmin,

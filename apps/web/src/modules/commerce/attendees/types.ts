@@ -1,4 +1,4 @@
-import type { ID, ISODate } from "@/modules/_shared"
+import type { ID, ISODate, Locale } from "@/modules/_shared"
 
 /** CONTRACT §4 (CCR-W2-6). One row per enrollment (seat). */
 export type AttendeeRow = {
@@ -15,4 +15,6 @@ export type AttendeeRow = {
   enrollmentStatus: "confirmed" | "cancelled" | "refunded"
   attendance: "unknown" | "present" | "absent"
   paidAt: ISODate
+  /** CCR-W3-4: attendee `preferredLocale` (reminders). Not a CSV column. */
+  locale: Locale
 }

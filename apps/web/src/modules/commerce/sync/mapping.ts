@@ -110,7 +110,6 @@ const relIds = (v: unknown): string =>
 const norm = (v: unknown): string => (v == null ? "" : String(v))
 
 export function discountNeedsSync(prev: DiscountSnapshot | null | undefined, next: DiscountSnapshot): boolean {
-  if (next.personalFor) return false // W3 credits, out of scope
   if (!prev || !next.stripePromotionCodeId) return true
   const same =
     norm(prev.code) === norm(next.code) &&
