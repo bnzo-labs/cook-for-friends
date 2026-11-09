@@ -103,7 +103,7 @@ describe("oversell-refund zero amount", () => {
       template: "oversell-refund",
       to: "b@example.com",
       locale,
-      data: { orderNumber: "ORD-1", courseTitle: "Sushi Making", quantity: 2, refundAmount },
+      data: { orderNumber: "ORD-1", courseTitle: "Sushi Making", sessionStartsAt: "2026-09-01T18:00:00-04:00", quantity: 2, refundAmount, currency: "cad" },
       idempotencyKey: `os-${locale}-${refundAmount}`,
     })
 
