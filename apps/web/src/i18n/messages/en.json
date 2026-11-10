@@ -353,6 +353,10 @@
       "ics_description": "Your seat at the Cook for Friends class: {course}. See you in the kitchen!"
     }
   },
+  "scheduling": {
+    "ics_description": "Reminder: your Cook for Friends class, {course}. See you in the kitchen!",
+    "WAITLIST_RATE_LIMITED": "Too many requests. Please try again later."
+  },
   "pwa": {
     "name": "Cook for Friends",
     "short_name": "Cook for Friends",
@@ -374,6 +378,19 @@
         "parent_other_lesson": "This comment belongs to another lesson.",
         "parent_nested": "Replies are limited to one level."
       }
+    },
+    "certificate": {
+      "title": "Certificate of completion",
+      "awardedTo": "Awarded to",
+      "forCompleting": "for completing the course",
+      "issuedOn": "Issued on {date}",
+      "codeLabel": "Verification code",
+      "verifyAt": "Verify authenticity at {url}",
+      "issuer": "Cook For Friends",
+      "logoPlaceholder": "Logo"
+    },
+    "errors": {
+      "rateLimited": "Too many progress updates. Please try again later."
     }
   }
 }
