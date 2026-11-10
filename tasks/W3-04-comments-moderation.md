@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-04
-status: pending
+status: in-review
 wave: 3
 batch: 3b
 module: learning (comments sub-barrel)
@@ -32,12 +32,12 @@ Yours: `learning/comments/**` (barrel exists, created by W3-07 and re-exported f
 - Customers can't change a comment after posting (update = staff/admin, already).
 
 ## Acceptance criteria
-- [ ] Exports per CONTRACT 1.3 (`postComment`, `listLessonComments`, `CommentView`) from `learning/comments/index.ts`.
-- [ ] `POST /api/comments` (customer session, Origin check, zod): 201 pending; no entitlement → 403; reply to pending/rejected/other-lesson/nested parent → 400 VALIDATION; > 2000 chars → 400; 11th in an hour → 429; anonymous → 401.
-- [ ] Integration: approve → author receives one `send-email` job; double-approve save → still one job (idempotency key); reject → none; `moderatedBy` set; listing as other entitled customer shows only approved; author sees own pending flagged; non-entitled → `FORBIDDEN`. Customer REST `PATCH /api/comments/:id` → 403 (existing access proven).
-- [ ] XSS: body `<img src=x onerror=alert(1)>` stored verbatim and returned as plain string; test asserts no HTML transformation server-side (rendering safety is W3-03b's, noted there).
+- [x] Exports per CONTRACT 1.3 (`postComment`, `listLessonComments`, `CommentView`) from `learning/comments/index.ts`.
+- [x] `POST /api/comments` (customer session, Origin check, zod): 201 pending; no entitlement → 403; reply to pending/rejected/other-lesson/nested parent → 400 VALIDATION; > 2000 chars → 400; 11th in an hour → 429; anonymous → 401.
+- [x] Integration: approve → author receives one `send-email` job; double-approve save → still one job (idempotency key); reject → none; `moderatedBy` set; listing as other entitled customer shows only approved; author sees own pending flagged; non-entitled → `FORBIDDEN`. Customer REST `PATCH /api/comments/:id` → 403 (existing access proven).
+- [x] XSS: body `<img src=x onerror=alert(1)>` stored verbatim and returned as plain string; test asserts no HTML transformation server-side (rendering safety is W3-03b's, noted there).
 - [ ] Admin: staff Playwright smoke (throwaway branch) — pending list shows the new comment, approve it, status saved; screenshot `e2e/__screenshots__/w3-04/`.
-- [ ] typecheck/lint/test green; CI integration not skipped; Vercel preview Ready.
+- [x] typecheck/lint/test green; CI integration not skipped; Vercel preview Ready.
 
 ## Files to create / edit
 - Create/edit: `learning/comments/**`, `learning/collections/comments.ts` (hooks + admin config only, **no field changes**), `src/app/api/comments/route.ts`, tests, `e2e/w3-04-moderation.test.ts`.
@@ -72,3 +72,14 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+## Completion notes
+- Implemented: `learning/comments/**` (post, list, display, moderation hooks, zod), collection hooks + admin config (no field changes), `POST /api/comments`, `learning.comments.*` i18n (FR/EN parity).
+- Local: typecheck, lint, unit tests green. Integration tests (`comments/__tests__/comments.test.ts`) need a Neon branch; local `neonctl branches create` was denied by the permission classifier, so they run in CI only (CI integration job passed: 64 files passed, comments suite 9/9).
+- Deviations:
+  - `listLessonComments` takes optional `locale` (default `fr`) for the fallback author label; additive to CONTRACT signature.
+  - Admin list is **not** hard default-filtered to `pending` (`baseFilter` would also hide approved/rejected from staff and affects relationship pickers). Instead: `status` first column, `listSearchableFields: ['body']`, `defaultSort: -createdAt`, description tells staff to filter on Pending (deep link `?where[status][equals]=pending`). No count badge.
+  - Approved-email dedupe: besides `previousDoc.status !== approved`, `afterChange` looks up `payload-jobs` by `input.idempotencyKey` so approved→pending→approved sends once.
+  - Unknown/draft lesson → `FORBIDDEN` (no existence leak). Rate limit counted after entitlement, before parent checks.
+  - `lessonUrl` uses lesson id as `[lesson]` param: `/account/courses/[slug]/[lesson]` (W3-03b must resolve by id).
+- Not done: staff Playwright smoke + screenshots. `e2e/w3-04-moderation.test.ts` written (needs seeded staff + pending comment on a throwaway DB), not executed here.
