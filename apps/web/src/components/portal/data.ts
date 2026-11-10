@@ -19,6 +19,7 @@ export type SeatRow = {
   isGuestSeat: boolean
   guestName: string | null
   bookedByMe: boolean
+  buyerCustomerId: ID
   upcoming: boolean
 }
 
@@ -56,6 +57,7 @@ export async function loadSeats(customerId: ID, locale: Locale, now: Date = new 
       isGuestSeat: !e.isOwnSeat && e.bookedByMe,
       guestName: e.attendeeName?.trim() || null,
       bookedByMe: e.bookedByMe,
+      buyerCustomerId: e.buyerCustomerId,
       upcoming: new Date(session.endsAt) > now,
     })
   }

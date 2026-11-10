@@ -346,6 +346,19 @@
       "hint_other": "Vous + {guests} invités",
       "seats_left_message_one": "Dernière place disponible.",
       "seats_left_message_other": "Plus que {count} places disponibles."
+    },
+    "waitlist": {
+      "cta": "Liste d'attente",
+      "cta_aria": "Rejoindre la liste d'attente de la séance du {date}",
+      "email_label": "Votre courriel",
+      "help": "Nous vous écrirons si une place se libère. La première personne à réserver l'obtient : aucune place n'est mise de côté.",
+      "submit": "Me prévenir",
+      "confirmation": "Nous vous écrirons si une place se libère : la première personne à réserver l'obtient.",
+      "error": {
+        "invalid": "Entrez une adresse courriel valide.",
+        "rate_limited": "Trop de demandes. Réessayez plus tard.",
+        "generic": "Une erreur est survenue. Réessayez dans un instant."
+      }
     }
   },
   "commerce": {
@@ -446,7 +459,15 @@
       "all_sessions": "Toutes mes séances",
       "my_courses": "Mes cours en ligne",
       "no_courses": "Aucun cours en ligne",
-      "all_courses": "Voir mes cours"
+      "all_courses": "Voir mes cours",
+      "progress": {
+        "summary": "{completed} sur {total} leçons",
+        "bar_label": "Progression : {course}",
+        "continue": "Continuer",
+        "start": "Commencer",
+        "completed": "Terminé",
+        "certificate": "Télécharger mon certificat"
+      }
     },
     "courses": {
       "title": "Mes cours",
@@ -477,6 +498,41 @@
       "attendance": {
         "present": "Présent·e",
         "absent": "Absent·e"
+      },
+      "cancel": {
+        "trigger": "Annuler cette place",
+        "trigger_aria": "Annuler cette place : {course}, {date}",
+        "close": "Fermer",
+        "title": "Annuler cette place ?",
+        "outcome": {
+          "refund": "Vous serez remboursé·e de {amount} ({percent}) sur votre moyen de paiement.",
+          "credit": "Vous recevrez un crédit de {amount} ({percent}) à utiliser sur une prochaine réservation.",
+          "none": "Cette annulation ne donne droit à aucun remboursement ni crédit."
+        },
+        "credit_emailed": "Le code de crédit vous sera envoyé par courriel : il ne s'affiche pas ici.",
+        "none_hint": "Il reste moins de {hours} h avant la séance. Vous pouvez tout de même annuler pour libérer la place.",
+        "deadline": "Ce résultat est valable jusqu'au {date}.",
+        "policy_link": "Lire la politique d'annulation",
+        "keep": "Garder ma place",
+        "confirm": "Confirmer l'annulation",
+        "retry": "Réessayer",
+        "success": {
+          "refund": "Place annulée. Remboursement de {amount} en cours.",
+          "credit": "Place annulée. Le code de crédit vous est envoyé par courriel.",
+          "none": "Place annulée. Aucun remboursement ni crédit."
+        },
+        "error": {
+          "conflict": "Cette place est déjà annulée ou il est trop tard pour l'annuler. Nous actualisons la page.",
+          "upstream": "Le remboursement est en cours de traitement. Réessayez dans un instant.",
+          "generic": "L'annulation a échoué. Réessayez dans un instant."
+        },
+        "blocked": {
+          "not_buyer": "Cette place a été réservée par {name}. Contactez cette personne pour l'annuler.",
+          "not_buyer_unnamed": "Cette place a été réservée par une autre personne. Contactez-la pour l'annuler.",
+          "session_started": "Cette séance a commencé : l'annulation n'est plus possible.",
+          "self_cancel_disabled": "Les annulations se font avec notre équipe. Écrivez-nous :",
+          "self_cancel_disabled_no_email": "Les annulations se font avec notre équipe. Contactez-nous."
+        }
       }
     },
     "history": {
@@ -486,7 +542,14 @@
       "empty_body": "Vos séances terminées s'afficheront ici.",
       "empty_cta": "Découvrir les cours",
       "past_sessions": "Séances passées",
-      "certificates_label": "Certificats"
+      "certificates_label": "Certificats",
+      "certificates": {
+        "issued_on": "Délivré le {date}",
+        "code_label": "Code de vérification :",
+        "download": "Télécharger le PDF",
+        "download_aria": "Télécharger le certificat en PDF : {course}",
+        "empty": "Vos certificats apparaîtront ici quand vous terminerez un cours en ligne."
+      }
     },
     "receipts": {
       "title": "Reçus",

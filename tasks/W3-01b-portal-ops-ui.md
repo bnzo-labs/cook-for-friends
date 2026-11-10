@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-01b
-status: pending
+status: pending-ci
 wave: 3
 batch: 3c
 module: portal + storefront (waitlist CTA)
@@ -69,3 +69,13 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+
+## Completion notes
+- Criteria: code + e2e written; e2e NOT run locally (no throwaway Neon branch available, machine-load rule). CI is the evidence; screenshots not committed (no local build). Criteria stay unticked until CI integration/e2e result is confirmed in the PR.
+- Cancel: `loadCancelContext` calls `scheduling.previewCancellation` per upcoming confirmed seat server-side; `CancelSeatDialog` (client) renders outcome/amount/percent/deadline + policy link (`legal.cancellationPageId` -> published page slug, hidden if unset) and POSTs `/api/enrollments/:id/cancel`. Double-submit ref guard, CONFLICT (409) -> toast + refresh, UPSTREAM (502) -> inline alert + retry button, guest/NOT_BUYER -> buyer first name hint, SELF_CANCEL_DISABLED -> contactEmail.
+- Preview is computed at render; the success toast shows the outcome the server actually applied (tier can move between render and confirm).
+- Buyer first name and policy page slug are read through `@/lib/payload` in `components/portal/sessions/cancel-data.ts` (server loader; no module surface for either; same pattern as the CMS page route). No CONTRACT change requested.
+- Waitlist: `WaitlistMount` (server, prefill email from `getCurrentCustomer`) + `WaitlistForm` (client) mounted in `SessionList` for full, not-started sessions; course page untouched.
+- Dashboard: `OwnedCourseCard` restructured (course link, then progress, continue/start, finished badge + certificate PDF link) because nested links are invalid.
+- e2e refund-tier confirm is network-stubbed (no live Stripe); credit/none confirms run for real.
