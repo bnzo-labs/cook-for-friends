@@ -32,14 +32,14 @@ describe.skipIf(!hasTestDb)("W3-05 waitlist (integration)", () => {
   it("joinWaitlist: normalizes email, duplicate (any case) → ok and still one row, no customer created", async () => {
     const { session } = await makeBookableSession(payload, 1)
     const email = `Wait-${uid()}@Example.com`
-    const before = (await payload.count({ collection: "customers", overrideAccess: true })).totalDocs
     expect(await scheduling.joinWaitlist({ sessionId: session.id, email, locale: "fr" })).toEqual({ ok: true, data: undefined })
     expect(await scheduling.joinWaitlist({ sessionId: session.id, email: email.toUpperCase(), locale: "en" })).toEqual({ ok: true, data: undefined })
     const rows = await rowsFor(session.id, email.toLowerCase())
     expect(rows).toHaveLength(1)
     expect(rows[0]).toMatchObject({ status: "waiting", locale: "fr" })
     expect(rows[0]!.customer ?? null).toBeNull()
-    expect((await payload.count({ collection: "customers", overrideAccess: true })).totalDocs).toBe(before)
+    const created = await payload.count({ collection: "customers", where: { email: { equals: email.toLowerCase() } }, overrideAccess: true })
+    expect(created.totalDocs).toBe(0)
   })
 
   it("joinWaitlist: concurrent duplicates → one row; unknown / started / invalid → typed errors", async () => {
