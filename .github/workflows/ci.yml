@@ -187,3 +187,185 @@ jobs:
           project_id: ${{ env.NEON_PROJECT_ID }}
           api_key: ${{ env.NEON_API_KEY }}
           branch: ${{ env.BRANCH_NAME }}
+
+  # ---------------------------------------------------------------------------
+  # E2E (W3-11) — Playwright against `next build && next start` on a throwaway
+  # Neon branch (migrated + seeded). Same gating as `integration`. Stripe is
+  # never contacted: placeholder key, and specs stub /api/checkout and refunds
+  # at the network edge. Magic-link tokens are minted into the DB by the specs.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [verify]
+    timeout-minutes: 30
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      BRANCH_NAME: ci-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+      # Real env parsing for build + start (NEXT_PUBLIC_* is inlined at build time).
+      NEXT_PUBLIC_SKIP_ENV_VALIDATION: "0"
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      PLAYWRIGHT_BASE_URL: http://localhost:3000
+      VIDEO_PROVIDER: fake
+      VIDEO_FAKE_ALLOWED: "true"
+      STRIPE_SECRET_KEY: sk_test_ci_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
+      RESEND_API_KEY: re_ci_placeholder
+      EMAIL_FROM: ci@example.com
+      R2_ACCOUNT_ID: ci
+      R2_ACCESS_KEY_ID: ci
+      R2_SECRET_ACCESS_KEY: ci
+      R2_BUCKET: ci
+      R2_PUBLIC_URL: https://example.com
+    steps:
+      - name: Check Neon credentials
+        id: gate
+        run: |
+          if [ -z "$NEON_API_KEY" ] || [ -z "$NEON_PROJECT_ID" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=E2E skipped::NEON_API_KEY not set — e2e skipped"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          version: "11.28.5"
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Compute branch expiry
+        id: expiry
+        if: steps.gate.outputs.enabled == 'true'
+        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      # neondatabase/create-branch-action v6.3.1
+      - name: Create Neon branch
+        id: branch
+        if: steps.gate.outputs.enabled == 'true'
+        uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          api_key: ${{ env.NEON_API_KEY }}
+          parent_branch: dev
+          branch_name: ${{ env.BRANCH_NAME }}
+          database: neondb
+          role: neondb_owner
+          expires_at: ${{ steps.expiry.outputs.at }}
+
+      - name: Prepare secrets and DB env
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url }}
+        run: |
+          echo "::add-mask::$DB_URL"
+          PAYLOAD_SECRET="$(openssl rand -hex 32)"
+          CRON_SECRET="$(openssl rand -hex 32)"
+          SEED_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$PAYLOAD_SECRET"
+          echo "::add-mask::$CRON_SECRET"
+          echo "::add-mask::$SEED_PASSWORD"
+          {
+            echo "DATABASE_URL=$DB_URL"
+            echo "DATABASE_URL_DIRECT=$DB_URL"
+            echo "TEST_DATABASE_URL=$DB_URL"
+            echo "PAYLOAD_SECRET=$PAYLOAD_SECRET"
+            echo "CRON_SECRET=$CRON_SECRET"
+            echo "SEED_PASSWORD=$SEED_PASSWORD"
+            echo "E2E_STAFF_PASSWORD=$SEED_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Migrate, seed, create e2e fixtures
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/web
+        run: |
+          pnpm payload migrate
+          pnpm seed
+          pnpm payload run test/e2e-seed.ts
+
+      - name: Build
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm --filter @cff/web exec next build
+
+      - name: Start server
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/web
+        run: |
+          nohup pnpm exec next start -p 3000 > "$RUNNER_TEMP/next-start.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS -o /dev/null http://localhost:3000/fr; then echo "server up"; exit 0; fi
+            sleep 2
+          done
+          echo "server did not start"; tail -50 "$RUNNER_TEMP/next-start.log"; exit 1
+
+      - name: Cache Playwright browsers
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright chromium
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/web
+        env:
+          CI: "1"
+          W301_SCREENSHOTS: "1"
+          W301B_SCREENSHOTS: "1"
+          W302_SCREENSHOTS: "1"
+          W303B_SCREENSHOTS: "1"
+          W304_SCREENSHOTS: "1"
+          W305_SCREENSHOTS: "1"
+        run: pnpm exec playwright test
+
+      - name: Upload report and traces
+        if: always() && steps.gate.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload screenshots
+        if: always() && steps.gate.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: w3-screenshots
+          path: apps/web/e2e/__screenshots__/w3-*
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Server log (on failure)
+        if: failure() && steps.gate.outputs.enabled == 'true'
+        run: tail -200 "$RUNNER_TEMP/next-start.log" || true
+
+      # neondatabase/delete-branch-action v3.2.1
+      - name: Delete Neon branch
+        if: always() && steps.gate.outputs.enabled == 'true' && steps.branch.outcome != 'skipped'
+        continue-on-error: true
+        uses: neondatabase/delete-branch-action@4468d825d5a88ef4012f1705a82f02ec3072f776
+        with:
+          project_id: ${{ env.NEON_PROJECT_ID }}
+          api_key: ${{ env.NEON_API_KEY }}
+          branch: ${{ env.BRANCH_NAME }}
