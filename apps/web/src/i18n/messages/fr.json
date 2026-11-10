@@ -374,6 +374,19 @@
         "parent_other_lesson": "Ce commentaire appartient à une autre leçon.",
         "parent_nested": "Les réponses sont limitées à un niveau."
       }
+    },
+    "certificate": {
+      "title": "Certificat de réussite",
+      "awardedTo": "Décerné à",
+      "forCompleting": "pour avoir terminé le cours",
+      "issuedOn": "Délivré le {date}",
+      "codeLabel": "Code de vérification",
+      "verifyAt": "Vérifiez l’authenticité sur {url}",
+      "issuer": "Cook For Friends",
+      "logoPlaceholder": "Logo"
+    },
+    "errors": {
+      "rateLimited": "Trop de mises à jour de progression. Réessayez plus tard."
     }
   }
 }
