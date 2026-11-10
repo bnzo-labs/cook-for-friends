@@ -334,6 +334,8 @@ jobs:
           W303B_SCREENSHOTS: "1"
           W304_SCREENSHOTS: "1"
           W305_SCREENSHOTS: "1"
+          # Native-ESM resolution shims for the Local API seeding done inside specs.
+          NODE_OPTIONS: --import ./test/e2e-esm-register.mjs
         run: pnpm exec playwright test
 
       - name: Upload report and traces

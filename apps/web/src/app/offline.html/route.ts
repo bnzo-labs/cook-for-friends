@@ -4,10 +4,11 @@ import { defaultLocale, locales, type Locale } from "@/i18n/locales"
 
 /**
  * Offline fallback page served by the service worker (precached, never an
- * app route). Copy lives under `pwa.*` in the message files. Colors use CSS
+ * app route). Language comes from `?lang=`. Copy lives under `pwa.*` in the message files. Colors use CSS
  * system colors so no palette is hard-coded here.
  */
-export const dynamic = "force-static"
+// force-dynamic: force-static drops the query string in production, so ?lang=en rendered FR.
+export const dynamic = "force-dynamic"
 
 const COPY: Record<Locale, typeof fr.pwa> = { fr: fr.pwa, en: en.pwa }
 
