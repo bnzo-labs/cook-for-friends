@@ -29,3 +29,17 @@ export function greetingName(first: string | null): string | null {
   const name = first?.trim()
   return name ? name : null
 }
+
+/** Date + time in the studio timezone (no CSS capitalisation: French stays lowercase). */
+export function formatDateTime(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
+    timeZone: "America/Toronto",
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(new Date(iso))
+}
+
+/** Percent value (0-100) as a localized string, e.g. "100 %" / "100%". */
+export function formatPercent(percent: number, locale: Locale): string {
+  return new Intl.NumberFormat(intlLocale(locale), { style: "percent", maximumFractionDigits: 0 }).format(percent / 100)
+}

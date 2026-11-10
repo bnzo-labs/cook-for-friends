@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server"
 import { Link } from "@/i18n/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { WaitlistMount } from "@/components/storefront/waitlist/WaitlistMount"
 import { formatSessionDate, formatSessionTime } from "@/lib/storefront/format"
 import type { SessionSummary } from "@/modules/catalog"
 import type { Locale } from "@/modules/_shared"
@@ -25,6 +26,9 @@ export interface SessionListProps {
     location: string
   }
 }
+
+/** Waitlist is only offered for sessions that have not started. */
+const hasStarted = (iso: string): boolean => new Date(iso).getTime() <= Date.now()
 
 /** Session list with live availability and a "Book" CTA per session. */
 export async function SessionList({
@@ -125,7 +129,9 @@ export async function SessionList({
                       />
                       <span className={soldOut ? "text-fg-muted" : "text-fg"}>{statusText}</span>
                     </span>
-                    {soldOut ? (
+                    {soldOut && !hasStarted(session.startsAt) ? (
+                      <WaitlistMount sessionId={String(session.id)} dateLabel={dateStr} />
+                    ) : soldOut ? (
                       <Button disabled aria-label={`${t("sold_out")}, ${dateStr}`}>
                         {t("sold_out")}
                       </Button>

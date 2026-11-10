@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server"
 
 import { EmptyState, PageHeader, SeatList, requirePortalCustomer } from "@/components/portal"
 import { loadSeats } from "@/components/portal/data"
+import { CertificatesSection } from "@/components/portal/history/CertificatesSection"
 import { assertLocale } from "@/i18n/locale"
 import type { Metadata } from "next"
 
@@ -28,8 +29,7 @@ export default async function AccountHistoryPage({ params }: { params: Promise<{
           <EmptyState title={t("empty_title")} body={t("empty_body")} ctaLabel={t("empty_cta")} ctaHref="/courses" />
         )}
       </div>
-      {/* Mount point for certificates (W3-01b fills this section). */}
-      <section id="certificates" aria-label={t("certificates_label")} data-certificates-slot className="scroll-mt-6" />
+      <CertificatesSection customerId={customer.id} locale={locale} />
     </div>
   )
 }

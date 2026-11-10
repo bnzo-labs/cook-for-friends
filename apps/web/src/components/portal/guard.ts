@@ -13,9 +13,9 @@ export type PortalHref =
 
 /**
  * Portal guard (server). Signed out → localized login with `next` set to the
- * current localized path. `identity.requireCustomer` redirects to the untranslated
- * `/{locale}/auth/login`, which does not exist for FR, so the portal builds the
- * localized URL itself. Every portal page calls this before any data call.
+ * current localized path. Portal pages call this (rather than `identity.requireCustomer`)
+ * so the `next` target is the exact localized portal path. Every portal page calls
+ * this before any data call.
  */
 export async function requirePortalCustomer(locale: Locale, href: PortalHref): Promise<CustomerView> {
   const customer = await getCurrentCustomer(await headers())
