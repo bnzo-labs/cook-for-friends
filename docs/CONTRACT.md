@@ -189,7 +189,7 @@ export const identityCollections: CollectionConfig[]
 export function requestMagicLink(i: { email: string; locale: Locale; next?: string; ip: string }): Promise<Result<void>>
 export function verifyMagicLink(token: string): Promise<Result<{ customerId: ID; setCookie: string; next: string }>>
 export function getCurrentCustomer(headers: Headers): Promise<CustomerView | null>
-export function requireCustomer(headers: Headers): Promise<CustomerView>              // throws → redirect to /{locale}/auth/login
+export function requireCustomer(headers: Headers, opts?: { next?: string }): Promise<CustomerView>  // throws → redirect to localized login (/fr/connexion, /en/auth/login) (CCR-W3-9)
 // Sessions: the customers JWT carries `sessionVersion`; the strategy rejects a token whose version != customer.sessionVersion.
 // `POST /api/auth/logout` increments it, revoking every device of that customer (no per-device sessions).
 export function upsertCustomerByEmail(i: { email: string; locale: Locale; firstName?: string; lastName?: string }): Promise<CustomerView>
@@ -201,6 +201,7 @@ export function isStaff(user: unknown): boolean
 // CCR-W3-2 (W3-07):
 export function updateCustomerProfile(customerId: ID, patch: { firstName?: string; lastName?: string; phone?: string | null
   preferredLocale?: Locale; marketingConsent?: boolean; dietaryNotes?: string | null }): Promise<Result<CustomerView>>  // email immutable
+// CCR-W3-9: CustomerView gains `dietaryNotes?: string | null` (profile prefill); `""`/null on updateCustomerProfile clears it. No schema change.
 // Magic-link email URL uses the localized pathname: /fr/connexion/verifier?token=… · /en/auth/verify?token=…
 
 // @/modules/access

@@ -18,10 +18,8 @@ export async function saveProfile(_prev: ProfileActionState, data: FormData): Pr
   const parsed = parseProfileForm(data)
   if (!parsed.ok) return { status: "error", errors: parsed.errors }
 
-  // CustomerView does not expose dietaryNotes yet (CCR in task file), so the form
-  // cannot prefill it: blank means "keep", never "erase".
-  const { dietaryNotes, ...rest } = parsed.value
-  const result = await updateCustomerProfile(customer.id, dietaryNotes === null ? rest : { ...rest, dietaryNotes })
+  // Blank submits null, which clears the stored notes (CCR-W3-9).
+  const result = await updateCustomerProfile(customer.id, parsed.value)
   if (!result.ok) return { status: "error", errors: result.error.code === "VALIDATION" ? { preferredLocale: { code: "invalid" } } : undefined }
 
   // Switch the page to the new language only when the stored preference changed.

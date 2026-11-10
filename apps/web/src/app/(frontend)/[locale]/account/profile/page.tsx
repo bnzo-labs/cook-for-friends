@@ -36,7 +36,7 @@ export default async function AccountProfilePage({
           firstName: customer.firstName ?? "",
           lastName: customer.lastName ?? "",
           phone: customer.phone ?? "",
-          dietaryNotes: "",
+          dietaryNotes: customer.dietaryNotes ?? "",
           preferredLocale: customer.preferredLocale,
           marketingConsent: customer.marketingConsent,
         }}
