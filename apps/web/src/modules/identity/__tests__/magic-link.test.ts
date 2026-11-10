@@ -312,8 +312,11 @@ describe.skipIf(!hasTestDb)("identity magic-link (integration)", () => {
     await expect(identity.requireCustomer(new Headers({ "x-next-intl-locale": "en" }))).rejects.toMatchObject({
       digest: expect.stringContaining("/en/auth/login"),
     })
+    await expect(identity.requireCustomer(new Headers({ "x-next-intl-locale": "en" }), { next: "/en/account" })).rejects.toMatchObject({
+      digest: expect.stringContaining("/en/auth/login?next=%2Fen%2Faccount"),
+    })
     await expect(identity.requireCustomer(new Headers())).rejects.toMatchObject({
-      digest: expect.stringContaining("/fr/auth/login"),
+      digest: expect.stringContaining("/fr/connexion"),
     })
   })
 

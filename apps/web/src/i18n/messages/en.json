@@ -347,6 +347,19 @@
       "seats_left_message_one": "Only 1 seat left.",
       "seats_left_message_other": "Only {count} seats left."
     },
+    "waitlist": {
+      "cta": "Join waitlist",
+      "cta_aria": "Join the waitlist for the session on {date}",
+      "email_label": "Your email",
+      "help": "We'll email you if a seat frees up. The first person to book gets it: no seat is held for you.",
+      "submit": "Notify me",
+      "confirmation": "We'll email you if a seat frees up: first to book gets it.",
+      "error": {
+        "invalid": "Enter a valid email address.",
+        "rate_limited": "Too many requests. Try again later.",
+        "generic": "Something went wrong. Try again in a moment."
+      }
+    },
     "certificate": {
       "meta_title": "Certificate verification",
       "heading": "Certificate verification",
@@ -459,7 +472,15 @@
       "all_sessions": "All my sessions",
       "my_courses": "My online courses",
       "no_courses": "No online courses",
-      "all_courses": "See my courses"
+      "all_courses": "See my courses",
+      "progress": {
+        "summary": "{completed} of {total} lessons",
+        "bar_label": "Progress: {course}",
+        "continue": "Continue",
+        "start": "Start",
+        "completed": "Completed",
+        "certificate": "Download my certificate"
+      }
     },
     "courses": {
       "title": "My courses",
@@ -490,6 +511,41 @@
       "attendance": {
         "present": "Attended",
         "absent": "Absent"
+      },
+      "cancel": {
+        "trigger": "Cancel this seat",
+        "trigger_aria": "Cancel this seat: {course}, {date}",
+        "close": "Close",
+        "title": "Cancel this seat?",
+        "outcome": {
+          "refund": "You will be refunded {amount} ({percent}) to your payment method.",
+          "credit": "You will receive a credit of {amount} ({percent}) to use on a future booking.",
+          "none": "This cancellation does not qualify for a refund or credit."
+        },
+        "credit_emailed": "The credit code is sent to you by email. It is not shown here.",
+        "none_hint": "There are less than {hours} h left before the session. You can still cancel to free the seat.",
+        "deadline": "This outcome applies until {date}.",
+        "policy_link": "Read the cancellation policy",
+        "keep": "Keep my seat",
+        "confirm": "Confirm cancellation",
+        "retry": "Try again",
+        "success": {
+          "refund": "Seat cancelled. Your refund of {amount} is on its way.",
+          "credit": "Seat cancelled. The credit code is sent to you by email.",
+          "none": "Seat cancelled. No refund or credit."
+        },
+        "error": {
+          "conflict": "This seat is already cancelled or it is too late to cancel it. Refreshing the page.",
+          "upstream": "Your refund is being processed. Try again in a moment.",
+          "generic": "The cancellation failed. Try again in a moment."
+        },
+        "blocked": {
+          "not_buyer": "This seat was booked by {name}. Contact them to cancel it.",
+          "not_buyer_unnamed": "This seat was booked by someone else. Contact them to cancel it.",
+          "session_started": "This session has started: cancellation is no longer possible.",
+          "self_cancel_disabled": "Cancellations are handled by our team. Write to us:",
+          "self_cancel_disabled_no_email": "Cancellations are handled by our team. Contact us."
+        }
       }
     },
     "history": {
@@ -499,7 +555,14 @@
       "empty_body": "Your completed sessions will appear here.",
       "empty_cta": "Browse courses",
       "past_sessions": "Past sessions",
-      "certificates_label": "Certificates"
+      "certificates_label": "Certificates",
+      "certificates": {
+        "issued_on": "Issued on {date}",
+        "code_label": "Verification code:",
+        "download": "Download PDF",
+        "download_aria": "Download the certificate as PDF: {course}",
+        "empty": "Your certificates will appear here when you complete an online course."
+      }
     },
     "receipts": {
       "title": "Receipts",

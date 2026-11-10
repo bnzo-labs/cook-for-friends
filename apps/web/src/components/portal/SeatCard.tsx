@@ -5,19 +5,23 @@ import { formatSessionDate, formatSessionTime } from "@/lib/storefront/format"
 import type { Locale } from "@/modules/_shared"
 
 import type { SeatRow } from "./data"
+import { SeatCancel } from "./sessions/SeatCancel"
+import type { CancelContext } from "./sessions/types"
 
 const STATUS_VARIANT = { confirmed: "ok", cancelled: "danger", refunded: "neutral" } as const
 
 export interface SeatCardProps {
   seat: SeatRow
   locale: Locale
+  /** Cancel data for upcoming confirmed seats (sessions + dashboard pages). */
+  cancel?: CancelContext
 }
 
 /**
- * One seat. The empty `[data-cancel-slot]` on upcoming confirmed rows is the
- * mount point for W3-01b's cancel button (no cancel UI in W3-01).
+ * One seat. `[data-cancel-slot]` on upcoming confirmed rows holds the cancel
+ * button, or the reason it is unavailable (W3-01b).
  */
-export async function SeatCard({ seat, locale }: SeatCardProps) {
+export async function SeatCard({ seat, locale, cancel }: SeatCardProps) {
   const t = await getTranslations({ locale, namespace: "portal.sessions" })
   const date = formatSessionDate(seat.startsAt, locale)
   const time = formatSessionTime(seat.startsAt, seat.endsAt, locale)
@@ -56,7 +60,9 @@ export async function SeatCard({ seat, locale }: SeatCardProps) {
           ) : null}
         </div>
         {slot ? (
-          <div data-cancel-slot data-enrollment-id={seat.enrollmentId} data-booked-by-me={seat.bookedByMe ? "true" : "false"} />
+          <div data-cancel-slot data-enrollment-id={seat.enrollmentId} data-booked-by-me={seat.bookedByMe ? "true" : "false"} className="flex flex-col items-start sm:items-end">
+            {cancel ? <SeatCancel seat={seat} locale={locale} context={cancel} /> : null}
+          </div>
         ) : null}
       </div>
     </li>

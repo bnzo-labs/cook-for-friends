@@ -6,6 +6,7 @@ import { getPayload } from "./payload"
 import type { Locale } from "@/modules/_shared"
 import type { CustomerView } from "../types"
 import { toCustomerView } from "./magic-link"
+import { sanitizeNext } from "./next-path"
 
 /** The signed-in customer for these request headers, or null (anonymous, staff, expired). */
 export async function getCurrentCustomer(headers: Headers): Promise<CustomerView | null> {
@@ -20,10 +21,20 @@ function localeFromHeaders(headers: Headers): Locale {
   return (locales as readonly string[]).includes(candidate ?? "") ? (candidate as Locale) : defaultLocale
 }
 
-/** Portal guard. Throws Next's redirect error to `/{locale}/auth/login`. */
-export async function requireCustomer(headers: Headers): Promise<CustomerView> {
+/**
+ * Portal guard. Throws Next's redirect error to the localized login page
+ * (`/fr/connexion`, `/en/auth/login`). Optional `next` (sanitized same-origin
+ * path) is carried as the `next` query param.
+ */
+export async function requireCustomer(headers: Headers, opts: { next?: string } = {}): Promise<CustomerView> {
   const customer = await getCurrentCustomer(headers)
-  if (!customer) redirect(`/${localeFromHeaders(headers)}/auth/login`)
+  if (!customer) {
+    const locale = localeFromHeaders(headers)
+    const { getPathname } = await import("@/i18n/navigation")
+    const login = getPathname({ locale, href: "/auth/login" })
+    const next = sanitizeNext(opts.next)
+    redirect(next ? `${login}?next=${encodeURIComponent(next)}` : login)
+  }
   return customer
 }
 

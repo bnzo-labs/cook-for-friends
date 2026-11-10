@@ -8,6 +8,8 @@ import {
   SeatList,
   requirePortalCustomer,
 } from "@/components/portal"
+import { loadCancelContext } from "@/components/portal/sessions/cancel-data"
+import { loadProgressByCourse } from "@/components/portal/dashboard/progress-data"
 import { loadCommunityUrl, loadOwnedCourses, loadSeats } from "@/components/portal/data"
 import { greetingName } from "@/components/portal/format"
 import { Button } from "@/components/ui/button"
@@ -28,14 +30,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function AccountDashboardPage({ params }: { params: Promise<{ locale: string }> }) {
   const locale = assertLocale((await params).locale)
   const customer = await requirePortalCustomer(locale, "/account")
-  const [t, courses, seats, communityUrl] = await Promise.all([
+  const [t, courses, seats, communityUrl, progress] = await Promise.all([
     getTranslations({ locale, namespace: "portal" }),
     loadOwnedCourses(customer.id, locale),
     loadSeats(customer.id, locale),
     loadCommunityUrl(),
+    loadProgressByCourse(customer.id, locale),
   ])
   const name = greetingName(customer.firstName)
   const nextSeats = seats.upcoming.filter((s) => s.status === "confirmed").slice(0, MAX_DASHBOARD_SEATS)
+  const cancel = await loadCancelContext(customer.id, locale, nextSeats)
 
   return (
     <div className="flex flex-col gap-12">
@@ -53,7 +57,7 @@ export default async function AccountDashboardPage({ params }: { params: Promise
           ) : null}
         </div>
         {nextSeats.length > 0 ? (
-          <SeatList seats={nextSeats} locale={locale} label={t("dashboard.next_sessions")} />
+          <SeatList seats={nextSeats} locale={locale} label={t("dashboard.next_sessions")} cancel={cancel} />
         ) : (
           <p className="rounded-card border border-border bg-surface p-5 text-fg-muted">{t("dashboard.no_sessions")}</p>
         )}
@@ -65,14 +69,31 @@ export default async function AccountDashboardPage({ params }: { params: Promise
         </h2>
         {courses.length > 0 ? (
           <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {courses.map((course) => (
-              <OwnedCourseCard
-                key={String(course.id)}
-                course={course}
-                formatLabel={t("courses.format_online")}
-                openLabel={t("courses.open")}
-              />
-            ))}
+            {courses.map((course) => {
+              const p = progress.get(String(course.id))
+              return (
+                <OwnedCourseCard
+                  key={String(course.id)}
+                  course={course}
+                  formatLabel={t("courses.format_online")}
+                  openLabel={t("courses.open")}
+                  locale={locale}
+                  progress={p ? { ...p, slug: course.slug } : undefined}
+                  progressLabels={
+                    p
+                      ? {
+                          summary: t("dashboard.progress.summary", { completed: p.completedLessons, total: p.totalLessons }),
+                          barLabel: t("dashboard.progress.bar_label", { course: course.title }),
+                          continue: t("dashboard.progress.continue"),
+                          start: t("dashboard.progress.start"),
+                          completedBadge: t("dashboard.progress.completed"),
+                          certificate: t("dashboard.progress.certificate"),
+                        }
+                      : undefined
+                  }
+                />
+              )
+            })}
           </ul>
         ) : (
           <EmptyState
