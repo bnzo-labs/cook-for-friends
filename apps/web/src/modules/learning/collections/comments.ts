@@ -1,9 +1,11 @@
 import type { CollectionConfig, PayloadRequest, Validate, Where } from "payload"
 
 import { isAdmin, isCustomerUser, isStaff, isStaffField, isStaffOrAdmin } from "@/modules/identity"
+import { COMMENT_MAX_LENGTH } from "../comments/constants"
+import { notifyAuthorOnApproval, stampModerator } from "../comments/server/moderation"
 import { learningGroup } from "../labels"
 
-export const COMMENT_MAX_LENGTH = 2000
+export { COMMENT_MAX_LENGTH }
 
 /** Replies are one level deep: a parent must not itself have a parent. */
 export async function validateParent(
@@ -34,7 +36,12 @@ export const Comments: CollectionConfig = {
     plural: { fr: "Commentaires", en: "Comments" },
   },
   admin: {
-    defaultColumns: ["lesson", "customer", "status", "createdAt"],
+    defaultColumns: ["status", "body", "lesson", "customer", "createdAt"],
+    listSearchableFields: ["body"],
+    description: {
+      fr: "Modération : filtrez sur le statut « En attente », puis passez le statut à Approuvé ou Rejeté. Approuver envoie un courriel à l'auteur·e.",
+      en: "Moderation: filter on status “Pending”, then set status to Approved or Rejected. Approving emails the author.",
+    },
     group: learningGroup,
   },
   access: {
@@ -50,7 +57,10 @@ export const Comments: CollectionConfig = {
     update: isStaffOrAdmin,
     delete: isAdmin,
   },
+  defaultSort: "-createdAt",
   hooks: {
+    beforeChange: [stampModerator],
+    afterChange: [notifyAuthorOnApproval],
     beforeValidate: [
       // A customer always posts as themselves; status is forced by field access.
       ({ data, req, operation }) => {

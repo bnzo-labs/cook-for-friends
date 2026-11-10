@@ -361,6 +361,21 @@
     "offline_body": "We cannot reach Cook for Friends right now. Check your connection, then try again.",
     "offline_retry": "Try again"
   },
+  "learning": {
+    "comments": {
+      "anonymousAuthor": "Participant",
+      "rateLimited": "You are commenting too fast. Please try again later.",
+      "errors": {
+        "body": "Write a comment between 1 and 2000 characters.",
+        "lessonId": "This lesson could not be found.",
+        "parentId": "This comment cannot be replied to.",
+        "parent_not_found": "This comment cannot be replied to.",
+        "parent_not_approved": "This comment cannot be replied to yet.",
+        "parent_other_lesson": "This comment belongs to another lesson.",
+        "parent_nested": "Replies are limited to one level."
+      }
+    }
+  },
   "auth": {
     "login": {
       "meta_title": "Sign in",
