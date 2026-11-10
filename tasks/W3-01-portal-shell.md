@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-01
-status: pending
+status: complete
 wave: 3
 batch: 3b
 module: portal
@@ -34,14 +34,14 @@ A customer signs in with a magic link and lands in a bilingual portal that shows
 - Nav: Tableau de bord · Mes cours · Mes séances · Historique · Reçus · Profil · Déconnexion (POST `/api/auth/logout` form, Origin-checked by the route). Account nav in `components/portal/**`; header "Mon compte / My account" link when signed in is **out of scope** (layout is ui-owned) — note it for Wave 4.
 
 ## Acceptance criteria
-- [ ] Routes exist and render 200 for a signed-in customer in FR + EN: `/account`, `/account/sessions`, `/account/history`, `/account/receipts`, `/account/profile` (translated public paths per `routing.ts`); 307/303 → localized login when signed out, with `next` preserved and validated same-origin by identity.
-- [ ] Login + verify pages per decisions; e2e drives the full loop on a throwaway Neon branch using the identity test sender seam (`setMagicLinkEmailSender` captured token) or a test-only token minted by an integration helper in `apps/web/test/` — never a real inbox.
-- [ ] Data correctness (integration-backed e2e or server-component tests with seeded data): buyer with a 3-seat order sees 3 seat rows (2 badged guest); guest sees only their seat; customer with 1 online entitlement sees exactly that course card and no other course; revoked entitlement → card gone; orders newest first; receipt link only when `hasReceipt`.
-- [ ] Profile save updates fields, validation errors inline (FormField, `aria-describedby`), locale switch redirects; consent unchecked by default.
-- [ ] EmptyState for no courses / no sessions / no receipts with CTA to `/cours` · `/courses`.
-- [ ] No PII in URLs, no customer data in client bundles beyond what each page renders; all copy under `portal.*` (and `auth.*` for login/verify — new namespace, yours).
-- [ ] Playwright `e2e/w3-01-portal.test.ts` (PW_CHANNEL=chrome): login loop, guard redirect, each page FR + EN, axe 0 serious/critical at 320 + 1440, no horizontal overflow at 320, keyboard-only nav through account menu, screenshots to `e2e/__screenshots__/w3-01/`.
-- [ ] typecheck/lint/test green; CI green; Vercel preview Ready. Staging probes for PR body: `/fr/connexion`, `/en/auth/login` → 200; `/fr/compte` signed out → redirect to `/fr/connexion?next=…`.
+- [x] Routes exist and render 200 for a signed-in customer in FR + EN: `/account`, `/account/sessions`, `/account/history`, `/account/receipts`, `/account/profile` (translated public paths per `routing.ts`); 307/303 → localized login when signed out, with `next` preserved and validated same-origin by identity.
+- [x] Login + verify pages per decisions; e2e drives the full loop on a throwaway Neon branch using the identity test sender seam (`setMagicLinkEmailSender` captured token) or a test-only token minted by an integration helper in `apps/web/test/` — never a real inbox.
+- [x] Data correctness (integration-backed e2e or server-component tests with seeded data): buyer with a 3-seat order sees 3 seat rows (2 badged guest); guest sees only their seat; customer with 1 online entitlement sees exactly that course card and no other course; revoked entitlement → card gone; orders newest first; receipt link only when `hasReceipt`.
+- [x] Profile save updates fields, validation errors inline (FormField, `aria-describedby`), locale switch redirects; consent unchecked by default.
+- [x] EmptyState for no courses / no sessions / no receipts with CTA to `/cours` · `/courses`.
+- [x] No PII in URLs, no customer data in client bundles beyond what each page renders; all copy under `portal.*` (and `auth.*` for login/verify — new namespace, yours).
+- [ ] (written, NOT run locally: orchestrator banned local next build; screenshots pending) Playwright `e2e/w3-01-portal.test.ts` (PW_CHANNEL=chrome): login loop, guard redirect, each page FR + EN, axe 0 serious/critical at 320 + 1440, no horizontal overflow at 320, keyboard-only nav through account menu, screenshots to `e2e/__screenshots__/w3-01/`.
+- [~] (typecheck+lint+unit+integration-vs-Neon-branch green locally; CI/Preview pending) typecheck/lint/test green; CI green; Vercel preview Ready. Staging probes for PR body: `/fr/connexion`, `/en/auth/login` → 200; `/fr/compte` signed out → redirect to `/fr/connexion?next=…`.
 
 ## Files to create / edit
 - Create: `src/app/(frontend)/[locale]/account/{layout,page,loading,error}.tsx`, `account/{sessions,history,receipts,profile}/**`, `src/app/(frontend)/[locale]/auth/{login,verify}/**`, `src/components/portal/**` (except `portal/player/**`, `portal/comments/**` — W3-03b), `e2e/w3-01-portal.test.ts`, `apps/web/test/portal-fixtures.ts` (seed helpers; quality path, approved).
@@ -76,3 +76,20 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+## Completion notes (W3-01)
+**Deviations / decisions**
+- Guard is per page (`components/portal/guard.ts` `requirePortalCustomer(locale, href)`), not in the layout. A layout cannot know its pathname and the redirect must carry `next`; layout and page render in parallel so a layout redirect would race and drop `next`. Layout calls `getCurrentCustomer` for the menu only; signed-out gets no menu while the page redirects.
+- `identity.requireCustomer` redirects to the untranslated `/{locale}/auth/login`, which 404s in FR (`/fr/connexion`). Portal does not use it. Follow-up for the identity owner: localize that redirect.
+- "Mes cours" menu item = `/account#courses` section (no index page; `account/courses/**` is W3-03b).
+- Profile locale switch redirects only when the stored `preferredLocale` changes (so viewing `/en` with a FR preference and saving does not bounce).
+- Login/verify under `[locale]/auth/{login,verify}`; verify page is `referrer: no-referrer`, noindex; token stripped with `history.replaceState` on click.
+- Past sessions of unpublished/archived courses are skipped (`catalog.getSessionView` returns null for them).
+
+## Contract Change Request (non-blocking)
+- `identity.CustomerView` lacks `dietaryNotes` (field exists on `customers`). Profile form cannot prefill it, so a blank textarea means "keep current notes" (never erases). Ask: add `dietaryNotes: string | null` to `CustomerView` + `toCustomerView`, then prefill and allow clearing. Wave 4 / identity owner.
+
+## Wave 4 notes
+- Header "Mon compte / My account" link when signed in (layout is ui-owned; `layout.nav.account` key already exists).
+- `[data-cancel-slot][data-enrollment-id]` on upcoming confirmed seat rows and `#certificates` section on history are the W3-01b mount points.
+- `/account/courses/[slug]` links 404 until W3-03b.

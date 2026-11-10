@@ -392,5 +392,164 @@
     "errors": {
       "rateLimited": "Too many progress updates. Please try again later."
     }
+  },
+  "auth": {
+    "login": {
+      "meta_title": "Sign in",
+      "title": "Sign in to your account",
+      "intro": "Enter your email. We send you a sign-in link, no password needed.",
+      "email_label": "Email",
+      "email_placeholder": "you@example.com",
+      "submit": "Email me a sign-in link",
+      "sending": "Sending…",
+      "sent_title": "Check your inbox",
+      "sent_body": "If {email} can receive a link, it will arrive within a few minutes. It expires in 15 minutes and works once.",
+      "sent_hint": "Nothing yet? Check your spam folder.",
+      "use_other": "Use a different address",
+      "error_email": "Enter a valid email address.",
+      "error_rate": "Too many requests. Try again later.",
+      "error_generic": "We couldn't send the link right now. Please try again.",
+      "no_account_note": "No account yet? One is created automatically with your first booking."
+    },
+    "verify": {
+      "meta_title": "Confirm sign-in",
+      "title": "Confirm your sign-in",
+      "intro": "One click to open your account. This link works only once.",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "invalid_title": "Link invalid or expired",
+      "invalid_body": "This sign-in link is no longer valid. Request a new one.",
+      "request_new": "Send me a new link",
+      "error_generic": "We couldn't sign you in right now. Please try again."
+    }
+  },
+  "portal": {
+    "meta_title": "My account",
+    "skip_label": "Customer area",
+    "greeting_named": "Hello {name}",
+    "greeting": "Hello",
+    "nav": {
+      "label": "Account menu",
+      "dashboard": "Dashboard",
+      "courses": "My courses",
+      "sessions": "My sessions",
+      "history": "History",
+      "receipts": "Receipts",
+      "profile": "Profile",
+      "logout": "Sign out"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "intro": "Your sessions, online courses and receipts, all in one place.",
+      "next_sessions": "Upcoming sessions",
+      "no_sessions": "No upcoming sessions",
+      "all_sessions": "All my sessions",
+      "my_courses": "My online courses",
+      "no_courses": "No online courses",
+      "all_courses": "See my courses"
+    },
+    "courses": {
+      "title": "My courses",
+      "intro": "The online courses you have access to.",
+      "open": "Open course",
+      "format_online": "Online",
+      "empty_title": "No online courses yet",
+      "empty_body": "Your online courses will show up here once you buy one.",
+      "empty_cta": "Browse courses"
+    },
+    "sessions": {
+      "title": "My sessions",
+      "intro": "The in-person sessions you booked, for yourself or for your guests.",
+      "empty_title": "No upcoming sessions",
+      "empty_body": "Book an in-person session and it will show up here.",
+      "empty_cta": "Browse courses",
+      "see_history": "See past sessions",
+      "order_label": "Order {number}",
+      "guest_badge": "Guest: {name}",
+      "guest_badge_unnamed": "Guest",
+      "booked_by_me": "Booked by you",
+      "location_label": "Location",
+      "status": {
+        "confirmed": "Confirmed",
+        "cancelled": "Cancelled",
+        "refunded": "Refunded"
+      },
+      "attendance": {
+        "present": "Attended",
+        "absent": "Absent"
+      }
+    },
+    "history": {
+      "title": "History",
+      "intro": "Your past sessions.",
+      "empty_title": "No past sessions",
+      "empty_body": "Your completed sessions will appear here.",
+      "empty_cta": "Browse courses",
+      "past_sessions": "Past sessions",
+      "certificates_label": "Certificates"
+    },
+    "receipts": {
+      "title": "Receipts",
+      "intro": "Your orders, newest first.",
+      "empty_title": "No receipts yet",
+      "empty_body": "Your receipts will appear here after a purchase.",
+      "empty_cta": "Browse courses",
+      "col_number": "Order",
+      "col_date": "Date",
+      "col_total": "Total",
+      "col_status": "Status",
+      "col_receipt": "Receipt",
+      "download": "Receipt",
+      "download_aria": "Receipt for order {number}",
+      "preparing": "Being prepared",
+      "no_date": "—",
+      "status": {
+        "paid": "Paid",
+        "refunded": "Refunded",
+        "partially_refunded": "Partially refunded",
+        "cancelled": "Cancelled",
+        "pending": "Pending"
+      }
+    },
+    "profile": {
+      "title": "Profile",
+      "intro": "Your details and preferences.",
+      "email_label": "Email",
+      "email_help": "Contact us to change your email address.",
+      "first_name": "First name",
+      "last_name": "Last name",
+      "phone": "Phone",
+      "phone_help": "Optional. Only used to reach attendees before a session.",
+      "dietary": "Dietary restrictions and allergies",
+      "dietary_help": "Optional. Shared with the team for your in-person sessions. Leave blank to keep your current notes.",
+      "language": "Preferred language",
+      "language_help": "Language of your emails and your account.",
+      "lang_fr": "Français",
+      "lang_en": "English",
+      "consent": "I agree to receive news and offers from Cook for Friends by email.",
+      "consent_help": "Optional. You can withdraw consent at any time.",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Profile saved.",
+      "error_summary": "Fix the highlighted fields.",
+      "error_generic": "We couldn't save right now. Please try again.",
+      "errors": {
+        "too_long": "Maximum {max} characters.",
+        "phone_invalid": "Enter a valid phone number.",
+        "invalid": "Invalid value."
+      }
+    },
+    "community": {
+      "title": "Join the community",
+      "body": "Chat with other Cook for Friends cooks.",
+      "cta": "Open the community",
+      "new_tab": "(opens in a new tab)"
+    },
+    "loading": "Loading your account…",
+    "error": {
+      "title": "We couldn't show this page",
+      "body": "Something went wrong. Please try again in a moment.",
+      "retry": "Try again"
+    }
   }
 }
