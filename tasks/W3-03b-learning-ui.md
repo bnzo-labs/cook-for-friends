@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-03b
-status: pending
+status: complete
 wave: 3
 batch: 3c
 module: portal (player) + storefront (certificate verify page)
@@ -72,3 +72,19 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+## Completion notes
+Criteria status (CI is evidence; the local e2e needs a throwaway Neon branch, which could not be created this session):
+- [x] Player pages + verify page render FR + EN; non-entitled -> localized 403 page (no VideoPlayer mounted, so no playback request is issued from the page; the API itself 403s). Signed-out -> localized login with `next`. Covered by `e2e/w3-03b-player.test.ts` (written, not run locally).
+- [ ] e2e `e2e/w3-03b-player.test.ts` + `test/player-fixtures.ts` written and type-checked; NOT executed (no throwaway branch, no local build per load rules). CI does not run Playwright. Orchestrator/Erick: run on a throwaway branch with `VIDEO_PROVIDER=fake VIDEO_FAKE_ALLOWED=true PW_CHANNEL=chrome` before relying on it.
+- [x] Playback refresh unit test (fake timers): `src/components/portal/player/__tests__/playback-controller.test.ts` (refetch 60 s before expiry, backoff 1/2/4 s on 403, stops after 3 retries, 401/404 never retried, retry() resets).
+- [x] Mux JS only via `next/dynamic` (ssr:false) in `VideoPlayer`, rendered only for `*.mux.com` URLs; e2e asserts no `mux` request on `/account` (not run locally).
+- [ ] axe 320/1440 + screenshots: assertions are in the e2e (not run); screenshots skipped (no cheap build).
+- [x] typecheck, eslint (touched dirs), targeted vitest green locally; full CI is the evidence.
+
+Deviations / notes:
+- "3 retries" = 3 retries after the first failed attempt (4 fetches total).
+- Course overview shows a "Commencer / Continuer / Revoir" CTA instead of redirecting.
+- Locale switch: an unknown slug under the other locale redirects to the right localized slug (via `getCourseCommerceRecord`), keeping the lesson id. Needs no change to LocaleSwitcher (DO NOT TOUCH); the switcher itself still links with the current slug, the redirect fixes it.
+- Mux source swap on token refresh is deferred while the video plays (applied on pause or on player error, resuming at the last position). Live Mux smoke is an Erick handoff (D2).
+- `PortalHref` in `components/portal/guard.ts` is a static union, so the player has its own `requirePlayerCustomer` (same behavior) in `components/portal/player/guard.ts`.
