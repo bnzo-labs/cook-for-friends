@@ -1,15 +1,18 @@
 ---
 type: task
 id: W2-12
-status: pending
+status: superseded
 wave: 2
 module: quality
 agent: e2e-runner
 model: sonnet
 depends-on: [W2-06, W2-07, W2-08, W2-09, W2-10]
+superseded-by: [W4-01, W4-06]
 ---
 
 # W2-12 — Wave 2 acceptance on staging: in-person purchase end to end
+
+> **SUPERSEDED 2026-11-09 (Wave 4 plan).** Blocked on staging: classifier denied writes to the shared staging DB; staging has no `STRIPE_WEBHOOK_SECRET`. Every criterion is re-homed: CI-provable parts → **W4-01** (Playwright in the CI `e2e` job, Stripe test sandbox or signed events; mapping table in W4-01 Completion notes); real-infrastructure parts (staging/prod webhook delivery, Vercel deploy, Cloudflare cron ticks, real Resend delivery) → **W4-06** post-deploy smoke (Erick-approved). Do not run this brief.
 
 ## Mission
 Prove on the real staging deployment, with Stripe **test mode**, that a customer can buy **3 in-person seats (self + 2 guests)**, that buyer and guests each get their confirmation email with `.ics` and their own enrollment/entitlement/customer, that all three appear on the attendee list, and that the expired-hold oversell path refunds automatically. This is the "replaces Google Forms + e-transfer" gate (DISCOVERY §9, R14).
