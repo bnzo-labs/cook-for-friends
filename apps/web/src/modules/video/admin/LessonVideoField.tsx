@@ -63,9 +63,14 @@ export function LessonVideoField() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // Browser-only values; applied after mount (never during render, to keep SSR hydration identical).
     const m = /\/collections\/lessons\/(\d+)/.exec(window.location.pathname)
-    setLessonId(m?.[1] ?? null)
-    setLang(document.documentElement.lang.startsWith("en") ? "en" : "fr")
+    const lessonFromUrl = m?.[1] ?? null
+    const langFromDoc: Lang = document.documentElement.lang.startsWith("en") ? "en" : "fr"
+    void Promise.resolve().then(() => {
+      setLessonId(lessonFromUrl)
+      setLang(langFromDoc)
+    })
   }, [])
 
   /** Read the server-recorded video group. Returns the status read. */
@@ -82,7 +87,7 @@ export function LessonVideoField() {
   }, [lessonId])
 
   useEffect(() => {
-    void syncFromServer()
+    void Promise.resolve().then(syncFromServer)
   }, [syncFromServer])
 
   /**
