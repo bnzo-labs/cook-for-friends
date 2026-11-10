@@ -38,6 +38,12 @@ async function courseUrl(locale: Locale, slug: string | undefined): Promise<stri
   return `${origin}${getPathname({ locale, href: { pathname: "/courses/[slug]", params: { slug } } })}`
 }
 
+/** Absolute, localized login page (no token), for the `accountUrl` link in confirmations. */
+export async function accountUrl(locale: Locale): Promise<string> {
+  const { getPathname } = await import("@/i18n/navigation")
+  return `${siteOrigin()}${getPathname({ locale, href: "/auth/login" })}`
+}
+
 /** `.ics` for one enrollment: uid `enrollment-<id>@cookforfriends`. */
 export async function enrollmentIcs(p: Paid, enrollmentId: number): Promise<IcsInput[]> {
   const view = p.sessionView
@@ -89,6 +95,7 @@ export async function enqueueOrderConfirmation(
       total: Number(p.session.amount_total ?? 0),
       currency: "cad",
       receiptUrl: `${siteOrigin()}/api/orders/${order.id}/receipt`,
+      accountUrl: await accountUrl(p.meta.locale),
       ...(p.contactEmail ? { contactEmail: p.contactEmail } : {}),
     },
     ...(buyerEnrollmentId !== null ? { ics: await enrollmentIcs(p, buyerEnrollmentId) } : {}),
@@ -117,6 +124,7 @@ export async function enqueueGuestConfirmations(p: Paid, enrollmentIds: Map<numb
         sessionStartsAt: view.startsAt,
         sessionEndsAt: view.endsAt,
         location: emailLocation(view),
+        accountUrl: await accountUrl(p.meta.locale),
         ...(p.contactEmail ? { contactEmail: p.contactEmail } : {}),
       },
       ics: await enrollmentIcs(p, enrollmentId),
