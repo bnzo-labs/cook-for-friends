@@ -10,4 +10,6 @@ export type CustomerView = {
   preferredLocale: Locale
   stripeCustomerId: string | null
   marketingConsent: boolean
+  /** CCR-W3-9: lets the profile form prefill/clear. */
+  dietaryNotes?: string | null
 }

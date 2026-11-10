@@ -34,6 +34,7 @@ export function toCustomerView(c: Customer): CustomerView {
     preferredLocale: isLocale(c.preferredLocale) ? c.preferredLocale : defaultLocale,
     stripeCustomerId: c.stripeCustomerId ?? null,
     marketingConsent: Boolean(c.marketingConsent),
+    dietaryNotes: c.dietaryNotes ?? null,
   }
 }
 
