@@ -19,3 +19,11 @@ export async function resolve(specifier, context, nextResolve) {
     throw err
   }
 }
+
+/** App code imports `*.json` without `with { type: "json" }` (bundler semantics). */
+export async function load(url, context, nextLoad) {
+  if (url.endsWith(".json") && url.startsWith("file:")) {
+    return nextLoad(url, { ...context, format: "json", importAttributes: { ...context.importAttributes, type: "json" } })
+  }
+  return nextLoad(url, context)
+}
