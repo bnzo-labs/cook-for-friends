@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-05
-status: pending
+status: complete
 wave: 3
 batch: 3b
 module: scheduling (+ admin-ext attendance)
@@ -78,3 +78,12 @@ Criteria ticked, PR open, CI green, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+## Completion notes
+- Implemented per brief: `scheduling/server/{policy,cancel,seat-released,waitlist,reminders,reminder-offsets,attendance,http,email-data,urls,tx}.ts`; routes `/api/waitlist`, `/api/enrollments/:id/{cancel,attendance}`; cron route calls `sendDueReminders`; admin `AttendanceControl` in SessionAttendees (disabled before session day, Toronto).
+- `previewCancellation` also returns optional `deadlineNextTier` (ISO) beyond CONTRACT shape (additive).
+- Retry of a pending refund re-evaluates the tier at `cancelledAt` (same amount as first attempt); customer retry allowed even after session start.
+- Reminder window = smallest offset >= hoursUntil (only the current window fires; a missed 48 h is never sent late after the 24 h one). Booked-after-window skip uses order `paidAt`.
+- EXTRA (accountUrl on order/enrollment-confirmation): SKIPPED, enqueue calls live in `commerce/webhook/emails.ts` (DO NOT TOUCH). Follow-up for commerce owner.
+- Removed obsolete W2 `seat-released.test.ts` (asserted the log-only body); replaced by `waitlist.test.ts`.
+- Local verification: NOT run (machine overload; neonctl branch create was denied by permission classifier). CI is the evidence. Playwright admin smoke + screenshots written (`e2e/w3-05-attendance.test.ts`, `W305_SCREENSHOTS=1`) but not executed: needs seeded staff session; screenshots not committed.

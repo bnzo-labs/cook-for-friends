@@ -3,6 +3,9 @@ import type { UIFieldServerProps } from "payload"
 import { getSeatSummary, listAttendees, type AttendeeRow } from "@/modules/commerce"
 import { isStaff } from "@/modules/identity"
 
+import { AttendanceControl } from "./AttendanceControl"
+import { attendanceOpen } from "./attendance-open"
+
 type Lang = "fr" | "en"
 
 const T = {
@@ -21,6 +24,7 @@ const T = {
     bookedBy: "Réservé par",
     guest: "Invité",
     none: "Aucun participant confirmé pour le moment.",
+    attendance: "Présence",
     inactive: "Annulés / remboursés",
     cancelled: "Annulée",
     refunded: "Remboursée",
@@ -41,6 +45,7 @@ const T = {
     bookedBy: "Booked by",
     guest: "Guest",
     none: "No confirmed participants yet.",
+    attendance: "Attendance",
     inactive: "Cancelled / refunded",
     cancelled: "Cancelled",
     refunded: "Refunded",
@@ -51,12 +56,24 @@ const T = {
 const cell = { padding: "6px 10px", textAlign: "left", verticalAlign: "top" } as const
 const stat = { border: "1px solid var(--theme-elevation-150)", borderRadius: 4, padding: "8px 14px", minWidth: 110 } as const
 
-function Table({ rows, t, showStatus }: { rows: AttendeeRow[]; t: (typeof T)[Lang]; showStatus?: boolean }) {
+function Table({
+  rows,
+  t,
+  lang,
+  attendanceEnabled,
+  showStatus,
+}: {
+  rows: AttendeeRow[]
+  t: (typeof T)[Lang]
+  lang: Lang
+  attendanceEnabled?: boolean
+  showStatus?: boolean
+}) {
   return (
     <table style={{ width: "100%", borderCollapse: "collapse" }} data-testid="attendees-table">
       <thead>
         <tr style={{ borderBottom: "1px solid var(--theme-elevation-150)" }}>
-          {[t.name, t.email, t.phone, t.dietary, t.order, t.bookedBy].map((h) => (
+          {[t.name, t.email, t.phone, t.dietary, t.order, t.bookedBy, ...(showStatus ? [] : [t.attendance])].map((h) => (
             <th key={h} style={cell} scope="col">
               {h}
             </th>
@@ -86,6 +103,17 @@ function Table({ rows, t, showStatus }: { rows: AttendeeRow[]; t: (typeof T)[Lan
             <td style={cell}>{r.dietaryNotes ?? "—"}</td>
             <td style={cell}>{r.orderNumber || "—"}</td>
             <td style={cell}>{[r.bookedBy.name, r.bookedBy.email].filter(Boolean).join(" · ") || "—"}</td>
+            {!showStatus && (
+              <td style={cell}>
+                <AttendanceControl
+                  enrollmentId={r.enrollmentId}
+                  initial={r.attendance}
+                  lang={lang}
+                  disabled={!attendanceEnabled}
+                  name={[r.firstName, r.lastName].filter(Boolean).join(" ") || r.email}
+                />
+              </td>
+            )}
           </tr>
         ))}
       </tbody>
@@ -101,13 +129,21 @@ export async function SessionAttendees({ id, i18n, req, payload }: UIFieldServer
 
   let rows: AttendeeRow[]
   let summary: Awaited<ReturnType<typeof getSeatSummary>>
+  let startsAt: string | null
   try {
-    ;[rows, summary] = await Promise.all([listAttendees(id), getSeatSummary(id, payload)])
+    let session: { startsAt?: string | null } | null
+    ;[rows, summary, session] = await Promise.all([
+      listAttendees(id),
+      getSeatSummary(id, payload),
+      payload.findByID({ collection: "sessions", id, depth: 0, overrideAccess: true }).catch(() => null),
+    ])
+    startsAt = session?.startsAt ?? null
   } catch (err) {
     payload.logger.error({ err, sessionId: id }, "SessionAttendees: load failed")
     return <p role="alert">{t.error}</p>
   }
 
+  const open = attendanceOpen(startsAt)
   const confirmed = rows.filter((r) => r.enrollmentStatus === "confirmed")
   const inactive = rows.filter((r) => r.enrollmentStatus !== "confirmed")
 
@@ -140,14 +176,14 @@ export async function SessionAttendees({ id, i18n, req, payload }: UIFieldServer
         </dl>
       )}
 
-      {confirmed.length ? <Table rows={confirmed} t={t} /> : <p>{t.none}</p>}
+      {confirmed.length ? <Table rows={confirmed} t={t} lang={lang} attendanceEnabled={open} /> : <p>{t.none}</p>}
 
       {inactive.length > 0 && (
         <details style={{ marginTop: 16 }}>
           <summary style={{ cursor: "pointer" }}>
             {t.inactive} ({inactive.length})
           </summary>
-          <Table rows={inactive} t={t} showStatus />
+          <Table rows={inactive} t={t} lang={lang} showStatus />
         </details>
       )}
     </section>
