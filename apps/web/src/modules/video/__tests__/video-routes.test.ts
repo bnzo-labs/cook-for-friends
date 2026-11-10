@@ -57,7 +57,7 @@ describe.skipIf(!hasTestDb)("video routes (integration, fake + mocked Mux)", () 
   async function customerCookie(customer: { id: number; email: string }) {
     const { token } = await jwtSign({
       fieldsToSign: { id: customer.id, collection: "customers", email: customer.email, sessionVersion: 0 },
-      secret: process.env.PAYLOAD_SECRET!,
+      secret: payload.secret,
       tokenExpiration: 3600,
     })
     return `payload-token=${token}`
