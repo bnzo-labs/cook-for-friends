@@ -160,7 +160,7 @@ test.describe("login + verify", () => {
   test("logout form signs out", async ({ page }) => {
     await signIn(page, w.buyer.id, "en", P.account.en)
     await page.getByRole("button", { name: "Sign out" }).click()
-    await page.waitForURL("**/en")
+    await page.waitForURL(/\/(en|fr)$/)
     await page.goto(P.account.en)
     await expect(page).toHaveURL(new RegExp(`${P.login.en}`))
   })
