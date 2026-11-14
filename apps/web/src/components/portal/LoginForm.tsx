@@ -100,7 +100,7 @@ export function LoginForm({ locale, next }: LoginFormProps) {
           {t(error)}
         </p>
       ) : null}
-      <Button type="submit" loading={phase === "sending"} className="self-start">
+      <Button type="submit" loading={phase === "sending"} className="sm:self-start">
         {phase === "sending" ? t("sending") : t("submit")}
       </Button>
       <p className="text-sm text-fg-muted">{t("no_account_note")}</p>

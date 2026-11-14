@@ -10,7 +10,7 @@ export const badgeVariants = cva(
         neutral: "bg-surface-muted text-fg-muted",
         accent: "bg-primary text-primary-fg",
         outline: "border border-border text-fg",
-        ok: "bg-seats-ok/12 text-seats-ok",
+        ok: "bg-seats-ok/12 text-seats-ok-fg",
         low: "bg-seats-low/20 text-fg",
         full: "bg-surface-muted text-seats-full",
         danger: "bg-danger/12 text-danger",

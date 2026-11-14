@@ -337,7 +337,7 @@ test.describe("storefront waitlist", () => {
     await page.locator("[data-waitlist-cta]").click()
     await page.getByLabel("Your email").fill("nope")
     await page.locator("[data-waitlist-submit]").click()
-    await expect(page.getByRole("alert")).toContainText(/valid email/i)
+    await expect(page.getByRole("alert").first()).toContainText(/valid email/i)
     expect(calls).toBe(0)
   })
 })
