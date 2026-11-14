@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import type { ID, Locale, Result } from "@/modules/_shared"
 import { getCancellationPolicy, getSessionView, type SessionView } from "@/modules/catalog"
-import { executeSeatCancellation, getEnrollmentView, type EnrollmentView } from "@/modules/commerce"
+import { executeSeatCancellation, getEnrollmentView, getSeatCancellationCap, type EnrollmentView } from "@/modules/commerce"
 import { enqueueEmail } from "@/modules/notifications"
 
 import { evaluateTiers, effectiveTiers, hoursBetween } from "./policy"
@@ -33,7 +33,26 @@ type Actor = { kind: "customer"; id: ID } | { kind: "staff" } | { kind: "any" }
 
 /** A seat whose cancellation committed but whose Stripe refund never got requested. */
 const isPendingRefund = (v: EnrollmentView): boolean =>
-  v.status === "cancelled" && v.cancellationOutcome === "refund" && v.refundedAmount === 0
+  v.status === "cancelled" &&
+  v.cancellationOutcome === "refund" &&
+  v.refundedAmount === 0 &&
+  (v.cancellationAmount === null || v.cancellationAmount > 0)
+
+type Decision = { outcome: CancellationPreview["outcome"]; amount: number }
+
+/**
+ * W4-03b (M-2): the policy amount never exceeds what is still refundable on the
+ * seat AND the order (Dashboard refunds included). Clamped to 0 → outcome `none`.
+ * A retry shows the persisted decision (L-2); commerce replays it anyway.
+ */
+async function applyCap(view: EnrollmentView, d: Decision, retry: boolean): Promise<Decision> {
+  if (retry && view.cancellationAmount !== null) return { outcome: "refund", amount: view.cancellationAmount }
+  if (retry || d.amount === 0) return d
+  const cap = await getSeatCancellationCap(view.id)
+  if (!cap.ok) return d
+  const amount = Math.min(d.amount, cap.data.cap)
+  return { outcome: amount === 0 ? "none" : d.outcome, amount }
+}
 
 type Evaluated = { preview: CancellationPreview; session: SessionView | null; retry: boolean }
 
@@ -45,11 +64,12 @@ async function evaluate(view: EnrollmentView, actor: Actor, now: Date): Promise<
   const startsAt = session ? new Date(session.startsAt) : null
   const hoursBefore = startsAt ? hoursBetween(at, startsAt) : 0
   const result = evaluateTiers(effectiveTiers(policy.tiers), hoursBefore, view.seatAmount)
+  const decided = await applyCap(view, { outcome: result.outcome, amount: result.amount }, retry)
   const preview: CancellationPreview = {
     allowed: true,
-    outcome: result.outcome,
+    outcome: decided.outcome,
     percent: result.percent,
-    amount: result.amount,
+    amount: decided.amount,
     hoursBefore,
   }
   if (result.tierMinHours !== null && result.tierMinHours > 0 && startsAt) {
@@ -169,23 +189,45 @@ export async function cancelEnrollment(i: {
     actorId,
     reason: `${by}-cancel:${preview.outcome}`,
   })
-  if (!done.ok) return done
+  if (!done.ok) {
+    // L-2: UPSTREAM = the seat committed `cancelled` but the Stripe refund failed. The seat is
+    // free now, so the waitlist hears about it; emails wait for the successful retry (sent once).
+    if (done.error.code === "UPSTREAM") await releaseQuietly(view.sessionId, enrollmentId)
+    return done
+  }
+  const { outcome, amount } = done.data
 
   try {
     await enqueueCancellationEmails(
       view,
       session,
       {
-        outcome: preview.outcome,
-        amount: preview.amount,
+        outcome,
+        amount,
         ...(done.data.creditCode ? { creditCode: done.data.creditCode } : {}),
         ...(done.data.creditExpiresAt ? { creditExpiresAt: done.data.creditExpiresAt } : {}),
       },
     )
   } catch (error) {
     // The seat is already cancelled and money moved: never fail the call over a notice.
-    console.error("[scheduling] cancellation emails failed", { enrollmentId, retry, error })
+    console.error("[scheduling] cancellation emails failed", {
+      enrollmentId,
+      retry,
+      message: error instanceof Error ? error.message : String(error),
+    })
   }
-  await onSeatReleased(view.sessionId)
-  return { ok: true, data: { outcome: preview.outcome, amount: preview.amount } }
+  await releaseQuietly(view.sessionId, enrollmentId)
+  return { ok: true, data: { outcome, amount } }
+}
+
+/** `onSeatReleased` is idempotent (conditional claims); a waitlist failure never fails the cancel. */
+async function releaseQuietly(sessionId: ID, enrollmentId: ID): Promise<void> {
+  try {
+    await onSeatReleased(sessionId)
+  } catch (error) {
+    console.error("[scheduling] onSeatReleased failed after cancel", {
+      enrollmentId,
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
 }

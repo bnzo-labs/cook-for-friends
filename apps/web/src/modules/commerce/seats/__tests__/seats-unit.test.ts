@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { CREDIT_CODE_PATTERN, generateCreditCode, isCodeConflict } from "../credit"
 import { executeSeatCancellation, seatRefundKey } from "../cancel"
+import { seatCancellationCap } from "../cap"
 import { refundedForEnrollment } from "../shared"
 
 describe("credit code (unit)", () => {
@@ -60,5 +61,33 @@ describe("executeSeatCancellation input validation (unit, before any DB call)", 
   })
   it("outcome none with a positive amount → VALIDATION", async () => {
     expect(await code({ ...base, outcome: "none", amount: 1 })).toBe("VALIDATION")
+  })
+})
+
+describe("seatCancellationCap (unit, W4-03b M-2)", () => {
+  const seat = (id: number, extra: object = {}) => ({ id, seatAmount: 5000, status: "confirmed", cancellationOutcome: null, cancellationAmount: null, ...extra })
+  const r = (amount: number, enrollment: number | null) => ({ stripeRefundId: `re_${amount}_${enrollment}`, amount, at: "", enrollment })
+
+  it("no refunds → cap = seatAmount", () => {
+    expect(seatCancellationCap({ total: 10000, refunds: [] }, [seat(1), seat(2)] as never, 2)).toEqual({ cap: 5000, seatRemaining: 5000, orderRemaining: 10000 })
+  })
+  it("unlinked (Dashboard) refund lowers the order remaining, not the seat remaining", () => {
+    const c = seatCancellationCap({ total: 5000, refunds: [r(2000, null)] } as never, [seat(1)] as never, 1)
+    expect(c).toEqual({ cap: 3000, seatRemaining: 5000, orderRemaining: 3000 })
+  })
+  it("linked refund lowers this seat; sibling credit + sibling pending refund are reserved", () => {
+    const seats = [
+      seat(1, { status: "cancelled", cancellationOutcome: "credit", cancellationAmount: 2000 }),
+      seat(2, { status: "cancelled", cancellationOutcome: "refund", cancellationAmount: 3000 }),
+      seat(3),
+    ]
+    // seat 2's refund partly linked (1000 of 3000) → 2000 still reserved
+    const c = seatCancellationCap({ total: 15000, refunds: [r(1000, 2), r(500, 3)] } as never, seats as never, 3)
+    expect(c.seatRemaining).toBe(4500)
+    expect(c.orderRemaining).toBe(15000 - 1500 - 2000 - 2000)
+    expect(c.cap).toBe(4500)
+  })
+  it("never negative", () => {
+    expect(seatCancellationCap({ total: 5000, refunds: [r(6000, null)] } as never, [seat(1)] as never, 1).cap).toBe(0)
   })
 })

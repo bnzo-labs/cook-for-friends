@@ -11,7 +11,8 @@ import type { ExecuteSeatCancellationInput, SeatCancellationResult } from "../ty
 import { findOrderById } from "../webhook/orders"
 import { requestOrderRefund } from "../webhook/refund"
 import { insertCreditCode, type CreatedCredit } from "./credit"
-import { fail, idSchema, invalid, refundedForEnrollment, relNum, seatLog, zodFail } from "./shared"
+import { seatCancellationCap, seatsOfOrder } from "./cap"
+import { fail, idSchema, invalid, relNum, seatLog, zodFail } from "./shared"
 
 const inputSchema = z
   .object({
@@ -42,17 +43,23 @@ export function setSeatFaultForTests(fn: SeatFault | null): void {
 
 // ---------- phase 1: the database transaction ----------
 
+/** The decision that is executed: on a retry it is the PERSISTED one, never the caller's input. */
+type Decision = { outcome: Input["outcome"]; amount: number }
+
 type Plan =
   | { kind: "error"; result: Result<never> }
-  | { kind: "cancelled"; orderId: number; paymentIntentId: string | null; credit: CreatedCredit | null }
-  | { kind: "retry"; orderId: number; paymentIntentId: string | null }
+  | { kind: "cancelled"; orderId: number; paymentIntentId: string | null; credit: CreatedCredit | null; decision: Decision }
+  | { kind: "retry"; orderId: number; paymentIntentId: string | null; decision: Decision }
 
 const isRefundable = (o: Order) => (o.status === "paid" || o.status === "partially_refunded") && Boolean(o.stripePaymentIntentId)
 
 const hasLinkedRefund = (o: Order, enrollmentId: number) => (o.refunds ?? []).some((r) => relNum(r.enrollment) === enrollmentId)
 
-async function lockEnrollment(db: SqlExecutor, id: number): Promise<boolean> {
-  const { rows } = await db.execute(sql`SELECT id FROM enrollments WHERE id = ${id} FOR UPDATE`)
+async function lockRow(db: SqlExecutor, table: "enrollments" | "orders", id: number): Promise<boolean> {
+  const { rows } =
+    table === "enrollments"
+      ? await db.execute(sql`SELECT id FROM enrollments WHERE id = ${id} FOR UPDATE`)
+      : await db.execute(sql`SELECT id FROM orders WHERE id = ${id} FOR UPDATE`)
   return rows.length > 0
 }
 
@@ -61,7 +68,7 @@ async function cancelSeat(i: Input, e: Enrollment, order: Order, tx: TxContext):
   await payload.update({
     collection: "enrollments",
     id: e.id,
-    data: { status: "cancelled", cancelledAt: new Date().toISOString(), cancellationOutcome: i.outcome },
+    data: { status: "cancelled", cancelledAt: new Date().toISOString(), cancellationOutcome: i.outcome, cancellationAmount: i.amount },
     depth: 0,
     overrideAccess: true,
     req: tx.req,
@@ -90,33 +97,50 @@ async function cancelSeat(i: Input, e: Enrollment, order: Order, tx: TxContext):
   return credit
 }
 
-/** Lock → validate → cancel (or recognise a pending-refund retry). Commits on return. */
+/**
+ * A seat cancelled with outcome `refund` and a positive persisted amount whose
+ * refund never got linked: the Stripe call failed (or is in flight). The
+ * persisted amount wins over the caller's (L-2); legacy rows (no amount) use the input.
+ */
+function pendingRefundAmount(e: Enrollment, order: Order, i: Input): number | null {
+  if (e.status !== "cancelled" || e.cancellationOutcome !== "refund" || hasLinkedRefund(order, Number(e.id))) return null
+  const persisted = e.cancellationAmount
+  const amount = persisted === null || persisted === undefined ? (i.outcome === "refund" ? i.amount : 0) : Number(persisted)
+  return amount > 0 ? amount : null
+}
+
+/** Lock order + enrollment → cap (M-2) → cancel (or recognise a pending-refund retry). Commits on return. */
 function planCancellation(i: Input): Promise<Plan> {
   return withTransaction(async ({ db, tx }) => {
     const id = i.enrollmentId
-    if (!(await lockEnrollment(db, id))) return { kind: "error", result: fail({ code: "NOT_FOUND", entity: "enrollment" }) }
+    if (!(await lockRow(db, "enrollments", id))) return { kind: "error", result: fail({ code: "NOT_FOUND", entity: "enrollment" }) }
     const payload = tx.req.payload
     const e = (await payload.findByID({ collection: "enrollments", id, depth: 0, overrideAccess: true, req: tx.req })) as Enrollment
     const orderId = relNum(e.order)
-    const order = orderId !== null ? await findOrderById(payload, orderId, tx.req) : null
+    // Serialize every seat of one order: the order-level cap must see sibling decisions.
+    if (orderId === null || !(await lockRow(db, "orders", orderId))) return { kind: "error", result: fail({ code: "NOT_FOUND", entity: "order" }) }
+    const order = await findOrderById(payload, orderId, tx.req)
     if (!order) return { kind: "error", result: fail({ code: "NOT_FOUND", entity: "order" }) }
 
-    const refundable = Number(e.seatAmount ?? 0) - refundedForEnrollment(order, id)
-    if (i.amount > refundable) return { kind: "error", result: invalid("amount", "AMOUNT_EXCEEDS_SEAT") }
+    const { cap, seatRemaining } = seatCancellationCap(order, await seatsOfOrder(orderId, tx.req), id)
     const base = { orderId: Number(order.id), paymentIntentId: order.stripePaymentIntentId ?? null }
 
     if (e.status === "confirmed") {
+      if (i.amount > seatRemaining) return { kind: "error", result: invalid("amount", "AMOUNT_EXCEEDS_SEAT") }
+      if (i.amount > cap) return { kind: "error", result: invalid("amount", "AMOUNT_EXCEEDS_REFUNDABLE") }
       if (i.outcome === "refund" && i.amount > 0 && !isRefundable(order)) {
         return { kind: "error", result: fail({ code: "CONFLICT", reason: "ORDER_NOT_REFUNDABLE" }) }
       }
       const credit = await cancelSeat(i, e, order, tx)
-      return { kind: "cancelled", ...base, credit }
+      return { kind: "cancelled", ...base, credit, decision: { outcome: i.outcome, amount: i.amount } }
     }
-    // A seat cancelled with outcome `refund` whose refund never got linked: the
-    // Stripe call failed (or is in flight). Re-calling retries the refund only.
-    const pendingRefund =
-      e.status === "cancelled" && e.cancellationOutcome === "refund" && i.outcome === "refund" && i.amount > 0 && !hasLinkedRefund(order, id)
-    if (pendingRefund) return { kind: "retry", ...base }
+    const pending = pendingRefundAmount(e, order, i)
+    if (pending !== null) {
+      // The seat's own pending promise is not in `cap` (only siblings' are), so this re-checks the
+      // order after Dashboard refunds made since the failure.
+      if (pending > cap) return { kind: "error", result: fail({ code: "CONFLICT", reason: "AMOUNT_EXCEEDS_REFUNDABLE" }) }
+      return { kind: "retry", ...base, decision: { outcome: "refund", amount: pending } }
+    }
     return { kind: "error", result: fail({ code: "CONFLICT", reason: "SEAT_NOT_CONFIRMED" }) }
   })
 }
@@ -132,6 +156,7 @@ async function seatRefundExists(paymentIntentId: string, enrollmentId: number): 
 }
 
 async function requestSeatRefund(i: Input, plan: Extract<Plan, { kind: "cancelled" | "retry" }>): Promise<Result<void>> {
+  const amount = plan.decision.amount
   if (plan.kind === "retry") {
     if (!plan.paymentIntentId) return fail({ code: "CONFLICT", reason: "ORDER_NOT_REFUNDABLE" })
     try {
@@ -144,7 +169,7 @@ async function requestSeatRefund(i: Input, plan: Extract<Plan, { kind: "cancelle
     }
   }
   const r = await requestOrderRefund(
-    { orderId: plan.orderId, amount: i.amount, reason: i.reason, enrollmentId: i.enrollmentId },
+    { orderId: plan.orderId, amount, reason: i.reason, enrollmentId: i.enrollmentId },
     { idempotencyKey: seatRefundKey(i.enrollmentId) },
   )
   if (!r.ok) {
@@ -165,10 +190,12 @@ function withSeatGuard<T>(enrollmentId: number, fn: () => Promise<T>): Promise<T
  * CONTRACT §4 `executeSeatCancellation` (CCR-W3-4). Commerce executes the
  * outcome scheduling decided; it never reads the cancellation policy.
  *
- * tx (lock enrollment, must be `confirmed`, mark cancelled + outcome, revoke the
+ * tx (lock enrollment + order, must be `confirmed`, amount ≤ cap (M-2: seat AND
+ * order remaining, Dashboard refunds included), mark cancelled + outcome + amount, revoke the
  * attendee's purchase entitlement, credit row for the BUYER) → commit → Stripe
  * refund with idempotency key `seat-cancel-<enrollmentId>`. Stripe failure →
- * UPSTREAM with the seat left cancelled; re-calling retries the refund only.
+ * UPSTREAM with the seat left cancelled; re-calling retries the refund only, with
+ * the PERSISTED amount (L-2) whatever the caller passes.
  * Calls for one enrollment are serialized, so a concurrent duplicate gets CONFLICT.
  */
 export async function executeSeatCancellation(i: ExecuteSeatCancellationInput): Promise<Result<SeatCancellationResult>> {
@@ -191,7 +218,8 @@ export async function executeSeatCancellation(i: ExecuteSeatCancellationInput): 
       })
     }
 
-    const wantsRefund = input.outcome === "refund" && input.amount > 0
+    const { decision } = plan
+    const wantsRefund = decision.outcome === "refund" && decision.amount > 0
     if (wantsRefund) {
       const r = await requestSeatRefund(input, plan)
       if (!r.ok) return r
@@ -202,6 +230,9 @@ export async function executeSeatCancellation(i: ExecuteSeatCancellationInput): 
       data: {
         enrollmentStatus: "cancelled",
         refundRequested: wantsRefund,
+        outcome: decision.outcome,
+        amount: decision.amount,
+        retry: plan.kind === "retry",
         ...(credit ? { creditCode: credit.code, creditExpiresAt: credit.expiresAt } : {}),
       },
     }

@@ -7,6 +7,33 @@ import { moneyField, validateInteger } from "../money"
 /** Staff may update only `attendance`; every other field is admin-only on update. */
 const adminUpdateOnly: { update: FieldAccess } = { update: isAdminField }
 
+/**
+ * W4-03b (W2-11 L-3): money fields are readable by staff and by the buyer
+ * (`order.customer`) only. A guest attendee reading their own seat via REST
+ * does not see the price share.
+ */
+const relIdOf = (v: unknown): string | null => {
+  if (v === null || v === undefined) return null
+  if (typeof v === "object") return relIdOf((v as { id?: unknown }).id)
+  return String(v)
+}
+
+export const readByStaffOrBuyer: FieldAccess = async ({ req, doc }) => {
+  if (isStaff(req.user)) return true
+  if (!isCustomerUser(req.user) || !req.user || !doc) return false
+  const self = String(req.user.id)
+  const order = (doc as { order?: unknown }).order
+  if (order && typeof order === "object" && "customer" in order) return relIdOf((order as { customer: unknown }).customer) === self
+  const orderId = relIdOf(order)
+  if (orderId === null) return false
+  const o = await req.payload
+    .findByID({ collection: "orders", id: orderId, depth: 0, overrideAccess: true, select: { customer: true }, req })
+    .catch(() => null)
+  return relIdOf(o?.customer) === self
+}
+
+const moneyAccess = { ...adminUpdateOnly, read: readByStaffOrBuyer }
+
 const fields: Field[] = [
   { name: "session", type: "relationship", relationTo: "sessions", required: true, index: true, access: adminUpdateOnly },
   { name: "customer", type: "relationship", relationTo: "customers", required: true, index: true, access: adminUpdateOnly },
@@ -26,7 +53,7 @@ const fields: Field[] = [
    * `floor(total / N)`, remainder cents on attendeeIndex 0; sum = order.total.
    * Basis for per-seat partial refund/credit (CONTRACT §3.4, D1).
    */
-  moneyField({ name: "seatAmount", access: adminUpdateOnly }),
+  moneyField({ name: "seatAmount", access: moneyAccess }),
   {
     name: "status",
     type: "select",
@@ -62,6 +89,17 @@ const fields: Field[] = [
       { value: "none", label: { fr: "Aucun", en: "None" } },
     ],
   },
+  /**
+   * W4-03b (W3-10 L-2): amount (cents) decided when the seat was cancelled,
+   * refund or credit. Persisted in the cancel transaction so a refund retry
+   * replays it instead of recomputing from the (possibly edited) policy.
+   */
+  moneyField({
+    name: "cancellationAmount",
+    access: moneyAccess,
+    admin: { readOnly: true },
+    label: { fr: "Montant d'annulation", en: "Cancellation amount" },
+  }),
 ]
 
 /**
