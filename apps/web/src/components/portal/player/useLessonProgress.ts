@@ -61,7 +61,10 @@ export function useLessonProgress({ lessonId, initialCompleted, errorMessage }: 
 
   const markComplete = useCallback(async () => {
     if (completed || saving) return
-    setCompleted(true)
+    // setSaving first so the button shows a loading indicator while the API is in-flight.
+    // We do NOT optimistically set completed=true here; instead we confirm it only after
+    // the server acknowledges the save. This eliminates a race where page.reload() could
+    // load a fresh server render before the write completes in the database.
     setSaving(true)
     const res = await postProgress({ lessonId, completed: true, ...(lastPosition.current !== null ? { positionSec: lastPosition.current } : {}) })
     setSaving(false)
@@ -70,6 +73,7 @@ export function useLessonProgress({ lessonId, initialCompleted, errorMessage }: 
       toast.error(errorMessage)
       return
     }
+    setCompleted(true)
     if (res.data.courseCompleted) setCourseResult(res.data)
     startTransition(() => router.refresh())
   }, [completed, errorMessage, lessonId, router, saving])
