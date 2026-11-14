@@ -54,6 +54,8 @@ export type EnrollmentView = {
   attendance: Attendance
   cancelledAt: ISODate | null
   cancellationOutcome: CancellationOutcome | null
+  /** W4-03b (L-2): amount decided at cancel time (cents); null on seats cancelled before W4-03b. */
+  cancellationAmount: number | null
   /** Relative to the customer asked about. */
   isOwnSeat: boolean
   bookedByMe: boolean
@@ -82,6 +84,11 @@ export type ExecuteSeatCancellationInput = {
 export type SeatCancellationResult = {
   enrollmentStatus: "cancelled" | "refunded"
   refundRequested: boolean
+  /** W4-03b (L-2): the executed decision. On a retry this is the persisted one, not the caller's input. */
+  outcome: CancellationOutcome
+  amount: number
+  /** True when this call only retried a pending refund of an already-cancelled seat. */
+  retry: boolean
   creditCode?: string
   creditExpiresAt?: ISODate
 }

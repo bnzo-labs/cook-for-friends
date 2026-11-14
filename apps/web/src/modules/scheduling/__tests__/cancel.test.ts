@@ -245,6 +245,31 @@ describe.skipIf(!hasTestDb)("W3-05 cancelEnrollment / previewCancellation (integ
     expect(await jobsFor(payload, `cancel-${seat.id}-buyer`)).toHaveLength(1)
   })
 
+  it("W4-03b M-2: Dashboard refund on the order → preview + cancel clamp to what is left; fully refunded → outcome none", async () => {
+    const o = await order(2, 100)
+    const { chargeRefundedEvent, sign } = await import("../../commerce/__tests__/webhook-helpers")
+    const dash = (amount: number, refunded: number) => {
+      const refund = { id: `re_dash_${uid()}`, amount, payment_intent: o.pi, status: "succeeded", metadata: {}, created: Math.floor(Date.now() / 1000), reason: null }
+      return sign(chargeRefundedEvent({ pi: o.pi, amount: Number(o.order.total), refunded, refunds: [refund] }))
+    }
+    const deliver = async (signed: { raw: string; signature: string }) => {
+      const r = await commerce.handleStripeEvent(signed.raw, signed.signature)
+      expect(r.ok).toBe(true)
+    }
+    await deliver(dash(7000, 7000))
+
+    const preview = await scheduling.previewCancellation({ enrollmentId: o.seats[1]!.id })
+    expect(preview).toMatchObject({ ok: true, data: { outcome: "refund", percent: 100, amount: 3000 } })
+    const r = await scheduling.cancelEnrollment({ enrollmentId: o.seats[1]!.id, by: "customer", actorId: o.buyerId })
+    expect(r).toEqual({ ok: true, data: { outcome: "refund", amount: 3000 } })
+    expect(seatRefunds(o.seats[1]!.id)[0]!.params).toMatchObject({ amount: 3000 })
+
+    // order now fully promised: the other seat cancels with no money
+    const last = await scheduling.cancelEnrollment({ enrollmentId: o.seats[0]!.id, by: "customer", actorId: o.buyerId })
+    expect(last).toEqual({ ok: true, data: { outcome: "none", amount: 0 } })
+    expect(seatRefunds(o.seats[0]!.id)).toHaveLength(0)
+  })
+
   it("previewCancellation: tier math, deadline of the current tier, NOT_BUYER, NOT_CONFIRMED", async () => {
     const o = await order(2, 48)
     const guest = o.seats[1]!

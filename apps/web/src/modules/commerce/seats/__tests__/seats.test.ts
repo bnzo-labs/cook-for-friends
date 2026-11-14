@@ -78,7 +78,7 @@ describe.skipIf(!hasTestDb)("W3-09 seat operations (integration)", () => {
     expect(seat2.seatAmount).toBe(5000)
 
     const r = await commerce.executeSeatCancellation({ enrollmentId: seat2.id, outcome: "refund", amount: 4000, ...staffActor })
-    expect(r).toEqual({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: true } })
+    expect(r).toEqual({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: true, outcome: "refund", amount: 4000, retry: false } })
 
     const after = await enrollmentsOf(payload, { order: order.id })
     expect(after.map((e) => e.status)).toEqual(["confirmed", "cancelled", "confirmed"])
@@ -153,7 +153,7 @@ describe.skipIf(!hasTestDb)("W3-09 seat operations (integration)", () => {
 
     setStripeForTests(fake.client)
     const retry = await commerce.executeSeatCancellation({ enrollmentId: seat.id, outcome: "refund", amount: 2500, ...staffActor })
-    expect(retry).toEqual({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: true } })
+    expect(retry).toEqual({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: true, outcome: "refund", amount: 2500, retry: true } })
     expect(seatRefunds(seat.id)).toHaveLength(1)
     expect(seatRefunds(seat.id)[0]!.key).toBe(`seat-cancel-${seat.id}`)
 
@@ -181,9 +181,9 @@ describe.skipIf(!hasTestDb)("W3-09 seat operations (integration)", () => {
     const seat = seats[1]!
     const codesBefore = await payload.count({ collection: "discount-codes", where: { personalFor: { equals: Number(order.customer) } }, overrideAccess: true })
     const r = await commerce.executeSeatCancellation({ enrollmentId: seat.id, outcome: "none", amount: 0, ...staffActor })
-    expect(r).toEqual({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: false } })
+    expect(r).toMatchObject({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: false, outcome: "none", amount: 0 } })
     const zeroRefund = await commerce.executeSeatCancellation({ enrollmentId: seats[0]!.id, outcome: "refund", amount: 0, ...staffActor })
-    expect(zeroRefund).toEqual({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: false } })
+    expect(zeroRefund).toMatchObject({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: false, amount: 0 } })
     expect(fake.refunds.filter((x) => meta(x).orderId === String(order.id))).toHaveLength(0)
     const codesAfter = await payload.count({ collection: "discount-codes", where: { personalFor: { equals: Number(order.customer) } }, overrideAccess: true })
     expect(codesAfter.totalDocs).toBe(codesBefore.totalDocs)
@@ -323,5 +323,88 @@ describe.skipIf(!hasTestDb)("W3-09 seat operations (integration)", () => {
     const byId = new Map(rows.map((x) => [Number(x.enrollmentId), x]))
     expect(byId.get(seats[1]!.id)!.locale).toBe("en")
     expect(byId.get(seats[0]!.id)!.locale).toBe("fr")
+  })
+
+  // ---------- W4-03b: M-2 (order-level cap) + L-2 (persisted decision) ----------
+
+  /** A Stripe Dashboard refund: no `enrollmentId` metadata → recorded on the order, unlinked. */
+  async function dashboardRefund(c: { pi: string; total: number }, amount: number, refundedTotal = amount) {
+    const refund = {
+      id: `re_dash_${Math.random().toString(36).slice(2)}`,
+      amount,
+      payment_intent: c.pi,
+      status: "succeeded",
+      metadata: {},
+      created: Math.floor(Date.now() / 1000),
+      reason: null,
+    }
+    expect(await deliver(chargeRefundedEvent({ pi: c.pi, amount: c.total, refunded: refundedTotal, refunds: [refund] }))).toBe("applied")
+  }
+
+  it("M-2 refund tier: Dashboard refund lowers the cap → over-cap cancel rejected BEFORE the seat commits; capped amount succeeds", async () => {
+    const { c, seats } = await paidOrder(2)
+    const seat = seats[1]!
+    await dashboardRefund(c, 7500)
+
+    const cap = await commerce.getSeatCancellationCap(seat.id)
+    expect(cap).toEqual({ ok: true, data: { cap: 2500, seatRemaining: 5000, orderRemaining: 2500 } })
+
+    const over = await commerce.executeSeatCancellation({ enrollmentId: seat.id, outcome: "refund", amount: 5000, ...staffActor })
+    expect(!over.ok && over.error).toMatchObject({ code: "VALIDATION", issues: [{ path: "amount", message: "AMOUNT_EXCEEDS_REFUNDABLE" }] })
+    expect((await reloadSeat(seat.id)).status).toBe("confirmed")
+    expect(seatRefunds(seat.id)).toHaveLength(0)
+
+    const ok = await commerce.executeSeatCancellation({ enrollmentId: seat.id, outcome: "refund", amount: 2500, ...staffActor })
+    expect(ok).toMatchObject({ ok: true, data: { refundRequested: true, amount: 2500 } })
+    expect(await reloadSeat(seat.id)).toMatchObject({ status: "cancelled", cancellationOutcome: "refund", cancellationAmount: 2500 })
+  })
+
+  it("M-2 credit tier: no credit on top of a Dashboard refund; sibling credits count against the order", async () => {
+    const { c, seats } = await paidOrder(2)
+    await dashboardRefund(c, 4000)
+
+    const first = await commerce.executeSeatCancellation({ enrollmentId: seats[0]!.id, outcome: "credit", amount: 5000, ...staffActor })
+    expect(first).toMatchObject({ ok: true, data: { amount: 5000 } })
+    expect((await reloadSeat(seats[0]!.id)).cancellationAmount).toBe(5000)
+
+    // order: 10000 − 4000 Dashboard − 5000 credit promised to seat #1 = 1000
+    const cap = await commerce.getSeatCancellationCap(seats[1]!.id)
+    expect(cap.ok && cap.data.cap).toBe(1000)
+    const over = await commerce.executeSeatCancellation({ enrollmentId: seats[1]!.id, outcome: "credit", amount: 5000, ...staffActor })
+    expect(!over.ok && over.error.code).toBe("VALIDATION")
+    expect((await reloadSeat(seats[1]!.id)).status).toBe("confirmed")
+  })
+
+  it("L-2: a refund retry replays the PERSISTED decision, whatever the caller now passes", async () => {
+    const { seats } = await paidOrder(2)
+    const seat = seats[1]!
+    const failing = {
+      ...fake.client,
+      refunds: { ...fake.client.refunds, create: async () => Promise.reject(Object.assign(new Error("stripe down"), { type: "StripeAPIError" })) },
+    } as unknown as Stripe
+    setStripeForTests(failing)
+    const first = await commerce.executeSeatCancellation({ enrollmentId: seat.id, outcome: "refund", amount: 3000, ...staffActor })
+    expect(!first.ok && first.error.code).toBe("UPSTREAM")
+    expect(await reloadSeat(seat.id)).toMatchObject({ status: "cancelled", cancellationOutcome: "refund", cancellationAmount: 3000 })
+
+    setStripeForTests(fake.client)
+    // policy edited meanwhile: caller now computes a credit of 1000 → ignored, refund 3000 replayed
+    const retry = await commerce.executeSeatCancellation({ enrollmentId: seat.id, outcome: "credit", amount: 1000, ...staffActor })
+    expect(retry).toEqual({ ok: true, data: { enrollmentStatus: "cancelled", refundRequested: true, outcome: "refund", amount: 3000, retry: true } })
+    expect(seatRefunds(seat.id)).toHaveLength(1)
+    expect(seatRefunds(seat.id)[0]!.params).toMatchObject({ amount: 3000 })
+  })
+
+  it("L-3 (W2-11): guest reading own seat via REST does not see seatAmount / cancellationAmount; buyer does", async () => {
+    const { seats, buyerId } = await paidOrder(2)
+    const guestSeat = seats[1]!
+    const guestId = Number(guestSeat.customer)
+    const customer = async (id: number) =>
+      asUser(await payload.findByID({ collection: "customers", id, depth: 0, overrideAccess: true }), "customers")
+    const asGuest = await payload.findByID({ collection: "enrollments", id: guestSeat.id, depth: 0, overrideAccess: false, user: await customer(guestId) })
+    expect(asGuest.seatAmount).toBeUndefined()
+    expect(asGuest.status).toBe("confirmed")
+    const asBuyer = await payload.findByID({ collection: "enrollments", id: guestSeat.id, depth: 0, overrideAccess: false, user: await customer(buyerId) })
+    expect(asBuyer.seatAmount).toBe(5000)
   })
 })
