@@ -6,6 +6,56 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-11-10 — Wave 4 plan (Quality & launch) — AWAITING ERICK REVIEW (architect, Opus)
+Planning only. Briefs `tasks/W4-00`, `W4-01`, `W4-02`, `W4-03a/b/c`, `W4-04`, `W4-05`, `W4-06`. Base `main` 6d04ad3. W3-10 (security review) and W3-11 (CI `e2e` job) still running — W4 starts on their merge. MASTER_BUILD_SPEC unchanged; no CONTRACT change (one conditional CCR noted below). `tasks/W2-12` → `superseded` (by W4-01 + W4-06).
+
+**Tasks + batches** (each starts when deps are merged on `main`; orchestrator merges)
+| ID | Task | Agent · model | Depends on | Batch | Migration |
+|----|------|---------------|------------|-------|-----------|
+| W4-00 | platform-prep: `@sentry/nextjs` + `@lhci/cli` pins; e2e job Stripe mode gate (`live-test` via `STRIPE_CI_SECRET_KEY` + pinned Stripe CLI `stripe listen` / `signed-events` fallback); Lighthouse step on the e2e server; optional dispatch-only staging Lighthouse | devops-agent · Sonnet | W3-11 | 4a | — |
+| W4-03b | security carry-overs: W2-11 L-3…L-8 + W3-10 MEDIUM/LOW | backend-engineer · Sonnet | W3-10 (+ its W3-1N fixes) | 4a | **only W4 slot, only if a finding needs schema (`w4_security`)** |
+| W4-05 | `docs/GUIDE_ADMIN_FR.md` (17 sections, labels verified against code) | doc-updater · Sonnet | W3-11 | 4a | — |
+| W4-01 | e2e purchase flows in CI: in-person 3 seats + attendee list/CSV, online → magic link → player, expired-hold refund, receipt, replay; both Stripe modes; **subsumes W2-12** | e2e-runner · Sonnet | W3-11, W4-00, W4-03b | 4b | — |
+| W4-02 | perf + a11y: Lighthouse ≥ 90 perf/a11y error-level gate (6 URLs FR/EN), CWV lab budgets, course-detail fix ladder, axe/keyboard/reduced-motion/target-size sweep | frontend-architect · Sonnet | W4-00 | 4b | — |
+| W4-04 | observability: Sentry server/edge/client, `/monitoring` tunnel, PII scrubber, webhook/cron/email-job capture, alert-rule spec `infra/sentry/README.md` | devops-agent · Sonnet | W4-00, W4-03b | 4b | — |
+| W4-03a | security headers: CSP (static, `CSP_MODE`), HSTS, nosniff/XFO/Referrer/Permissions/COOP; zero violations across e2e; Lighthouse still green | devops-agent · Sonnet | W4-02, W4-04 | 4c | — |
+| W4-03c | final pre-launch security review → GO/NO-GO, fix briefs `W4-1N` | security-reviewer · **Opus** | W4-01, W4-02, W4-03a, W4-03b, W4-04 | 4d | — |
+| W4-06 | production deploy **runbook + checklist only** (`docs/RUNBOOK_PROD.md`, inert `[env.production]` in cron worker) — **APPROVAL GATE**, executes nothing | devops-agent · Sonnet | all above (ready only after W4-03c GO) | 4d | — |
+
+**Critical path:** W3-11 → W4-00 → W4-01 (live Stripe) → W4-03c (→ W4-1N fixes if any) → W4-06 ready → Erick approval → launch. Second chain: W3-10 → W4-03b → W4-04 → W4-03a → W4-03c. W4-02 must land before W4-03a.
+
+**Ownership rules:** platform files serial through devops tasks (W4-00 `.github/**` + `package.json`/lockfile → W4-04 `next.config.ts` Sentry wrap, `proxy.ts` tunnel exclusion, `env.ts` → W4-03a `headers()` + `lib/security-headers.ts` + `CSP_MODE` → W4-06 runbook). Nobody else edits `.github/**`, deps or `next.config.ts` in W4. Quality: W4-01 `e2e/w4-01-*`, `test/e2e-stripe/**`, appends to `test/e2e-seed.ts`; W4-02 `lighthouserc.json` + `test/lighthouse-seed.ts` (stubs created by W4-00), `e2e/w4-02-*`, storefront/portal/ui paths. Approved one-off exceptions (single writer, one call each): W4-04 → `api/stripe/webhook/route.ts`, `api/video/webhook/route.ts` (`captureWebhookError`), `notifications/server/send.ts` (`captureJobFailure`). Conditional **CCR-W4-1** only if W4-02's fix ladder rungs a+b fail: commerce read route for live seats → W4-02 stops, orchestrator decides.
+
+**W2-12 decision:** subsumed. CI-provable criteria → W4-01 (mapping table required in its Completion notes); real-infra criteria (webhook delivery to a deployed endpoint, Vercel Ready, Cloudflare cron ticks, real Resend incl. plus-addressing) → W4-06 post-deploy smoke, run only with Erick's OK. No staging writes needed.
+
+**Decisions baked in (defaults; change = Erick)**
+- Q18 production = **separate Vercel project** (current project's Production env holds staging values), Pro plan (Hobby is non-commercial; D11).
+- Q19 CI uses a **dedicated Stripe sandbox** key (`STRIPE_CI_SECRET_KEY`); never the staging test account (its webhook endpoint would get CI events). `stripe listen --print-secret` supplies the webhook secret, so no webhook secret is stored. Live runs serialized by a concurrency group.
+- Q20 CSP = static header with `script-src 'self' 'unsafe-inline'` (nonce forces every page dynamic → breaks the ISR/Lighthouse NFR); W4-03a spikes nonce and adopts it only if Lighthouse stays ≥ 90.
+- Q21 HSTS `max-age=31536000` without `includeSubDomains`/`preload` until D8 (domain shared with Shopify).
+- Sentry: replay off, `sendDefaultPii: false`, same-origin tunnel, no-op without DSN.
+- Lighthouse gate runs on the CI server (no local runs). CI R2 is a placeholder → W4-02 seeds small committed fixture images for a representative LCP; staging dispatch numbers are informative only.
+
+**Erick launch checklist (consolidated)**
+1. Approve this plan + Q18–Q21 defaults.
+2. Stripe sandbox `cff-ci` → `gh secret set STRIPE_CI_SECRET_KEY` (W4-00/W4-01; workaround signed-events).
+3. Optional `gh secret set VERCEL_AUTOMATION_BYPASS_SECRET` (staging Lighthouse dispatch).
+4. Sentry org/project, DSN (+ `NEXT_PUBLIC_SENTRY_DSN`), auth token/org/project for prod builds, alert rules from `infra/sentry/README.md` (W4-04; workaround no-op).
+5. Client decisions before launch: D1 tiers + policy page, D2 Mux (or launch without video), D3 community URL, D4 brand/photos, D5 date + courses ready, D6 GST/QST + tax code, D8 domain + email domain, privacy policy FR/EN text (Law 25).
+6. Launch via `docs/RUNBOOK_PROD.md` (W4-06): new Vercel project + domain/DNS, prod env vars, Neon `main` restore branch + migrate, first admin, Stripe live (activation, tax, webhook, catalog re-sync, discount codes), Resend domain (SPF/DKIM/DMARC), Mux prod env + webhook, cron worker `--env production`, Sentry, deploy, post-deploy live smoke, rollback ready.
+7. Client review of the French admin guide (W4-05).
+
+**Open questions (default applies if no answer)**
+- Q22 Waitlist email retention after session end: default **30 days** (W4-03b, if W3-10 flags no rule).
+- Q23 Launch without Mux (D2 open) = online courses hidden or text-only? Default **block online-course launch until Mux keys exist**; in-person can launch alone (Wave 2 shippable alone, D5).
+- Q24 MEDIUM/LOW findings from W4-03c accepted for launch? Default: W4-03c recommends per item; Erick decides at the gate.
+
+**Risks:** W3-10 CRITICAL/HIGH fixes delay W4-03b and the whole second chain; Lighthouse variance on GitHub runners (median of 3, mobile); Payload admin / Mux player may need extra CSP origins (e2e violation listener catches them); `@sentry/nextjs` × Next 16.3.8/Turbopack compat (W4-00 checks peers, W4-04 proves build); Stripe sandbox Products accumulate (W4-01 archives in `afterAll`).
+
+**Next step:** Erick reviews plan → when W3-11 merges: W4-00 + W4-05; when W3-10 (+ fixes) merges: W4-03b.
+
+---
+
 ## 2026-11-08 — W2-21 zero-amount checkout + M-1/L-1/L-2 (backend-engineer, Opus)
 **Done**
 - H-1: `checkout.session.completed` with `payment_status = no_payment_required` (100 % promo) now fulfils like `paid` (order total 0, no PaymentIntent, N enrollments seatAmount 0, entitlements, emails). Zero-amount oversell → no Stripe refund, order `cancelled`, hold `expired`, `oversell-refund` email amount 0, outcome `refunded` (no 500 loop).
