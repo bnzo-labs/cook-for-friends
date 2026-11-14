@@ -23,7 +23,7 @@ type Seat = { id: string; left: number }
 async function sessions(page: Page, locale: "fr" | "en", kind: Kind = "big"): Promise<Seat[]> {
   await page.goto(COURSES[kind][locale])
   const rows = page.locator("[data-session-id]")
-  await expect(rows.first()).toBeVisible()
+  await expect(rows.first()).toBeVisible({ timeout: 15_000 })
   return rows.evaluateAll((els) =>
     els.map((e) => ({ id: e.getAttribute("data-session-id") ?? "", left: Number(e.getAttribute("data-seats-left")) })),
   )

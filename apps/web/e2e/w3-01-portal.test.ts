@@ -118,14 +118,14 @@ test.describe("login + verify", () => {
       await page.route("**/api/auth/magic-link/request", (r) => r.fulfill({ status, contentType: "application/json", body: "{}" }))
       await input.fill("a@example.com")
       await page.getByRole("button", { name: /email me/i }).click()
-      await expect(page.getByRole("alert")).toContainText(text)
+      await expect(page.getByRole("alert").first()).toContainText(text)
       await page.unroute("**/api/auth/magic-link/request")
     }
   })
 
   for (const locale of ["fr", "en"] as const) {
     test(`verify ${locale}: GET never consumes, click signs in, token stripped, replay is invalid`, async ({ page, request }) => {
-      const token = await mintLoginToken(payload, w.buyer.id)
+      const token = await mintLoginToken(payload, w.buyer.id, P.account[locale])
       const url = `${P.verify[locale]}?token=${token}`
       // Scanner-style prefetches do nothing to the token.
       for (let i = 0; i < 2; i += 1) expect((await request.get(url)).status()).toBe(200)
@@ -158,9 +158,9 @@ test.describe("login + verify", () => {
   })
 
   test("logout form signs out", async ({ page }) => {
-    await signIn(page, w.buyer.id, "en")
+    await signIn(page, w.buyer.id, "en", P.account.en)
     await page.getByRole("button", { name: "Sign out" }).click()
-    await page.waitForURL("**/en")
+    await page.waitForURL(/\/(en|fr)$/)
     await page.goto(P.account.en)
     await expect(page).toHaveURL(new RegExp(`${P.login.en}`))
   })

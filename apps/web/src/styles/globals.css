@@ -24,6 +24,7 @@
   --color-danger: var(--color-danger);
   --color-info: var(--color-info);
   --color-seats-ok: var(--color-seats-ok);
+  --color-seats-ok-fg: var(--color-seats-ok-fg);
   --color-seats-low: var(--color-seats-low);
   --color-seats-full: var(--color-seats-full);
   --color-transparent: transparent;

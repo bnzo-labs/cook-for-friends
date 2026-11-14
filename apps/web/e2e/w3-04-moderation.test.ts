@@ -17,7 +17,8 @@ test("admin: pending comment is listed, approve saves status", async ({ page }) 
   await page.waitForURL(/\/admin(\/)?$/)
 
   await page.goto("/admin/collections/comments?where[status][equals]=pending")
-  const row = page.locator("table tbody tr", { hasText: new RegExp(`\\b${E2E_COMMENT_ID}\\b`) })
+  // The list has no id column: identify the row by its link to this comment.
+  const row = page.locator("table tbody tr").filter({ has: page.locator(`a[href$="/admin/collections/comments/${E2E_COMMENT_ID}"]`) })
   await expect(row.first()).toBeVisible()
   if (process.env.W304_SCREENSHOTS) {
     await page.screenshot({ path: "e2e/__screenshots__/w3-04/admin-pending-1440.png", fullPage: true })

@@ -124,14 +124,23 @@ function sessionDates(daysFromNow: number, hour: number, durationMinutes: number
 async function seedInPerson(payload: Payload): Promise<void> {
   for (const c of inPersonCourses) {
     const courseId = await upsertCourse(payload, c, "in_person")
-    const old = await payload.find({
+    // Count only upcoming scheduled sessions — past sessions on the main Neon branch
+    // should not block re-seeding future-dated sessions on a CI throwaway branch.
+    const now = new Date().toISOString()
+    const upcoming = await payload.find({
       collection: "sessions",
-      where: { course: { equals: courseId } },
+      where: {
+        and: [
+          { course: { equals: courseId } },
+          { startsAt: { greater_than: now } },
+          { status: { equals: "scheduled" } },
+        ],
+      },
       limit: 100,
       depth: 0,
       overrideAccess: true,
     })
-    if (old.totalDocs >= c.sessions.length) continue
+    if (upcoming.totalDocs >= c.sessions.length) continue
     for (const s of c.sessions) {
       const created = await payload.create({
         collection: "sessions",

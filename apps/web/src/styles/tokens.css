@@ -30,6 +30,7 @@
 
   /* ── Semantic: domain states ───────────────────────────── */
   --color-seats-ok: var(--color-success);
+  --color-seats-ok-fg: oklch(42% 0.09 150);   /* dark green for text on light bg — ≥5:1 vs white */
   --color-seats-low: var(--color-warning);     /* ≤ 3 seats left */
   --color-seats-full: var(--color-fg-subtle);  /* sold out → waitlist */
 

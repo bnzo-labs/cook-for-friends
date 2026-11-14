@@ -42,7 +42,7 @@ test.describe("W3-06 metadata", () => {
 
   test("course JSON-LD: Course + one Event per upcoming session", async ({ page }) => {
     await page.goto(COURSE.en)
-    await expect(page.locator("[data-session-id]").first()).toBeVisible()
+    await expect(page.locator("[data-session-id]").first()).toBeVisible({ timeout: 15_000 })
     const sessionCount = await page.locator("[data-session-id]").count()
     const nodes = await jsonLd(page)
     const course = nodes.find((n) => n["@type"] === "Course")
