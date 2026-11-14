@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-10
-status: pending
+status: complete
 wave: 3
 batch: 3d
 module: quality (review)
@@ -33,9 +33,9 @@ Independent review of everything Wave 3 shipped before acceptance: access contro
 - Secrets: no Mux/R2 keys in client bundles (`grep` the `.next/static` build output).
 
 ## Acceptance criteria
-- [ ] Findings table in this file (id, severity CRITICAL/HIGH/MEDIUM/LOW, location, evidence, fix owner per CONTRACT §1). Proof-of-concept tests for CRITICAL/HIGH added under `apps/web/test/security/w3-*.test.ts` (quality path), marked `.fails` / skipped-with-reason until fixed.
-- [ ] Every CRITICAL/HIGH → `tasks/W3-1N-fix-<slug>.md` brief (owner, criteria, same standing rules). MEDIUM/LOW → listed for Wave 4 (W4-03).
-- [ ] PR with the review + PoC tests + fix briefs; never merges fixes itself.
+- [x] Findings table in this file (id, severity CRITICAL/HIGH/MEDIUM/LOW, location, evidence, fix owner per CONTRACT §1). Proof-of-concept tests for CRITICAL/HIGH added under `apps/web/test/security/w3-*.test.ts` (quality path), marked `.fails` / skipped-with-reason until fixed.
+- [x] Every CRITICAL/HIGH → `tasks/W3-1N-fix-<slug>.md` brief (owner, criteria, same standing rules). MEDIUM/LOW → listed for Wave 4 (W4-03).
+- [x] PR with the review + PoC tests + fix briefs; never merges fixes itself.
 
 ## Files to create / edit
 - Edit: this file. Create: `apps/web/test/security/w3-*.test.ts`, `tasks/W3-1N-fix-*.md`.
@@ -69,3 +69,86 @@ Checklist complete, findings + fix briefs in the PR, `status: complete`.
 ## Communication
 Caveman. English only.
 
+
+---
+
+## Review results (2026-11-13, Opus, base `origin/main` bb4ceb9)
+
+**Verdict: 0 CRITICAL · 1 HIGH · 2 MEDIUM · 12 LOW.** One HIGH (paid material files that are images are public) → fix brief `tasks/W3-13-fix-material-media-leak.md`. Access control on video, progress, certificates, comments and cancellation is sound. The cancellation money path is serialized and idempotent, with one MEDIUM gap (order-level refunds are ignored). MEDIUM/LOW → W4-03b.
+
+Method: code read of every Wave 3 route/module (W3-00…W3-09, W3-12 follow-ups) + targeted greps. No full build or full suite (shared machine). Ran `vitest run test/security` locally: 14 passed, 1 expected fail (M-1 PoC), integration PoC skipped (no DB). The CI integration job runs the H-1 PoC. Paths below are relative to `apps/web/src/`.
+
+### Checklist
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| `/api/video/playback`: authn/authz | PASS | `app/api/video/playback/route.ts:39-57` anon 401, staff any lesson, customer → `video/server/playback.ts:38-46` (published course + entitlement, or `isPreview` + signed in, Q13). `NOT_FOUND`/`FORBIDDEN` only after a valid id |
+| Playback rate limit, zod, envelope | PASS | 120/customer/h (`route.ts:47-54`); `lessonId` regex; errors map to keys only (`video/server/http.ts:20-25`), no upstream detail |
+| Playback TTL ≤ 2 h, never cached/logged/SSR'd | PASS | `PLAYBACK_TTL_SECONDS` 3600, `clampTtl` ≤ 7200 (`video/types.ts:34-41`); `private, no-store` on every response; logs carry lessonId/provider only (`playback.ts:29`); URL fetched client-side only (`components/portal/player/playback-controller.ts:81`), no server component calls `getLessonPlayback` |
+| Mux JWT claims | PASS (note) | `video/server/mux-port.ts:77-82` `signPlaybackId` type `video`/`thumbnail`, `exp` = TTL; signed playback policy only (`:48`). Token is not bound to the viewer (L-4) |
+| Video webhook: signature + timestamp | PASS | Raw body (`app/api/video/webhook/route.ts:17`) → `mux.webhooks.unwrap` (HMAC, 300 s tolerance, `@mux/mux-node` 15.5.0 `resources/webhooks/webhooks.js:110`); no secret → 503; bad sig → 403; fake provider rejects all webhooks (`providers/fake.ts:62-64`) |
+| Webhook replay / stale events | PASS | Idempotent by state, stale upload/asset dropped, never downgrades `ready` (`video/server/webhook.ts:24-59`) |
+| Fake provider unreachable unless opted in | PASS (note) | `fakeEnabled()` = `VIDEO_PROVIDER=fake` AND `VIDEO_FAKE_ALLOWED=true` (`video/server/config.ts:14-16`); `/api/video/fake*` 404 otherwise; boot error without opt-in (`lib/env.ts:95-99`). No hard production guard (L-5). Guarded by `test/security/w3-invariants.test.ts` |
+| Staff video routes | PASS | `uploads` POST + `fake-upload` PUT: Origin check + staff only; `uploads/:id` GET staff only (polls + records, idempotent) |
+| Materials: TTL 300 s, key not user-controlled, any containing course | PASS | `learning/server/materials.ts:7,14-29`; key from `media` doc (`catalog/server/materials.ts:7-12`); courses via `courses.materials` + `lessons.materials` (`:36-64`); every denial 404 (`app/api/materials/[id]/route.ts`) |
+| Materials: no other path to the file | **FINDING** | H-1: image-type material files public via `media` read access |
+| Progress: authn/authz/Origin/rate/zod | PASS | `app/api/progress/route.ts:26-52` customer only, Origin, 600/h, zod; `learning/server/progress.ts:94-100` published course + entitlement; `completed` monotonic, race-safe upsert (`:44-83`) |
+| Certificates: PDF ownership | PASS | `learning/server/certificates.ts:196-214` owner or staff, else 404 (no existence oracle); `private, no-store` |
+| Certificates: verify page reveals only name/course/date | PASS | `verifyCertificate` returns `code, customerName, courseTitle, issuedAt` only (`certificates.ts:172-193`); page `noindex` |
+| Certificates: code entropy, single issuance | PASS | 10 × Crockford via `randomInt` = 50 bits (`learning/server/codes.ts:7-11`); UNIQUE (customer, course) + code, email enqueued in the insert tx (`certificates.ts:107-153`) |
+| Comments: stored XSS | PASS | Plain text, rendered as JSX text (`components/portal/comments/CommentItem.tsx:28`); no `dangerouslySetInnerHTML` in `src/` except escaped JSON-LD (`components/storefront/seo/schema-org.ts:15`) |
+| Comments: parent spoofing | PASS | Parent must exist, be approved, same lesson, top-level (`learning/comments/server/post.ts:57-73`) + collection `validateParent` |
+| Comments: rate limit, moderation bypass via REST | PASS | 10/customer/h after entitlement (`post.ts:47-54`); `status`/`moderatedBy` field access staff only (`learning/collections/comments.ts:84,95`); `update` staff; Next route shadows Payload `POST /api/comments` (no REST create path); GraphQL disabled (`payload.config.ts:157`) |
+| Comments: PII in listing | PASS (note) | Portal list: first name + last initial, no email/id (`comments/server/list.ts:70-81`). REST `GET /api/comments/:id` exposes customer id to anonymous (L-7) |
+| Cancellation: authn/authz, guest cannot cancel | PASS | `scheduling/server/http.ts:33-46`: Origin, anon 401, unrelated seat 404, guest → `NOT_BUYER` → 403 (`scheduling/server/cancel.ts:60`) |
+| Cancellation: concurrency (double click, two tabs, staff + buyer) | PASS | Advisory xact lock per seat around plan + Stripe (`commerce/seats/cancel.ts:157-162`), `FOR UPDATE` on the enrollment in the plan tx (`:54-57`); second caller sees `cancelled` → CONFLICT, or a pending-refund retry deduped by `seatRefundExists` (`:129-132`) |
+| Cancellation: Stripe failure / retry idempotency | PASS (note) | Key `seat-cancel-<id>` (`:30`, `:148`); retry path only when no linked refund (`:117-119`). Retry recomputes the amount from the current policy (L-2) |
+| Cancellation: `amount ≤ seatAmount − refunded` | **FINDING** | Per-seat cap ignores refunds not linked to a seat (M-2) |
+| Cancellation: no refund without seat release / no credit without seat cancel | PASS | Seat `cancelled` + entitlement revoked + credit row in one tx, refund only after commit (`cancel.ts:59-91`, `:174-208`); rollback test via `setSeatFaultForTests` |
+| Credit code single-use, personal, unguessable | PASS (note) | `CFF-CR-` + 8 CSPRNG Crockford (40 bits), `maxRedemptions: 1`, 365 d (`commerce/seats/credit.ts:19-62`). Not customer-restricted at Stripe: bearer code, documented in W3-09 (L-3) |
+| `charge.refunded` replay | PASS | Event-id ledger + `stripeRefundId` dedupe (`commerce/webhook/handlers/charge-refunded.ts:78-95`); seat-linked refund → seat `refunded` (`:102-115`) |
+| Reminders: exactly-once | PASS | Ledger row + email job in one tx, UNIQUE (enrollment, offset) (`scheduling/server/reminders.ts:60-98`); only `scheduled` sessions of published courses (`catalog/server/sessions.ts:107-137`); cron Bearer auth |
+| Waitlist: no email enumeration | PASS | Duplicate = silent success (`scheduling/server/waitlist.ts:44,53`); 5/IP/h + 3/email/h, Origin (`scheduling/server/http.ts:70-95`); notify claims `waiting → notified` with a conditional UPDATE in the email tx (`seat-released.ts:45-63`) |
+| Waitlist PII retention | **FINDING** | No retention rule: entries go `expired` and stay forever (L-10). Wave 4 rule: Q22 default 30 days after session end |
+| Portal: `no-store` on account responses | PASS | Every `/[locale]/account/**` page and layout `force-dynamic` + cookie read → Next sends `private, no-cache, no-store`; JSON/PDF/302 routes set `private, no-store` explicitly |
+| SW never caches account/api | PASS | `public/sw.js:49-75`: GET same-origin only; navigations network-only; caches only `/_next/static/**` + `/icons/**`. Proven in a sandbox by `test/security/w3-invariants.test.ts` |
+| Magic-link token not in logs/history | PASS | Token POSTed, never consumed on GET (`app/api/auth/magic-link/verify/route.ts`); URL scrubbed with `history.replaceState` (`components/portal/VerifyForm.tsx:30`); verify page `referrer: no-referrer`, `noindex` |
+| `next` open redirect | PASS (note) | Safe end to end because `next` is sanitized at request (`identity/server/magic-link.ts:121`) and again at verify (`:195`). `sanitizeNext` alone is not idempotent: `/.//evil.com` → `//evil.com` (L-1) |
+| Secrets in client bundles | PASS (source) | Only `NEXT_PUBLIC_SITE_URL` referenced; no `"use client"` file reads `MUX_*`/`R2_*`/`STRIPE_*`/`PAYLOAD_SECRET`/`CRON_SECRET`/`RESEND_*`; Next inlines only `NEXT_PUBLIC_*`. `.next/static` grep **not run**: no fresh build allowed on the shared machine (the only local `.next` is Wave 1). W4-03c should grep a CI build |
+| Known items (not duplicated) | NOTED | Session status "Annulée" has no effect (no refunds/notifications; self-cancel then denied as `SESSION_STARTED`); no staff cancel-seat in admin. Both belong to W4-07. Admin video form clobber confirmed = M-1 |
+
+### Findings
+
+| ID | Severity | File:line | Failure scenario | Fix recommendation | Owner |
+|----|----------|-----------|------------------|--------------------|-------|
+| H-1 | HIGH | `modules/catalog/collections/media.ts:22,28`; `modules/catalog/collections/materials.ts:30` | Staff uploads a recipe as JPG/PNG (allowed: `image/*`) and attaches it to a paid course. Anyone, signed out, calls `GET /api/media` (list with `filename`/`url`) and downloads it from `/api/media/file/<name>`. Paid content is public, against GUIDE_ADMIN_FR §4 ("seuls les clients ayant accès…"). PoC `test/security/w3-media-material-leak.test.ts` (`.fails`) | Non-staff `media` read = images **not referenced by any `materials.file`** (async access, `id not_in` list, no schema change) | catalog → **W3-13** |
+| M-1 | MEDIUM | `modules/catalog/collections/lessons.ts:50-83` (no field access on `video`); `modules/video/admin/LessonVideoField.tsx:95-97,144`; `modules/video/server/webhook.ts:24` | Admin form posts the `video` group as loaded. **Replace** case: staff starts an upload (lesson now tracks upload U), then clicks Save before the post-upload reload. The old `uploadId`/`assetId`/`status: ready` overwrite U. Mux events for U are then dropped as `stale`, and the poll gets `NOT_FOUND`. The old video keeps playing and the replacement is silently lost (bad if it was replaced for a content reason). **Processing** case: save while `preparing` after `asset.ready` resets `ready` → `preparing`, so customers see "processing" until staff reopens the lesson (the poll then recovers it). `readOnly` is UI-only, so REST `PATCH` can do the same | Field access `update: () => false, create: () => false` on the `video` group (writes go through `recordLessonVideo` → `payload.db.updateOne`, unaffected). PoC `.fails` in `test/security/w3-invariants.test.ts` | catalog (W4-03b) |
+| M-2 | MEDIUM | `modules/commerce/seats/cancel.ts:104-105`; `modules/commerce/webhook/refund.ts:101-103`; `modules/scheduling/server/cancel.ts:47,172` | The cap is `seatAmount − refunds linked to this seat`. Refunds made in the Stripe Dashboard (no `enrollmentId` metadata) are recorded unlinked and ignored. (a) Refund tier: 1-seat $100 order, staff refunds $50 goodwill in the Dashboard, then the buyer cancels at 100 % → seat committed `cancelled` + entitlement revoked → `requestOrderRefund` rejects $100 > $50 remaining → 400. Every retry fails the same way: seat lost, no money, no email, waitlist not notified. Same with 2 seats and a $150 Dashboard refund. (b) Credit tier: same setup → $100 credit issued on top of the $50 already refunded (over-compensation) | In the plan tx: cap = `min(seatAmount − linked, order.total − Σ all refunds)` for both refund and credit. Reject **before** committing the seat. Add integration tests for (a) and (b) | commerce + scheduling (W4-03b) |
+| L-1 | LOW | `modules/identity/server/next-path.ts:13-17` | `sanitizeNext("/.//evil.com")` returns `"//evil.com"` (URL normalisation after the `//` check). Safe today only because magic-link applies it twice. Any future single-pass caller (e.g. a `Location` built from `?next=`) becomes an open redirect | Re-check the **normalised** result (`startsWith("//")`, `\\`), or loop until stable; add the vectors `/.//x`, `/..//x`, `/a/..//x`, `/%2e//x` to the identity tests | identity |
+| L-2 | LOW | `modules/scheduling/server/cancel.ts:44-47,172-189`; `modules/commerce/seats/cancel.ts:146-149` | The cancellation decision (outcome, amount) is not persisted. A retry recomputes it from the **current** policy at `cancelledAt`. If staff edited the tiers, the amount changes: same Stripe idempotency key with different params → error for 24 h, or the outcome flips to credit → CONFLICT, so the refund is never retried. Stripe also replays a stored error for 24 h. Any refund failure returns before emails and `onSeatReleased`: the seat is freed but nobody is told and the waitlist is not notified. Retry emails reuse keys that Resend dedupes for 24 h only (duplicates after that) | Persist `cancellationAmount` on the enrollment in the plan tx and replay it on retry. Call `onSeatReleased` whenever the seat committed `cancelled`. Gate retry emails on "not yet sent" | commerce + scheduling |
+| L-3 | LOW | `modules/commerce/sync/discount.ts:38-40`; `seats/credit.ts:56` | Credit codes are bearer codes (no Stripe customer restriction; anyone with the forwarded email can redeem). `amount_off` once: the unused remainder is forfeited when the credit exceeds the next order | Document in the policy page/FAQ. Optionally check `personalFor` against the session email in `checkout.session.completed` (log/alert) | commerce |
+| L-4 | LOW | `modules/video/server/mux-port.ts:77-82` | A Mux token is not viewer-bound: an entitled customer can share the `.m3u8?token=` URL, valid 1 h, any number of viewers | Mux playback restrictions (referrer allow-list = site domain) at provisioning; consider a 15–30 min TTL with refresh in the player | video (+ W4-06 runbook) |
+| L-5 | LOW | `lib/env.ts:59,95-99`; `modules/video/server/config.ts:14-16` | `VIDEO_FAKE_ALLOWED=true` is also accepted in production. A copied staging env would put prod on the fake provider (staff could mark lessons `ready` without a real asset; customers get a dead player) | Boot error when `VERCEL_ENV === "production"` (or `NODE_ENV=production` without `CI`) and provider is `fake` | platform (W4-03b) |
+| L-6 | LOW | `modules/video/server/providers/mux.ts:16-35,63` | `passthrough` = bare lesson id. If staging and prod share one Mux environment, each webhook endpoint receives the other's events. A prod lesson with no `uploadId` takes the staging asset (`upload.asset_created` passes the stale check when `ref.uploadId` is null) | Separate Mux environment per deployment (W4-06 runbook), and/or passthrough `"<env>:<lessonId>"`, ignoring foreign prefixes | video (+ W4-06) |
+| L-7 | LOW | `modules/learning/collections/comments.ts:48-55,76` | Anonymous `GET /api/comments/:id` (Payload REST, not shadowed) returns approved comments of paid courses with the raw `customer` id and `lesson` id. Enumerable by id. Contradicts `list.ts` "never exposes customer ids" | Field `read` access on `customer` (and `moderatedBy`) = staff or self | learning |
+| L-8 | LOW | `app/api/progress/route.ts:16`; `modules/learning/server/progress.ts:72-82` | `completed` is client-asserted: an entitled customer can POST `completed: true` for every lesson and get a certificate without watching | Accept and document (certificate = attestation of lessons marked done), or require `positionSec ≥ 0.9 × durationSec` for video lessons | learning |
+| L-9 | LOW | `app/api/certificates/[id]/pdf/route.ts`; `app/api/materials/[id]/route.ts`; `app/api/enrollments/[id]/cancel/route.ts` | No rate limit. PDF render is CPU-heavy: a signed-in customer can loop their own certificate PDF. Cancel retries can call Stripe `refunds.list` without bound | Per-customer limits (e.g. PDF 30/h, materials 120/h, cancel 20/h) via `consumeRateLimit` | learning / scheduling |
+| L-10 | LOW | `modules/scheduling/server/http.ts:70-95`; `modules/scheduling/server/reminders.ts:18-28` | Waitlist accepts any third-party email without confirmation. Within limits, brand-domain "seat available" mail goes to non-consenting addresses (no unsubscribe link). Entries (emails) are kept forever (`expired` only) | Retention purge: delete entries 30 days after session end (Q22), in the reminders cron. Add a one-click "remove me" link to `waitlist-seat-available` | scheduling + notifications |
+| L-11 | LOW | `modules/learning/comments/server/list.ts:9,47-49` | Oldest 500 comments only: on a busy lesson, new approved comments (and the caller's own pending one) never show | Fetch newest first with the limit, then reverse; or paginate | learning |
+| L-12 | LOW | `modules/commerce/seats/cancel.ts:157-162,179-180` | The advisory-lock tx keeps one pooled connection open across the plan tx (a second connection) and the Stripe call: 2 connections per cancel during a slow Stripe call. A burst can exhaust a small pool | Take `pg_advisory_lock` on a dedicated client with an explicit unlock in `finally`, or keep it and document the pool size (Neon pooler) | commerce |
+
+### PoC tests (quality path)
+- `apps/web/test/security/w3-media-material-leak.test.ts`: **H-1**, integration (CI Neon branch). Control (hero image public) passes; material image `.fails` until W3-13.
+- `apps/web/test/security/w3-invariants.test.ts`: regression guards for PASS items (fake-provider opt-in, viewer/asset-bound fake URL, TTL ≤ 2 h, SW never caches account/api/admin/video). **M-1** PoC `.fails`.
+
+### Fix split
+- **W3-13** (backend-engineer, Opus): H-1. No schema. Must merge before prod (blocks W3 acceptance of materials).
+- **W4-03b** (already planned): M-1, M-2, L-1…L-12, plus W2-11 carry-overs. Suggested order: M-2 + L-2 together (same money path), then M-1 (one-line field access), L-1, L-5, L-7, L-10 (Q22 retention), rest.
+- **W4-06 runbook**: L-4 (Mux referrer restriction), L-6 (separate Mux env), L-5 check in the prod env checklist.
+- **W4-07** (orchestrator note): "Annulée" session status with no effect + staff seat cancel in admin. Not duplicated here. When built, staff cancel must go through the same `executeSeatCancellation` cap fix (M-2).
+- **W4-03c**: grep `.next/static` of a CI build for `MUX_`/`R2_`/`sk_`/`whsec_`/`PAYLOAD_SECRET` (not done here).
+
+## Completion notes
+- Docs + tests only; no `apps/web/src/**` change.
+- Deviation: orchestrator asked for a `docs/SESSION.md` entry (brief says not to touch `docs/**`). Followed the orchestrator. Entry added newest-first.
+- Previous run of this task was cut off before push; its `w3-invariants.test.ts` was reviewed and kept as is.

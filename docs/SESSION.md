@@ -6,6 +6,29 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-11-13 — W3-13 fix H-1: material files hidden from public `media` reads (backend-engineer, Opus)
+**Done** — `media.access.read` non-staff = images AND `id not_in` ids referenced by `materials.file` (`catalog/server/material-media.ts`; empty list skips the clause; 30 s in-process cache, dropped by `materials` afterChange/afterDelete; lookup failure → deny + log). Covers `GET /api/media` and `/api/media/file/*` (`checkFileAccess` uses the same access). No schema change. PoC `w3-media-material-leak.test.ts` green without `.fails` (+ customer, list, file-path, invalidation cases); unit tests `catalog/__tests__/material-media.test.ts`.
+**Blocked** — none. Material images on staging/prod were public until deploy (no key change needed: access is per request).
+**Next step** — orchestrator merges the W3-13 PR.
+
+---
+
+## 2026-11-13 — W3-10 Wave 3 security + correctness review (security-reviewer, Opus)
+**Done**
+- Reviewed portal, video/Mux, learning core, certificates, comments, scheduling (cancel/waitlist/reminders), seat ops + credit codes, SEO/PWA, W3-12 follow-ups. Base `main` bb4ceb9. Findings in `tasks/W3-10-wave3-security-review.md`.
+- **0 CRITICAL · 1 HIGH · 2 MEDIUM · 12 LOW.**
+- H-1: material files uploaded as images are public through `media` read access (`GET /api/media`, `/api/media/file/*`) → fix brief `tasks/W3-13-fix-material-media-leak.md` (no schema). PoC `apps/web/test/security/w3-media-material-leak.test.ts` (`.fails`, CI integration).
+- M-1 (confirmed known caveat): admin lesson form writes back the stale `video.*` group; saving mid-upload loses a replacement or resets `ready` → `preparing`. Fix = field access deny on `video`. PoC `.fails` in `w3-invariants.test.ts`.
+- M-2: seat cancellation cap ignores Dashboard (unlinked) refunds → seat cancelled with refund stuck (400 on every retry), or over-credit.
+- LOW: `sanitizeNext` not idempotent (`/.//x` → `//x`, safe today only via double sanitize), cancel decision not persisted for retries, bearer credit codes, Mux token not viewer-bound, fake provider without prod hard-guard, shared Mux env passthrough collision, anonymous comment REST exposes customer id, client-asserted completion, missing rate limits (PDF/materials/cancel), waitlist retention + no confirmation, comment list 500 cap, advisory-lock connection hold.
+- Known, not duplicated → W4-07: session "Annulée" has no effect; no staff seat cancel in admin.
+
+**Blocked** — none. `.next/static` secret grep not run (no build on the shared machine) → W4-03c on a CI build.
+
+**Next step** — orchestrator merges the W3-10 PR, runs W3-13 (H-1) before prod. M-1, M-2 + LOW → W4-03b.
+
+---
+
 ## 2026-11-10 — Wave 4 plan (Quality & launch) — AWAITING ERICK REVIEW (architect, Opus)
 Planning only. Briefs `tasks/W4-00`, `W4-01`, `W4-02`, `W4-03a/b/c`, `W4-04`, `W4-05`, `W4-06`. Base `main` 6d04ad3. W3-10 (security review) and W3-11 (CI `e2e` job) still running — W4 starts on their merge. MASTER_BUILD_SPEC unchanged; no CONTRACT change (one conditional CCR noted below). `tasks/W2-12` → `superseded` (by W4-01 + W4-06).
 
