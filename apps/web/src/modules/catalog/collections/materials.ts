@@ -3,6 +3,7 @@ import type { CollectionConfig } from "payload"
 import { locales } from "@/i18n/locales"
 import { isStaffOrAdmin } from "@/modules/identity"
 import { catalogGroup } from "../fields/labels"
+import { invalidateMaterialMediaIds } from "../server/material-media"
 
 /**
  * `materials` — recipes and PDFs attached to courses/lessons. CONTRACT §3.1.
@@ -24,6 +25,21 @@ export const Materials: CollectionConfig = {
     create: isStaffOrAdmin,
     update: isStaffOrAdmin,
     delete: isStaffOrAdmin,
+  },
+  // Material files are hidden from public `media` reads (W3-13): refresh the id list.
+  hooks: {
+    afterChange: [
+      ({ doc }) => {
+        invalidateMaterialMediaIds()
+        return doc
+      },
+    ],
+    afterDelete: [
+      ({ doc }) => {
+        invalidateMaterialMediaIds()
+        return doc
+      },
+    ],
   },
   fields: [
     { name: "title", type: "text", required: true, localized: true, label: { fr: "Titre", en: "Title" } },
