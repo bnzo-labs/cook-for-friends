@@ -6,6 +6,13 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-11-13 — W3-13 fix H-1: material files hidden from public `media` reads (backend-engineer, Opus)
+**Done** — `media.access.read` non-staff = images AND `id not_in` ids referenced by `materials.file` (`catalog/server/material-media.ts`; empty list skips the clause; 30 s in-process cache, dropped by `materials` afterChange/afterDelete; lookup failure → deny + log). Covers `GET /api/media` and `/api/media/file/*` (`checkFileAccess` uses the same access). No schema change. PoC `w3-media-material-leak.test.ts` green without `.fails` (+ customer, list, file-path, invalidation cases); unit tests `catalog/__tests__/material-media.test.ts`.
+**Blocked** — none. Material images on staging/prod were public until deploy (no key change needed: access is per request).
+**Next step** — orchestrator merges the W3-13 PR.
+
+---
+
 ## 2026-11-13 — W3-10 Wave 3 security + correctness review (security-reviewer, Opus)
 **Done**
 - Reviewed portal, video/Mux, learning core, certificates, comments, scheduling (cancel/waitlist/reminders), seat ops + credit codes, SEO/PWA, W3-12 follow-ups. Base `main` bb4ceb9. Findings in `tasks/W3-10-wave3-security-review.md`.
