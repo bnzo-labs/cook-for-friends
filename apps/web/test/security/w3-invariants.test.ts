@@ -1,6 +1,6 @@
 /**
  * W3-10 security review — regression guards for Wave 3 invariants (PASS items)
- * plus a proof-of-concept for M-1 (marked `.fails` until the fix lands).
+ * plus the M-1 regression guard (fixed in W4-03b).
  * Pure unit tests: no database, no network.
  */
 import { readFileSync } from "node:fs"
@@ -43,6 +43,16 @@ describe("W3-10 video: fake provider is opt-in only", () => {
       process.env.VIDEO_PROVIDER = p
       expect(fakeEnabled()).toBe(false)
     }
+  })
+
+  it("W4-03b L-5: fake is refused on the Vercel production deployment, even with the opt-in", () => {
+    process.env.VIDEO_PROVIDER = "fake"
+    process.env.VIDEO_FAKE_ALLOWED = "true"
+    process.env.VERCEL_ENV = "production"
+    expect(fakeEnabled()).toBe(false)
+    expect(getVideoProvider()).toBeNull()
+    process.env.VERCEL_ENV = "preview"
+    expect(fakeEnabled()).toBe(true)
   })
 
   it("fake signed URL is bound to the viewer and the asset, TTL clamped to ≤ 2 h", async () => {
@@ -158,11 +168,11 @@ describe("W3-10 service worker never caches authenticated content", () => {
 // (uploadId/assetId/status), so the provider webhook for the new upload is
 // then dropped as "stale". Fix: deny `update`/`create` field access on the
 // `video` group (writes go through catalog `recordLessonVideo`, which uses
-// `payload.db.updateOne` and is unaffected). Remove `.fails` once fixed.
+// `payload.db.updateOne` and is unaffected). Fixed in W4-03b.
 // ---------------------------------------------------------------------------
 
 describe("W3-10 M-1 lessons.video is not writable through the admin form / REST", () => {
-  it.fails("video group denies update + create field access", async () => {
+  it("video group denies update + create field access", async () => {
     const video = Lessons.fields.find((f) => "name" in f && f.name === "video") as {
       access?: { update?: (a: unknown) => unknown; create?: (a: unknown) => unknown }
     }

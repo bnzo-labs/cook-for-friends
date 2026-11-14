@@ -10,9 +10,23 @@ export function videoProviderSetting(): VideoProviderSetting {
   return v === "mux" || v === "bunny" || v === "fake" ? v : "none"
 }
 
-/** Fake adapter is non-prod only: provider=fake AND explicit opt-in (env.ts also fails boot otherwise). */
+let warnedProdFake = false
+
+/**
+ * Fake adapter is non-prod only: provider=fake AND explicit opt-in (env.ts also fails boot otherwise).
+ * W4-03b (W3-10 L-5): never on the Vercel production deployment, even with the opt-in
+ * (a copied staging env). Video is then unavailable (provider null) instead of fake.
+ */
 export function fakeEnabled(): boolean {
-  return videoProviderSetting() === "fake" && process.env.VIDEO_FAKE_ALLOWED === "true"
+  if (videoProviderSetting() !== "fake" || process.env.VIDEO_FAKE_ALLOWED !== "true") return false
+  if (process.env.VERCEL_ENV === "production") {
+    if (!warnedProdFake) {
+      warnedProdFake = true
+      console.error(JSON.stringify({ event: "video.fake_refused_in_production", level: "error" }))
+    }
+    return false
+  }
+  return true
 }
 
 export function siteUrl(): string {

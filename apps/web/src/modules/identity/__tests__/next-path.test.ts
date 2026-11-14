@@ -32,4 +32,15 @@ describe("sanitizeNext", () => {
     expect(sanitizeNext(undefined)).toBeNull()
     expect(sanitizeNext(null)).toBeNull()
   })
+
+  // W4-03b (W3-10 L-1): normalisation must not produce a protocol-relative path.
+  it.each(["/.//evil.com", "/..//evil.com", "/a/..//evil.com", "/%2e//evil.com", "/././/evil.com/x?y=1"])("rejects normalised-to-// %j", (input) => {
+    expect(sanitizeNext(input)).toBeNull()
+  })
+
+  it.each(["/fr/account", "/fr/a/../account?x=1#h", "/en/./courses", "/fr/compte%20x"])("is idempotent for %j", (input) => {
+    const once = sanitizeNext(input)
+    expect(once).not.toBeNull()
+    expect(sanitizeNext(once)).toBe(once)
+  })
 })

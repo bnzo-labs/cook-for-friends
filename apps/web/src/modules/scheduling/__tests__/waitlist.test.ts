@@ -152,6 +152,18 @@ describe.skipIf(!hasTestDb)("W3-05 waitlist (integration)", () => {
     expect((await load(keep.id)).status).toBe("waiting")
   })
 
+  it("W4-03b L-10: sendDueReminders deletes entries 30 days after the session ended (any status); younger ones kept", async () => {
+    const old = await makeBookableSession(payload, 6)
+    const recent = await makeBookableSession(payload, 6)
+    const gone = [await entry(old.session.id, `old1-${uid()}@example.com`), await entry(old.session.id, `old2-${uid()}@example.com`, "notified")]
+    const kept = await entry(recent.session.id, `recent-${uid()}@example.com`)
+    await moveSession(payload, old.session.id, -(31 * 24))
+    await moveSession(payload, recent.session.id, -(29 * 24))
+    await scheduling.sendDueReminders()
+    for (const g of gone) await expect(load(g.id)).rejects.toThrow()
+    expect((await load(kept.id)).status).toBe("expired")
+  })
+
   describe("POST /api/waitlist (route handler)", () => {
     const post = (body: unknown, headers: Record<string, string> = {}) =>
       new Request("http://localhost:3000/api/waitlist", {
