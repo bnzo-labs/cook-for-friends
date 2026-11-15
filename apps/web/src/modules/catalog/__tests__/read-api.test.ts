@@ -421,8 +421,8 @@ describe.skipIf(!hasTestDb)("catalog read API (integration)", { timeout: 30_000 
           overrideAccess: true,
           data: {
             tiers: [
-              { minHoursBefore: 24, outcome: "credit", percent: 50 },
               { minHoursBefore: 72, outcome: "refund", percent: 100 },
+              { minHoursBefore: 24, outcome: "credit", percent: 50 },
             ],
           },
         })
