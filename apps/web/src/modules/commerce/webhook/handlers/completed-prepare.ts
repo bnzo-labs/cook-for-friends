@@ -37,7 +37,7 @@ export type CompletedPrepared =
       quantity: number
       hold: HoldRow | null
       attendees: ResolvedAttendee[]
-      course: CourseCommerceRecord | null
+      course: CourseCommerceRecord
       sessionView: SessionView | null
       contactEmail: string | null
       line: { unitAmount: number; amountSubtotal: number; description: string | null }
@@ -196,6 +196,13 @@ export async function prepareCompleted(event: Stripe.Event): Promise<CompletedPr
     readTaxes(session),
     readInvoice(session),
   ])
+  if (!course) {
+    // W4-03b (W2-11 L-4): paid for a course the catalog no longer returns (deleted /
+    // unpublished). Never create an order with a dangling course id: throw → 500 →
+    // Stripe retries (staff can restore the course); the log line is the alert.
+    logEvent("error", "webhook.course.missing", { eventId: event.id, checkoutSessionId: session.id, courseId: meta.courseId })
+    throw new Error("[commerce] paid checkout session references a missing course")
+  }
   const promo = session.discounts?.find((d) => d.promotion_code)?.promotion_code
   return {
     kind: "paid",

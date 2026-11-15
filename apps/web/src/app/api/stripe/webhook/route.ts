@@ -1,4 +1,4 @@
-import { handleStripeEvent, moduleErrorResponse } from "@/modules/commerce"
+import { handleStripeEvent, logCommerceError, moduleErrorResponse } from "@/modules/commerce"
 import { jsonResponse } from "@/modules/identity"
 
 export const runtime = "nodejs"
@@ -27,7 +27,7 @@ export async function POST(request: Request): Promise<Response> {
     }
     return jsonResponse(200, { ok: true, data: { outcome: result.data.outcome } })
   } catch (error) {
-    console.error("[commerce] POST /api/stripe/webhook failed", error)
+    logCommerceError("commerce.webhook.route_failed", error)
     return serverError()
   }
 }

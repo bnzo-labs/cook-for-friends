@@ -5,6 +5,7 @@ import { revokeEntitlement } from "@/modules/access"
 import type { Result, TxContext } from "@/modules/_shared"
 import type { Enrollment, Order } from "@/payload-types"
 
+import { safeErrorFields } from "../server/log-error"
 import { getStripe } from "../server/stripe-port"
 import { withTransaction, type SqlExecutor } from "../server/tx"
 import type { ExecuteSeatCancellationInput, SeatCancellationResult } from "../types"
@@ -164,8 +165,9 @@ async function requestSeatRefund(i: Input, plan: Extract<Plan, { kind: "cancelle
         return fail({ code: "CONFLICT", reason: "REFUND_ALREADY_REQUESTED" })
       }
     } catch (error) {
-      seatLog("error", "commerce.seat.refund_lookup_failed", { enrollmentId: i.enrollmentId, orderId: plan.orderId })
-      return fail({ code: "UPSTREAM", service: "stripe", message: error instanceof Error ? error.message : "stripe error" })
+      const { code, type } = safeErrorFields(error)
+      seatLog("error", "commerce.seat.refund_lookup_failed", { enrollmentId: i.enrollmentId, orderId: plan.orderId, code, type })
+      return fail({ code: "UPSTREAM", service: "stripe", message: `stripe error (${code ?? type ?? "unknown"})` })
     }
   }
   const r = await requestOrderRefund(
@@ -178,7 +180,16 @@ async function requestSeatRefund(i: Input, plan: Extract<Plan, { kind: "cancelle
   return r
 }
 
-/** Serialize every call for one enrollment (cancel + refund) on a transaction-scoped advisory lock. */
+/**
+ * Serialize every call for one enrollment (cancel + refund) on a transaction-scoped advisory lock.
+ *
+ * W4-03b (W3-10 L-12, accepted): the guard tx holds one pooled connection for the whole
+ * cancel, so a cancel uses 2 connections (guard + plan tx) and keeps the guard open across
+ * the Stripe call (SDK default timeout). Bounded by the per-actor cancel limit (20/h, L-9);
+ * runtime connects through the Neon pooler (PgBouncer, `DATABASE_URL`), so a burst queues on
+ * the client pool instead of exhausting Postgres. Revisit (dedicated client + explicit unlock)
+ * if cancels ever run in bulk (e.g. W4-07 session cancel: loop sequentially).
+ */
 function withSeatGuard<T>(enrollmentId: number, fn: () => Promise<T>): Promise<T> {
   return withTransaction(async ({ db }) => {
     await db.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`cff_seat:${enrollmentId}`}, 0))`)

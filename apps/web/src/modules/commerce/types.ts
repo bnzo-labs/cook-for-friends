@@ -22,6 +22,7 @@ export type ExpireResult = { expired: number; checkoutSessionsExpired: number }
  * invoice. W2-07 relies on these exact keys. Never carries guest PII.
  */
 export type CheckoutMetadata = {
+  /** W4-03b (L-7): `sha256:<hex>` of the cart token (marker only, never the secret). */
   cartToken: string
   holdId?: string
   courseId: string

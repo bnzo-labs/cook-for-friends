@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
-import { buildSessionParams, CHECKOUT_TTL_SECONDS } from "../server/checkout"
+import { buildSessionParams, cartTokenRef, CHECKOUT_TTL_SECONDS } from "../server/checkout"
+import { isAppObject, parseCheckoutMetadata } from "../webhook/shared"
 
 const course = {
   id: 42,
@@ -64,7 +65,7 @@ describe("buildSessionParams", () => {
   it("metadata on session, PaymentIntent and invoice; no guest PII anywhere", async () => {
     const p = await build()
     const metadata = {
-      cartToken: "cart-token-abcdefghijkl",
+      cartToken: cartTokenRef("cart-token-abcdefghijkl"),
       holdId: "99",
       courseId: "42",
       sessionId: "7",
@@ -76,6 +77,9 @@ describe("buildSessionParams", () => {
     expect(p.invoice_creation?.invoice_data?.metadata).toEqual(metadata)
     const json = JSON.stringify(p)
     for (const pii of ["ann@example.com", "bo@example.com", "Ann", "Lee", "Ray"]) expect(json).not.toContain(pii)
+    // W4-03b (W2-11 L-7): the cart cookie secret never reaches Stripe
+    expect(json).not.toContain("cart-token-abcdefghijkl")
+    expect(metadata.cartToken).toMatch(/^sha256:[0-9a-f]{64}$/)
   })
 
   it("translated success/cancel URLs per locale", async () => {
@@ -91,7 +95,7 @@ describe("buildSessionParams", () => {
 
   it("online: no holdId/sessionId keys; no customer_email when absent", async () => {
     const p = await build({ holdId: null, line: { courseId: 42, quantity: 1 }, customerEmail: undefined })
-    expect(p.metadata).toEqual({ cartToken: "cart-token-abcdefghijkl", courseId: "42", locale: "fr", quantity: "1" })
+    expect(p.metadata).toEqual({ cartToken: cartTokenRef("cart-token-abcdefghijkl"), courseId: "42", locale: "fr", quantity: "1" })
     expect(p).not.toHaveProperty("customer_email")
   })
 
@@ -105,5 +109,20 @@ describe("buildSessionParams", () => {
   it("missing NEXT_PUBLIC_SITE_URL is a configuration error", async () => {
     delete process.env.NEXT_PUBLIC_SITE_URL
     await expect(build()).rejects.toThrow(/NEXT_PUBLIC_SITE_URL/)
+  })
+})
+
+describe("W2-11 L-7 cart token ref in Stripe metadata", () => {
+  const base = { courseId: "42", locale: "fr", quantity: "1" }
+  it("hashed ref and legacy raw token (sessions created before deploy) both resolve as ours", () => {
+    for (const cartToken of [cartTokenRef("cart-token-abcdefghijkl"), "cart-token-abcdefghijkl"]) {
+      expect(isAppObject({ ...base, cartToken })).toBe(true)
+      expect(parseCheckoutMetadata({ ...base, cartToken }, "test").courseId).toBe(42)
+    }
+  })
+  it("ref is deterministic and never contains the cookie value", () => {
+    expect(cartTokenRef("a")).toBe(cartTokenRef("a"))
+    expect(cartTokenRef("a")).not.toBe(cartTokenRef("b"))
+    expect(cartTokenRef("cart-token-abcdefghijkl")).not.toContain("cart-token")
   })
 })

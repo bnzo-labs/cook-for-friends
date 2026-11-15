@@ -1,5 +1,6 @@
 import { isStaff } from "@/modules/identity"
 
+import { logError } from "../server/log-error"
 import { getPayload } from "../server/payload"
 import { attendeesFilename, buildAttendeesCsv } from "./csv"
 import { collectAttendees } from "./list"
@@ -41,7 +42,7 @@ export async function handleAttendeesCsv(request: Request, rawId: string): Promi
       },
     })
   } catch (error) {
-    console.error("[commerce] GET /api/sessions/:id/attendees.csv failed", error)
+    logError("commerce.attendees_csv.route_failed", error)
     return json(500, "UPSTREAM")
   }
 }

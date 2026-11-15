@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+
 import type Stripe from "stripe"
 
 import type { ID, Locale, Result } from "@/modules/_shared"
@@ -16,6 +18,7 @@ import {
   zodIssues,
   type ParsedLine,
 } from "./validation"
+import { logError, safeErrorFields } from "./log-error"
 
 /** Stripe minimum is 30 min; the DB hold (15 min) is the real limit (F1). */
 export const CHECKOUT_TTL_SECONDS = 31 * 60
@@ -49,10 +52,20 @@ type SessionParamsInput = {
   now: Date
 }
 
+/**
+ * W4-03b (W2-11 L-7): Stripe metadata (session, PaymentIntent, invoice — visible to
+ * Dashboard users) carries a SHA-256 of the cart cookie secret, never the secret.
+ * The webhook only uses `cartToken` as an "app object" marker and resolves holds by
+ * `holdId`, so sessions created before this change (raw token) still resolve.
+ */
+export function cartTokenRef(token: string): string {
+  return `sha256:${createHash("sha256").update(token).digest("hex")}`
+}
+
 /** Checkout params (W2-04 criteria). Guest names/emails are never sent to Stripe. */
 export async function buildSessionParams(i: SessionParamsInput): Promise<Stripe.Checkout.SessionCreateParams> {
   const metadata: CheckoutMetadata = {
-    cartToken: i.cartToken,
+    cartToken: cartTokenRef(i.cartToken),
     ...(i.holdId !== null ? { holdId: String(i.holdId) } : {}),
     courseId: String(i.course.id),
     ...(i.line.sessionId !== undefined ? { sessionId: String(i.line.sessionId) } : {}),
@@ -99,10 +112,10 @@ async function openStripeSession(
     if (!session.url) throw new Error("Checkout session has no url")
     return { ok: true, data: session }
   } catch (error) {
-    console.error("[commerce] checkout.sessions.create failed", { holdId, error })
+    logError("commerce.checkout.session_create_failed", error, { holdId })
     if (holdId !== null) await releaseHold(holdId)
-    const message = error instanceof Error ? error.message : "stripe error"
-    return moduleError({ code: "UPSTREAM", service: "stripe", message })
+    const { code, type } = safeErrorFields(error)
+    return moduleError({ code: "UPSTREAM", service: "stripe", message: `stripe error (${code ?? type ?? "unknown"})` })
   }
 }
 
@@ -174,7 +187,7 @@ async function finishCheckout(
       await attachCheckoutSession(alloc.holdId, session.data.id)
     } catch (error) {
       // Webhook resolves the hold via metadata.holdId; only cron expiry loses the link.
-      console.error("[commerce] hold checkout-session write-back failed", { holdId: alloc.holdId, error })
+      logError("commerce.checkout.hold_writeback_failed", error, { holdId: alloc.holdId })
     }
   }
   const holdExpiresAt = alloc.expiresAt ?? new Date((params.expires_at as number) * 1000)
