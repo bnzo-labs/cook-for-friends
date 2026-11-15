@@ -9,6 +9,27 @@ const IMAGE = "https://image.mux.com"
 
 const str = (v: unknown): string | undefined => (typeof v === "string" && v.length > 0 ? v : undefined)
 
+/**
+ * W4-03b (W3-10 L-6): Mux `passthrough` = `<site host>:<lessonId>`. If two
+ * deployments (staging, prod) share one Mux environment, each webhook endpoint
+ * receives the other's events; a foreign host prefix maps to no lesson → ignored.
+ * A bare id (uploads created before this change) is still accepted for one release.
+ * Separate Mux environments per deployment remain the primary control (W4-06 runbook).
+ */
+const deploymentHost = (): string => new URL(siteUrl()).host
+
+export function muxPassthrough(lessonId: string): string {
+  return `${deploymentHost()}:${lessonId}`
+}
+
+export function lessonIdFromPassthrough(value: unknown): string | undefined {
+  const raw = str(value)
+  if (!raw) return undefined
+  const sep = raw.lastIndexOf(":")
+  if (sep < 0) return raw
+  return raw.slice(0, sep) === deploymentHost() ? str(raw.slice(sep + 1)) : undefined
+}
+
 /** Map a verified Mux webhook envelope to the provider-agnostic event. */
 export function mapMuxEvent(envelope: { type: string; data: Record<string, unknown> }): VideoWebhookEvent {
   const d = envelope.data
@@ -17,7 +38,7 @@ export function mapMuxEvent(envelope: { type: string; data: Record<string, unkno
       const settings = (d.new_asset_settings ?? {}) as Record<string, unknown>
       return {
         type: "upload.asset_created",
-        lessonId: str(settings.passthrough),
+        lessonId: lessonIdFromPassthrough(settings.passthrough),
         uploadId: str(d.id),
         assetId: str(d.asset_id),
       }
@@ -29,7 +50,7 @@ export function mapMuxEvent(envelope: { type: string; data: Record<string, unkno
       const duration = typeof d.duration === "number" ? Math.round(d.duration) : undefined
       return {
         type: envelope.type === "video.asset.ready" ? "asset.ready" : "asset.errored",
-        lessonId: str(d.passthrough),
+        lessonId: lessonIdFromPassthrough(d.passthrough),
         uploadId: str(d.upload_id),
         assetId: str(d.id),
         playbackId: str(signed?.id),
@@ -60,7 +81,7 @@ export function createMuxProvider(port: MuxPort = getMuxPort()): VideoProvider {
     },
 
     async createUpload({ lessonId }) {
-      const upload = await port.createDirectUpload({ passthrough: lessonId, corsOrigin: siteUrl() })
+      const upload = await port.createDirectUpload({ passthrough: muxPassthrough(lessonId), corsOrigin: siteUrl() })
       return { uploadUrl: upload.url, uploadId: upload.id }
     },
 
