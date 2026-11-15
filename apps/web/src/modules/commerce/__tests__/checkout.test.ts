@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 
 import { makeCustomer } from "../../../../test/fixtures"
 import { getTestPayload, hasTestDb, uid } from "../../../../test/integration"
+import { cartTokenRef } from "../server/checkout"
 import { CART_COOKIE, newCartToken } from "../server/http"
 import { setStripeForTests } from "../server/stripe-port"
 import { makeFakeStripe } from "./fake-stripe"
@@ -54,8 +55,9 @@ describe.skipIf(!hasTestDb)("createCheckout / releaseCartHolds (integration)", (
     const { params, options } = fake.creates[0]!
     expect(options?.idempotencyKey).toBe(`hold-${hold.id}`)
     expect(params.line_items).toEqual([{ price: expect.stringMatching(/^price_test_/), quantity: 3 }])
+    // W2-11 L-7: hashed ref, never the cookie secret
     expect(params.metadata).toEqual({
-      cartToken,
+      cartToken: cartTokenRef(cartToken),
       holdId: String(hold.id),
       courseId: String(course.id),
       sessionId: String(session.id),
@@ -157,7 +159,7 @@ describe.skipIf(!hasTestDb)("createCheckout / releaseCartHolds (integration)", (
     const cartToken = newCartToken()
     const r = await commerce.createCheckout({ cart: [{ courseId: course.id, quantity: 1 }], locale: "en", cartToken })
     expect(r.ok && r.data.holdIds).toEqual([])
-    expect(fake.creates[0]?.params.metadata).toEqual({ cartToken, courseId: String(course.id), locale: "en", quantity: "1" })
+    expect(fake.creates[0]?.params.metadata).toEqual({ cartToken: cartTokenRef(cartToken), courseId: String(course.id), locale: "en", quantity: "1" })
     expect(fake.creates[0]?.options).toBeUndefined()
   })
 
