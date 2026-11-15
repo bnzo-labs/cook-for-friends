@@ -115,7 +115,11 @@ test("entitled flow FR: lesson, placeholder, progress persists, complete all, ce
   const complete = page.locator("[data-mark-complete]")
   await complete.focus()
   await page.keyboard.press("Enter")
-  await expect(complete).toBeDisabled()
+  // Wait for completed=true (aria-pressed="true"), NOT just for the button's loading/disabled
+  // state. The Button component sets disabled={disabled||loading}, so toBeDisabled() passes
+  // the moment saving=true — before the API write commits to the DB. We must wait for
+  // aria-pressed="true" which is only set after setCompleted(true), which runs post-API.
+  await expect(complete).toHaveAttribute("aria-pressed", "true")
   await page.reload()
   await expect(page.locator("[data-mark-complete]")).toBeDisabled()
   await expect(page.locator("[data-lesson-id][data-completed=true]")).toHaveCount(1)

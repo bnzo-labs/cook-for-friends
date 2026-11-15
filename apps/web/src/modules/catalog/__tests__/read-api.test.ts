@@ -409,26 +409,31 @@ describe.skipIf(!hasTestDb)("catalog read API (integration)", { timeout: 30_000 
     })
 
     it("getCancellationPolicy returns sorted tiers", async () => {
+      // NOTE: Do NOT set customerCanSelfCancel:false here. This test file runs
+      // concurrently with cancel.test.ts; temporarily setting that flag false races
+      // with the 48h cancel test and returns FORBIDDEN. The customerCanSelfCancel
+      // flag is covered at the unit level (mappers.test.ts) and by the integration
+      // test in cancel.test.ts:160. This test validates DB round-trip + tier sorting.
       const prev = await payload.findGlobal({ slug: "cancellation-policy", overrideAccess: true })
       try {
         await payload.updateGlobal({
           slug: "cancellation-policy",
           overrideAccess: true,
           data: {
-            customerCanSelfCancel: false,
             tiers: [
-              { minHoursBefore: 72, outcome: "refund", percent: 100 },
               { minHoursBefore: 24, outcome: "credit", percent: 50 },
+              { minHoursBefore: 72, outcome: "refund", percent: 100 },
             ],
           },
         })
-        expect(await getCancellationPolicy()).toEqual({
-          customerCanSelfCancel: false,
-          tiers: [
-            { minHoursBefore: 72, outcome: "refund", percent: 100 },
-            { minHoursBefore: 24, outcome: "credit", percent: 50 },
-          ],
-        })
+        const result = await getCancellationPolicy()
+        // Tiers must come back sorted descending (72 first, then 24).
+        expect(result.tiers).toEqual([
+          { minHoursBefore: 72, outcome: "refund", percent: 100 },
+          { minHoursBefore: 24, outcome: "credit", percent: 50 },
+        ])
+        // customerCanSelfCancel remains whatever the global has (default true).
+        expect(typeof result.customerCanSelfCancel).toBe("boolean")
       } finally {
         await payload.updateGlobal({
           slug: "cancellation-policy",
