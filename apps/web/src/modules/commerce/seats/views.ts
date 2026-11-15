@@ -33,6 +33,7 @@ function toView(e: Enrollment, viewer: number | null): EnrollmentView | null {
     attendance: e.attendance,
     cancelledAt: e.cancelledAt ?? null,
     cancellationOutcome: e.cancellationOutcome ?? null,
+    cancellationAmount: e.cancellationAmount === null || e.cancellationAmount === undefined ? null : Number(e.cancellationAmount),
     isOwnSeat: viewer !== null && attendeeId === viewer,
     bookedByMe: viewer !== null && buyerId === viewer,
   }

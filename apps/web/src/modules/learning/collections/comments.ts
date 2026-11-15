@@ -1,4 +1,4 @@
-import type { CollectionConfig, PayloadRequest, Validate, Where } from "payload"
+import type { CollectionConfig, FieldAccess, PayloadRequest, Validate, Where } from "payload"
 
 import { isAdmin, isCustomerUser, isStaff, isStaffField, isStaffOrAdmin } from "@/modules/identity"
 import { COMMENT_MAX_LENGTH } from "../comments/constants"
@@ -29,6 +29,15 @@ export async function validateParent(
  * Access §3.7: public reads approved; customer creates + reads approved and
  * own; staff moderate; admin CRUD.
  */
+/** Field read: staff, or the customer who wrote the comment. */
+const readAuthor: FieldAccess = ({ req, doc }) => {
+  if (isStaff(req.user)) return true
+  if (!isCustomerUser(req.user) || !req.user || !doc) return false
+  const c = (doc as { customer?: unknown }).customer
+  const id = c && typeof c === "object" ? (c as { id?: unknown }).id : c
+  return id !== undefined && id !== null && String(id) === String(req.user.id)
+}
+
 export const Comments: CollectionConfig = {
   slug: "comments",
   labels: {
@@ -73,7 +82,9 @@ export const Comments: CollectionConfig = {
   },
   fields: [
     { name: "lesson", type: "relationship", relationTo: "lessons", required: true, index: true },
-    { name: "customer", type: "relationship", relationTo: "customers", required: true, index: true },
+    // W4-03b (W3-10 L-7): REST `GET /api/comments/:id` is public for approved comments; the
+    // author id is staff-or-self only (portal listing never exposes it either).
+    { name: "customer", type: "relationship", relationTo: "customers", required: true, index: true, access: { read: readAuthor } },
     { name: "body", type: "textarea", required: true, maxLength: COMMENT_MAX_LENGTH },
     {
       name: "status",
@@ -92,7 +103,7 @@ export const Comments: CollectionConfig = {
       name: "moderatedBy",
       type: "relationship",
       relationTo: "users",
-      access: { create: isStaffField, update: isStaffField },
+      access: { read: isStaffField, create: isStaffField, update: isStaffField },
     },
     {
       name: "parent",

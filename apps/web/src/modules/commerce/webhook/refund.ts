@@ -6,6 +6,7 @@ import type { Order } from "@/payload-types"
 
 import { getPayload } from "../server/payload"
 import { getStripe } from "../server/stripe-port"
+import { logError, safeErrorFields } from "../server/log-error"
 import { findOrderById } from "./orders"
 import { logEvent, relId } from "./shared"
 
@@ -119,9 +120,9 @@ export async function requestOrderRefund(
     })
     return { ok: true, data: undefined }
   } catch (error) {
-    console.error("[commerce] refundOrder: Stripe refund failed", { orderId, error })
-    const message = error instanceof Error ? error.message : "stripe error"
-    return fail({ code: "UPSTREAM", service: "stripe", message })
+    logError("commerce.refund.stripe_failed", error, { orderId })
+    const { code, type } = safeErrorFields(error)
+    return fail({ code: "UPSTREAM", service: "stripe", message: `stripe error (${code ?? type ?? "unknown"})` })
   }
 }
 

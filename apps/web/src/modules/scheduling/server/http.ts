@@ -19,6 +19,9 @@ const fromResult = <T>(r: Result<T>, okBody: (data: T) => unknown): Response => 
   return jsonResponse(status, body)
 }
 
+/** W4-03b (W3-10 L-9): bounds cancel retries (each may call Stripe `refunds.list`). Per actor, 20/h. */
+const CANCEL_LIMIT = { scope: "email", namespace: "scheduling-cancel", limit: 20, windowSeconds: 3600 } as const
+
 type Actor = { by: "staff"; id: number } | { by: "customer"; id: number }
 
 async function resolveActor(request: Request): Promise<Actor | null> {
@@ -37,6 +40,14 @@ export async function handleCancel(request: Request, rawId: string): Promise<Res
     if (!actor) return err(401, "FORBIDDEN")
     const id = ID.safeParse(rawId)
     if (!id.success) return err(404, "NOT_FOUND")
+    const limit = await consumeRateLimit({ ...CANCEL_LIMIT, key: `${actor.by}:${actor.id}` })
+    if (!limit.allowed) {
+      return jsonResponse(
+        429,
+        { ok: false, error: { code: "RATE_LIMITED", messageKey: "scheduling.CANCEL_RATE_LIMITED" } },
+        { "retry-after": String(limit.retryAfterSeconds) },
+      )
+    }
     if (actor.by === "customer" && !(await getEnrollmentView(id.data, actor.id))) return err(404, "NOT_FOUND")
     const r = await cancelEnrollment({ enrollmentId: id.data, by: actor.by, actorId: actor.id })
     return fromResult(r, (data) => ({ ok: true, data }))

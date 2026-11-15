@@ -55,6 +55,8 @@ export const Courses: CollectionConfig = {
     create: isStaffOrAdmin,
     update: isStaffOrAdmin,
     delete: isStaffOrAdmin,
+    // W4-03b (W2-11 L-8): Payload's default is any signed-in user (customers could read drafts).
+    readVersions: isStaffOrAdmin,
   },
   fields: [
     { name: "title", type: "text", required: true, localized: true, label: { fr: "Titre", en: "Title" } },

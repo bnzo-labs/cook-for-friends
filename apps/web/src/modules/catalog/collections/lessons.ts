@@ -53,6 +53,10 @@ export const Lessons: CollectionConfig = {
       label: { fr: "Vidéo", en: "Video" },
       // W3-02: upload / status / preview UI (approved single-line exception).
       admin: { components: { Field: "/modules/video/admin/LessonVideoField#LessonVideoField" } },
+      // W4-03b (W3-10 M-1): never written through the admin form or REST (a save with the
+      // loaded values clobbered a newer upload). The video module writes it via
+      // `recordLessonVideo` → `payload.db.updateOne`, which bypasses field access.
+      access: { create: () => false, update: () => false },
       fields: [
         {
           name: "provider",

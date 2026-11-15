@@ -27,6 +27,48 @@ async function expireStartedWaitlists(now: Date): Promise<void> {
   })
 }
 
+/** W4-03b (W3-10 L-10, Q22 default): waitlist emails are kept 30 days after the session ends. */
+export const WAITLIST_RETENTION_DAYS = 30
+const DAY = 24 * HOUR
+
+const PURGE_BATCH = 500
+
+const endedBefore = (session: unknown, cutoffIso: string): boolean => {
+  const endsAt = session && typeof session === "object" ? (session as { endsAt?: unknown }).endsAt : undefined
+  return typeof endsAt === "string" && new Date(endsAt).getTime() < new Date(cutoffIso).getTime()
+}
+
+/** Deletes every waitlist entry (any status) of sessions that ended more than the retention window ago. */
+export async function purgeExpiredWaitlistEntries(now: Date = new Date()): Promise<number> {
+  const payload = await getPayload()
+  const cutoff = new Date(now.getTime() - WAITLIST_RETENTION_DAYS * DAY).toISOString()
+  // Resolve candidates, re-check each populated session's `endsAt` in code, then delete
+  // by id only. A bulk `delete` with a relationship-path `where` also removed entries of
+  // younger sessions (CI), so the relationship filter is never trusted for a delete.
+  const { docs } = await payload.find({
+    collection: "waitlist-entries",
+    where: { "session.endsAt": { less_than: cutoff } },
+    depth: 1,
+    limit: PURGE_BATCH,
+    sort: "id",
+    overrideAccess: true,
+  })
+  const ids = docs.filter((d) => endedBefore(d.session, cutoff)).map((d) => d.id)
+  if (ids.length === 0) return 0
+  const res = await payload.delete({
+    collection: "waitlist-entries",
+    where: { id: { in: ids } },
+    depth: 0,
+    overrideAccess: true,
+  })
+  const purged = res.docs.length
+  if (purged > 0) console.info(JSON.stringify({ event: "scheduling.waitlist.purged", level: "info", purged }))
+  if (res.errors.length > 0) {
+    console.error(JSON.stringify({ event: "scheduling.waitlist.purge_errors", level: "error", count: res.errors.length }))
+  }
+  return purged
+}
+
 async function alreadyDelivered(enrollmentIds: number[]): Promise<Set<string>> {
   if (enrollmentIds.length === 0) return new Set()
   const payload = await getPayload()
@@ -109,7 +151,12 @@ export async function sendDueReminders(now: Date = new Date()): Promise<{ sent: 
   try {
     await expireStartedWaitlists(now)
   } catch (error) {
-    console.error("[scheduling] waitlist expiry sweep failed", error)
+    console.error("[scheduling] waitlist expiry sweep failed", error instanceof Error ? error.message : String(error))
+  }
+  try {
+    await purgeExpiredWaitlistEntries(now)
+  } catch (error) {
+    console.error("[scheduling] waitlist retention purge failed", error instanceof Error ? error.message : String(error))
   }
 
   const maxOffset = Math.max(...offsets)

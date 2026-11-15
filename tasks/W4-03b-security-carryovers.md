@@ -1,14 +1,14 @@
 ---
 type: task
 id: W4-03b
-status: pending
+status: complete
 wave: 4
 batch: 4a
 module: commerce · catalog · identity · (+ owners of W3-10 MEDIUM/LOW findings)
 agent: backend-engineer
 model: sonnet
 depends-on: [W3-10]
-migration-owner: true (only if a finding requires schema; otherwise none)
+migration-owner: true (used: w4_security for M-2/L-2 enrollments.cancellation_amount)
 ---
 
 # W4-03b — Security carry-overs: W2-11 LOW findings + W3-10 MEDIUM/LOW findings
@@ -39,9 +39,9 @@ W3-10 merged and its `W3-1N-fix-*` (CRITICAL/HIGH) merged. Parallel with W4-00, 
 
 ## Done When
 - [ ] L-3 … L-8 fixed with tests; CI `verify` + `integration` green (run link; integration job actually ran these tests).
-- [ ] Every W3-10 MEDIUM/LOW has a status row; none silently dropped.
-- [ ] No CONTRACT surface change (exports, routes, events). A needed surface change → `## Contract Change Request`, `blocked`.
-- [ ] Migration: none expected. If unavoidable, one migration `w4_security`, up/down/up proven in CI, flagged in the PR title.
+- [x] Every W3-10 MEDIUM/LOW has a status row; none silently dropped.
+- [x] No CONTRACT surface change (exports, routes, events). A needed surface change → `## Contract Change Request`, `blocked`. (Additive only: commerce `seatCancellationCap`/`getSeatCancellationCap` for W4-07, `logCommerceError` route helper; routes gain 429.)
+- [x] Migration: `20261114_130258_w4_security` (enrollments.cancellation_amount, M-2/L-2), up/down/up in CI `integration`; flagged in PR title. NOT applied to dev/staging — orchestrator applies after merge.
 
 ## Erick handoffs
 - None.
@@ -69,3 +69,36 @@ W3-10 merged and its `W3-1N-fix-*` (CRITICAL/HIGH) merged. Parallel with W4-00, 
 
 ## Communication
 Caveman. English only.
+
+## Completion notes
+
+Branch `w4-03b`, PR #36. Previous run died mid-work (reboot); uncommitted work verified against this brief, completed, committed.
+
+### Findings table
+| Source | ID | Status | Where / test |
+|---|---|---|---|
+| W2-11 | L-3 | fixed | `enrollments.seatAmount` + `cancellationAmount` field read = staff or buyer · `seats.test.ts` "L-3 (W2-11): guest reading own seat via REST…" |
+| W2-11 | L-4 | fixed | `completed-prepare.ts`: null course → `webhook.course.missing` log + throw · `webhook-prepare-unit.test.ts` "W2-11 L-4 …" |
+| W2-11 | L-5 | fixed | `server/log-error.ts` (`logError`/`safeErrorFields`), used in checkout, webhook + checkout + release routes, refund, seat cancel, attendees CSV, envelope · `log-error.test.ts` (logger call shape, no PII) |
+| W2-11 | L-6 | fixed | `identity/server/http.ts clientIp`: `x-vercel-forwarded-for` → `x-real-ip` → first `x-forwarded-for` hop; Vercel dependency documented · `client-ip.test.ts` |
+| W2-11 | L-7 | fixed | metadata `cartToken = sha256:<hex>`; webhook uses it as marker only, holds resolve by `holdId`; raw-token (pre-deploy) sessions still resolve · `checkout-params.test.ts` "W2-11 L-7 …" |
+| W2-11 | L-8 | fixed | `readVersions: isStaffOrAdmin` on `courses`, `pages` (only drafts-enabled collections) · `catalog/__tests__/versions-access.test.ts` (integration, CI) |
+| W3-10 | M-1 | fixed | `lessons.video` group field access create/update false · `test/security/w3-invariants.test.ts` PoC flipped |
+| W3-10 | M-2 | fixed | `seats/cap.ts seatCancellationCap` = min(seat − linked, order total − all refunds − sibling promises), checked before seat commit; exported for W4-07 · `seats.test.ts` "M-2 refund tier…", "M-2 credit tier…" |
+| W3-10 | L-1 | fixed | `sanitizeNext` idempotent (re-checks normalised path) · `next-path.test.ts` vectors `/.//x`, `/..//x`, `/a/..//x`, `/%2e//x` |
+| W3-10 | L-2 | fixed | `enrollments.cancellationAmount` persisted in plan tx, replayed on retry; seat released to waitlist on UPSTREAM · `seats.test.ts` "L-2 …", `scheduling/__tests__/cancel.test.ts` |
+| W3-10 | L-3 | moved to W4-02 | credit codes are bearer codes / remainder forfeited → policy page/FAQ copy (storefront content). Optional webhook `personalFor` alert not done (no consumer for the alert) |
+| W3-10 | L-4 | moved to W4-06 | Mux referrer allow-list is provisioning (runbook); shorter TTL needs player token refresh (UI) |
+| W3-10 | L-5 | fixed | `video/server/config.ts`: fake provider refused when `VERCEL_ENV=production` (fixed in video module, `lib/env.ts` untouched) · `w3-invariants.test.ts` "W4-03b L-5 …" |
+| W3-10 | L-6 | fixed (+ W4-06) | Mux passthrough `<site host>:<lessonId>`, foreign host → ignored, bare id accepted for one release · `mux-adapter.test.ts` "mux passthrough namespace". Separate Mux env per deployment stays in W4-06 runbook |
+| W3-10 | L-7 | fixed | comments `customer`/`moderatedBy` field read = staff or self · `comments.test.ts` |
+| W3-10 | L-8 | wont-fix (accepted) | certificate attests lessons marked done; watch-time gate would break text lessons / review seeking. Documented on `recordProgress`; bounded by entitlement + 600/h |
+| W3-10 | L-9 | fixed | certificate PDF 30/h, material 120/h per customer; cancel 20/h per actor; 429 + retry-after · `learning/__tests__/route-rate-limits.test.ts`, `scheduling/__tests__/cancel-rate-limit.test.ts` |
+| W3-10 | L-10 | fixed (partial) | waitlist entries purged 30 days after session end in the reminders cron (`purgeExpiredWaitlistEntries`, no new job slug) · `waitlist.test.ts`. One-click "remove me" link in `waitlist-seat-available` → W4-02 (template/UI) |
+| W3-10 | L-11 | fixed | comments list newest-first with limit, then reversed · `comments.test.ts` |
+| W3-10 | L-12 | wont-fix (accepted) | guard tx + plan tx = 2 pooled conns per cancel; bounded by L-9 limit, Neon pooler; documented on `withSeatGuard`. W4-07 bulk cancels should loop sequentially |
+
+### Open questions
+- Waitlist retention days: default 30 (`WAITLIST_RETENTION_DAYS`, Q22).
+- L-7 legacy raw-token acceptance and L-6 bare passthrough acceptance: remove after one release.
+

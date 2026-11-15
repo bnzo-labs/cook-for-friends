@@ -1,6 +1,8 @@
 import type Stripe from "stripe"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
+import { getCourseCommerceRecord, type CourseCommerceRecord } from "@/modules/catalog"
+
 import { setStripeForTests } from "../server/stripe-port"
 import { prepareCompleted } from "../webhook/handlers/completed-prepare"
 import { completedEvent, makeWebhookFake } from "./webhook-helpers"
@@ -8,7 +10,18 @@ import { completedEvent, makeWebhookFake } from "./webhook-helpers"
 /** W2-21 (H-1) + M-1: `prepareCompleted` classification, no DB (online course → no hold read). */
 vi.mock("@/modules/catalog", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/modules/catalog")>()),
-  getCourseCommerceRecord: vi.fn(async () => null),
+  getCourseCommerceRecord: vi.fn(async (): Promise<CourseCommerceRecord | null> => ({
+    id: 7,
+    format: "online",
+    status: "published",
+    price: 5000,
+    title: { fr: "Cours", en: "Course" },
+    summary: { fr: "", en: "" },
+    slug: { fr: "cours", en: "course" },
+    stripeProductId: "prod_1",
+    stripePriceId: "price_1",
+    stripeSyncStatus: "synced",
+  })),
   getSessionView: vi.fn(async () => null),
   getSiteSettings: vi.fn(async () => ({ contactEmail: null })),
 }))
@@ -57,6 +70,15 @@ describe("W2-21 prepareCompleted payment_status", () => {
   it("M-1 cartToken present but metadata malformed → still throws", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => undefined)
     await expect(prepareCompleted(event({ metadata: { cartToken: "c", courseId: "x", locale: "fr", quantity: "1" } }))).rejects.toThrow(/metadata/)
+    err.mockRestore()
+  })
+
+  it("W2-11 L-4 paid session whose course record is null → throws (500, Stripe retries) + structured log", async () => {
+    vi.mocked(getCourseCommerceRecord).mockResolvedValueOnce(null)
+    const err = vi.spyOn(console, "error").mockImplementation(() => undefined)
+    await expect(prepareCompleted(event())).rejects.toThrow(/course/)
+    const lines = err.mock.calls.map((c) => String(c[0]))
+    expect(lines.some((l) => l.includes("webhook.course.missing") && l.includes('"courseId":7'))).toBe(true)
     err.mockRestore()
   })
 })

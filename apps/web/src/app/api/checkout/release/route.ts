@@ -1,4 +1,4 @@
-import { readCartToken, releaseCartHolds } from "@/modules/commerce"
+import { logCommerceError, readCartToken, releaseCartHolds } from "@/modules/commerce"
 import { forbiddenOrigin, isAllowedOrigin, jsonResponse } from "@/modules/identity"
 
 export const runtime = "nodejs"
@@ -18,7 +18,7 @@ export async function POST(request: Request): Promise<Response> {
     const { released } = await releaseCartHolds(cartToken)
     return jsonResponse(200, { ok: true, data: { released } })
   } catch (error) {
-    console.error("[commerce] POST /api/checkout/release failed", error)
+    logCommerceError("commerce.checkout_release.route_failed", error)
     return jsonResponse(500, { ok: false, error: { code: "UPSTREAM", messageKey: "common.error_generic" } })
   }
 }
