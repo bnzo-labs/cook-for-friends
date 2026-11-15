@@ -6,7 +6,11 @@ vi.mock("@/modules/learning", () => ({
   getRequestActor: (...a: unknown[]) => getRequestActor(...a),
   getMaterialSignedUrl: (...a: unknown[]) => getMaterialSignedUrl(...a),
 }))
-vi.mock("@/modules/identity", async () => await import("../../../../modules/identity/server/http"))
+// W4-03b (W3-10 L-9): limiter always allows here; limits covered in learning/__tests__/route-rate-limits.test.ts
+vi.mock("@/modules/identity", async () => ({
+  ...(await import("../../../../modules/identity/server/http")),
+  consumeRateLimit: async () => ({ allowed: true, retryAfterSeconds: 0 }),
+}))
 
 import { GET } from "../[id]/route"
 
