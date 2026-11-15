@@ -26,6 +26,8 @@ export { expireStaleHolds } from "./server/expire"
 export type { AttendeeInput, CartLine, CheckoutMetadata, CheckoutResult, CreateCheckoutInput, ExpireResult } from "./types"
 
 // HTTP helpers for src/app/api/{checkout,cart}/** route handlers
+// W4-03b (W2-11 L-5): PII-safe error logging for commerce routes
+export { logError as logCommerceError } from "./server/log-error"
 export {
   CART_COOKIE,
   cartCookieHeader,

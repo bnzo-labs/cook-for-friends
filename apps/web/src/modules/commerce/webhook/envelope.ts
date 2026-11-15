@@ -4,6 +4,7 @@ import Stripe from "stripe"
 import type { Result } from "@/modules/_shared"
 import { onSeatReleased } from "@/modules/scheduling"
 
+import { logError } from "../server/log-error"
 import { getPayload } from "../server/payload"
 import { executorFor, withTransaction, type SqlExecutor } from "../server/tx"
 import { asyncFailedHandler, expiredHandler } from "./handlers/checkout-closed"
@@ -77,7 +78,7 @@ async function scheduleJobsRun(): Promise<void> {
         const payload = await getPayload()
         await payload.jobs.run({ limit: 20 })
       } catch (error) {
-        console.error("[commerce] webhook: post-commit jobs.run failed", error)
+        logError("commerce.webhook.jobs_run_failed", error)
       }
     })
   } catch {

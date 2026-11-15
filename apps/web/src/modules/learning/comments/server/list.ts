@@ -44,13 +44,14 @@ export async function listLessonComments(i: {
         { or: [{ status: { equals: "approved" } }, { customer: { equals: i.customerId } }] },
       ],
     },
-    sort: "createdAt",
+    // W4-03b (W3-10 L-11): the NEWEST MAX_COMMENTS (so recent and own pending ones always
+    // show), then back to oldest-first for display.
+    sort: ["-createdAt", "-id"],
     depth: 0,
     limit: MAX_COMMENTS,
-    pagination: false,
     overrideAccess: true,
   })
-  const rows = res.docs as unknown as Row[]
+  const rows = [...(res.docs as unknown as Row[])].reverse()
 
   const authorIds = [...new Set(rows.map((r) => relId(r.customer)).filter((v): v is ID => v !== null))]
   const authors = new Map<string, { firstName?: string | null; lastName?: string | null }>()

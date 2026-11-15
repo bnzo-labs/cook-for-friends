@@ -153,11 +153,11 @@ describe("Mux adapter over a fake port", () => {
     ...over,
   })
 
-  it("createUpload passes lessonId as passthrough and SITE_URL as CORS origin", async () => {
+  it("createUpload passes <site host>:<lessonId> as passthrough and SITE_URL as CORS origin", async () => {
     const port = fakePort({})
     const r = await createMuxProvider(port).createUpload({ lessonId: "5" })
     expect(r).toEqual({ uploadId: "up1", uploadUrl: "https://storage.example/upload" })
-    expect(port.createDirectUpload).toHaveBeenCalledWith({ passthrough: "5", corsOrigin: "https://example.test" })
+    expect(port.createDirectUpload).toHaveBeenCalledWith({ passthrough: "example.test:5", corsOrigin: "https://example.test" })
   })
 
   it("getAsset resolves an upload id through to its asset", async () => {
@@ -175,5 +175,23 @@ describe("Mux adapter over a fake port", () => {
     expect(await createMuxProvider(waiting).getAsset("up1")).toEqual({ assetId: "", status: "preparing" })
     const errored = fakePort({ getUpload: vi.fn(async () => ({ status: "errored", assetId: null })) })
     expect(await createMuxProvider(errored).getAsset("up1")).toEqual({ assetId: "", status: "errored" })
+  })
+})
+
+/** W4-03b (W3-10 L-6): passthrough is namespaced by the deployment's site host. */
+describe("mux passthrough namespace (unit)", () => {
+  const ready = (passthrough: string) => mapMuxEvent({ type: "video.asset.ready", data: { id: "as1", passthrough } })
+  it("own host prefix → lesson id", () => {
+    expect(ready("example.test:42").lessonId).toBe("42")
+    expect(
+      mapMuxEvent({ type: "video.upload.asset_created", data: { id: "up1", asset_id: "as1", new_asset_settings: { passthrough: "example.test:7" } } }).lessonId,
+    ).toBe("7")
+  })
+  it("foreign host prefix (other deployment sharing the Mux env) → no lesson (ignored)", () => {
+    expect(ready("staging.example.test:42").lessonId).toBeUndefined()
+    expect(ready("localhost:3000:42").lessonId).toBeUndefined()
+  })
+  it("legacy bare id (uploads created before the change) still resolves for one release", () => {
+    expect(ready("42").lessonId).toBe("42")
   })
 })

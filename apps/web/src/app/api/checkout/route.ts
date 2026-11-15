@@ -3,6 +3,7 @@ import {
   cartCookieHeader,
   createCheckout,
   getAvailableSeats,
+  logCommerceError,
   moduleErrorResponse,
   newCartToken,
   readCartToken,
@@ -54,7 +55,7 @@ export async function POST(request: Request): Promise<Response> {
     const { status, body: envelope } = moduleErrorResponse(result.error, details)
     return jsonResponse(status, envelope, cookie)
   } catch (error) {
-    console.error("[commerce] POST /api/checkout failed", error)
+    logCommerceError("commerce.checkout.route_failed", error)
     return jsonResponse(500, { ok: false, error: { code: "UPSTREAM", messageKey: "common.error_generic" } }, cookie)
   }
 }

@@ -635,6 +635,10 @@ export interface Enrollment {
   attendance: 'unknown' | 'present' | 'absent';
   cancelledAt?: string | null;
   cancellationOutcome?: ('refund' | 'credit' | 'none') | null;
+  /**
+   * Amount in cents (CAD). E.g. 4500 = $45.00
+   */
+  cancellationAmount?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -764,6 +768,8 @@ export interface Certificate {
   createdAt: string;
 }
 /**
+ * Moderation: filter on status “Pending”, then set status to Approved or Rejected. Approving emails the author.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "comments".
  */
@@ -1416,6 +1422,7 @@ export interface EnrollmentsSelect<T extends boolean = true> {
   attendance?: T;
   cancelledAt?: T;
   cancellationOutcome?: T;
+  cancellationAmount?: T;
   updatedAt?: T;
   createdAt?: T;
 }

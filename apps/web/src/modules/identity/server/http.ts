@@ -27,13 +27,24 @@ export async function readBody(request: Request): Promise<Record<string, unknown
   }
 }
 
+const firstHop = (v: string | null): string | undefined => v?.split(",")[0]?.trim() || undefined
+
 /**
- * Best-effort client IP. Vercel sets `x-forwarded-for` (client first) and
- * `x-real-ip`. Falls back to "unknown" so the NOT NULL column is always filled.
+ * Client IP for rate-limit keys (W4-03b, W2-11 L-6).
+ *
+ * VERCEL DEPENDENCY: on Vercel the edge sets `x-vercel-forwarded-for` and `x-real-ip`
+ * to the real client IP and overwrites any client-sent value, so they are trusted first.
+ * `x-forwarded-for` (first hop) is only a fallback: behind any other proxy/host a client
+ * can spoof it and dodge per-IP limits. Moving off Vercel → re-check this function.
+ * Falls back to "unknown" so the NOT NULL column is always filled.
  */
 export function clientIp(headers: Headers): string {
-  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-  return (forwarded || headers.get("x-real-ip") || "unknown").slice(0, 64)
+  const ip =
+    firstHop(headers.get("x-vercel-forwarded-for")) ??
+    firstHop(headers.get("x-real-ip")) ??
+    firstHop(headers.get("x-forwarded-for")) ??
+    "unknown"
+  return ip.slice(0, 64)
 }
 
 /**

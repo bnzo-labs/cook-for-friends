@@ -186,6 +186,25 @@ describe.skipIf(!hasTestDb)("W3-04 comments (integration)", () => {
     expect(created.status).toBe("pending")
   })
 
+  it("W4-03b L-7: REST read of an approved comment hides author id + moderator from anonymous / other customers; author + staff see them", async () => {
+    const { lesson, author, other } = await setup()
+    const staff = await makeStaff(payload, "staff")
+    await postComment({ customerId: author.id, lessonId: lesson.id, body: "visible" })
+    const [c] = await commentsOf(lesson.id)
+    await moderate(staff, c!.id, "approved")
+    const read = (user?: object) => payload.findByID({ collection: "comments", id: c!.id, depth: 0, overrideAccess: false, ...(user ? { user } : {}) })
+
+    const anon = await read()
+    expect(anon.body).toBe("visible")
+    expect(anon.customer).toBeUndefined()
+    expect(anon.moderatedBy).toBeUndefined()
+    expect((await read(asUser(other, "customers"))).customer).toBeUndefined()
+    expect(Number((await read(asUser(author, "customers"))).customer)).toBe(author.id)
+    const asStaff = await read(asUser(staff, "users"))
+    expect(Number(asStaff.customer)).toBe(author.id)
+    expect(Number(asStaff.moderatedBy)).toBe(staff.id)
+  })
+
   it("XSS payload is stored verbatim and returned as a plain string", async () => {
     const { lesson, author, other } = await setup()
     const staff = await makeStaff(payload, "staff")

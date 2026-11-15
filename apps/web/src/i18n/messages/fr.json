@@ -381,7 +381,8 @@
   },
   "scheduling": {
     "ics_description": "Rappel : votre cours Cook for Friends, {course}. À bientôt en cuisine !",
-    "WAITLIST_RATE_LIMITED": "Trop de demandes. Veuillez réessayer plus tard."
+    "WAITLIST_RATE_LIMITED": "Trop de demandes. Veuillez réessayer plus tard.",
+    "CANCEL_RATE_LIMITED": "Trop de demandes d'annulation. Veuillez réessayer plus tard."
   },
   "pwa": {
     "name": "Cook for Friends",
@@ -416,7 +417,8 @@
       "logoPlaceholder": "Logo"
     },
     "errors": {
-      "rateLimited": "Trop de mises à jour de progression. Réessayez plus tard."
+      "rateLimited": "Trop de mises à jour de progression. Réessayez plus tard.",
+      "tooManyRequests": "Trop de demandes. Veuillez réessayer plus tard."
     }
   },
   "auth": {
