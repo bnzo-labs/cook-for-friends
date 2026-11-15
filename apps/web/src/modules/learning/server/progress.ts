@@ -82,6 +82,12 @@ async function upsertProgress(
   return alreadyDone || i.completed
 }
 
+/**
+ * W4-03b (W3-10 L-8, accepted): `completed` is asserted by the customer's own
+ * player/UI. A certificate attests "every lesson marked done by the learner", not
+ * watch time; no watch-time gate (would break text-only lessons and seek-ahead review).
+ * Abuse is bounded to the caller's own entitled courses and 600 writes/h.
+ */
 export async function recordProgress(i: {
   customerId: ID
   lessonId: ID
