@@ -154,7 +154,9 @@ export async function sendDueReminders(now: Date = new Date()): Promise<{ sent: 
     console.error("[scheduling] waitlist expiry sweep failed", error instanceof Error ? error.message : String(error))
   }
   try {
-    await purgeExpiredWaitlistEntries(now)
+    // Always use real wall-clock time: retention (30 d) is a real-world policy,
+    // not part of the reminder-scheduling simulation used in tests.
+    await purgeExpiredWaitlistEntries()
   } catch (error) {
     console.error("[scheduling] waitlist retention purge failed", error instanceof Error ? error.message : String(error))
   }
