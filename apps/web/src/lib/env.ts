@@ -88,6 +88,9 @@ export const serverSchema = z.object({
     z.object({
       SENTRY_DSN: z.string().url().optional().or(z.literal("")),
       SENTRY_AUTH_TOKEN: z.string().optional(),
+      SENTRY_ORG: z.string().optional(),
+      SENTRY_PROJECT: z.string().optional(),
+      SENTRY_ENVIRONMENT: z.string().optional(),
     }),
   )
   .superRefine((data, ctx) => {

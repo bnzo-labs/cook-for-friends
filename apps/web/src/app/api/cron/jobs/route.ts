@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getPayload } from "payload"
 import config from "@payload-config"
 
+import { captureCronFailure } from "@/lib/observability/capture"
+
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
@@ -25,12 +27,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
   }
 
-  const payload = await getPayload({ config })
-  if (!payload.config.jobs.enabled) {
-    return NextResponse.json({ ok: true, ran: 0 })
-  }
+  try {
+    const payload = await getPayload({ config })
+    if (!payload.config.jobs.enabled) {
+      return NextResponse.json({ ok: true, ran: 0 })
+    }
 
-  const result = await payload.jobs.run({ limit: JOBS_LIMIT })
-  const ran = Object.keys(result.jobStatus ?? {}).length
-  return NextResponse.json({ ok: true, ran })
+    const result = await payload.jobs.run({ limit: JOBS_LIMIT })
+    const ran = Object.keys(result.jobStatus ?? {}).length
+    return NextResponse.json({ ok: true, ran })
+  } catch (error) {
+    console.error("[jobs] GET /api/cron/jobs failed", error)
+    captureCronFailure("jobs", error)
+    return NextResponse.json({ ok: false, error: "jobs run failed" }, { status: 500 })
+  }
 }

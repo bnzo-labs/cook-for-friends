@@ -7,6 +7,8 @@
  */
 import { z } from "zod"
 import type { TaskConfig } from "payload"
+// Pure, SDK-guarded helper (no-op without DSN); no recipient or payload leaves the module.
+import { captureJobFailure } from "@/lib/observability/capture"
 import { sendEmail } from "../server/send"
 import { buildIcs } from "../server/ics"
 import type { Attachment } from "../types"
@@ -37,10 +39,18 @@ const sendEmailInputSchema = z.object({
 // Task definition
 // ---------------------------------------------------------------------------
 // Type-safe after types regeneration: 'send-email' is now in TypedJobs.tasks
+const SEND_EMAIL_RETRIES = 3
+
 export const sendEmailTask: TaskConfig<"send-email"> = {
   slug: "send-email",
   label: "Send Email",
-  retries: 3,
+  retries: SEND_EMAIL_RETRIES,
+  // onFail runs on every failed attempt; only the final one (no retries left) alerts.
+  onFail: ({ input, taskStatus }) => {
+    if ((taskStatus?.totalTried ?? 0) < SEND_EMAIL_RETRIES) return
+    const key = (input as { idempotencyKey?: unknown } | undefined)?.idempotencyKey
+    captureJobFailure("send-email", { idempotencyKey: typeof key === "string" ? key : undefined })
+  },
   inputSchema: [
     { name: "template", type: "text" },
     { name: "to", type: "text" },

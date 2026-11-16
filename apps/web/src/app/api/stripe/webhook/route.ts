@@ -1,3 +1,4 @@
+import { captureWebhookError } from "@/lib/observability/capture"
 import { handleStripeEvent, logCommerceError, moduleErrorResponse } from "@/modules/commerce"
 import { jsonResponse } from "@/modules/identity"
 
@@ -23,11 +24,13 @@ export async function POST(request: Request): Promise<Response> {
     const result = await handleStripeEvent(rawBody, signature)
     if (!result.ok) {
       const { status, body } = moduleErrorResponse(result.error)
+      if (status >= 500) captureWebhookError("stripe", new Error(`webhook ${result.error.code}`))
       return jsonResponse(status, body)
     }
     return jsonResponse(200, { ok: true, data: { outcome: result.data.outcome } })
   } catch (error) {
     logCommerceError("commerce.webhook.route_failed", error)
+    captureWebhookError("stripe", error)
     return serverError()
   }
 }
