@@ -136,7 +136,8 @@ test.describe("cancel seat", () => {
     await expect(dialog).toContainText(/sent to you by email/i)
     await dialog.locator("[data-cancel-confirm]").click()
     await expect(page.getByText(/credit code is sent to you by email/i)).toBeVisible()
-    await expect(row).toHaveAttribute("data-status", "cancelled")
+    // router.refresh() after cancel takes variable time on CI; 15 s covers slow runners.
+    await expect(row).toHaveAttribute("data-status", "cancelled", { timeout: 15_000 })
     await expect(row.locator("[data-cancel-trigger]")).toHaveCount(0)
     await expect(page.locator("body")).not.toContainText(/CFF-CR-/)
   })
@@ -150,7 +151,8 @@ test.describe("cancel seat", () => {
     const dialog = page.locator("[data-cancel-dialog]")
     await expect(dialog.locator("[data-cancel-outcome]")).toContainText(/aucun remboursement ni crédit/i)
     await dialog.locator("[data-cancel-confirm]").click()
-    await expect(row).toHaveAttribute("data-status", "cancelled")
+    // router.refresh() after cancel takes variable time on CI; 15 s covers slow runners.
+    await expect(row).toHaveAttribute("data-status", "cancelled", { timeout: 15_000 })
   })
 
   test("error mapping: CONFLICT and UPSTREAM show their messages", async ({ page }) => {
@@ -337,7 +339,7 @@ test.describe("storefront waitlist", () => {
     await page.locator("[data-waitlist-cta]").click()
     await page.getByLabel("Your email").fill("nope")
     await page.locator("[data-waitlist-submit]").click()
-    await expect(page.getByRole("alert")).toContainText(/valid email/i)
+    await expect(page.getByRole("alert").first()).toContainText(/valid email/i)
     expect(calls).toBe(0)
   })
 })

@@ -115,7 +115,11 @@ test("entitled flow FR: lesson, placeholder, progress persists, complete all, ce
   const complete = page.locator("[data-mark-complete]")
   await complete.focus()
   await page.keyboard.press("Enter")
-  await expect(complete).toBeDisabled()
+  // Wait for completed=true (aria-pressed="true"), NOT just for the button's loading/disabled
+  // state. The Button component sets disabled={disabled||loading}, so toBeDisabled() passes
+  // the moment saving=true — before the API write commits to the DB. We must wait for
+  // aria-pressed="true" which is only set after setCompleted(true), which runs post-API.
+  await expect(complete).toHaveAttribute("aria-pressed", "true")
   await page.reload()
   await expect(page.locator("[data-mark-complete]")).toBeDisabled()
   await expect(page.locator("[data-lesson-id][data-completed=true]")).toHaveCount(1)
@@ -159,8 +163,11 @@ test("verify page: valid + invalid, FR + EN, axe", async ({ page }) => {
 })
 
 test("comments: pending for the author, visible to the other customer after approval, body is text", async ({ browser }) => {
-  const ana = await browser.newPage()
-  const ben = await browser.newPage()
+  // AxeBuilder requires pages created via newContext(), not browser.newPage() directly.
+  const anaCtx = await browser.newContext()
+  const ana = await anaCtx.newPage()
+  const benCtx = await browser.newContext()
+  const ben = await benCtx.newPage()
   await signIn(ana, w.ana.id, "fr")
   await signIn(ben, w.ben.id, "en")
 
@@ -189,8 +196,8 @@ test("comments: pending for the author, visible to the other customer after appr
   await expect(ben.locator("[data-comment-status=approved] [data-comment-body]")).toContainText("<img src=x")
   await audit(ben)
   await shot(ben, "en", "lesson-comments")
-  await ana.close()
-  await ben.close()
+  await anaCtx.close()
+  await benCtx.close()
 })
 
 test("lesson page EN axe + locale-switched slug redirects", async ({ page }) => {

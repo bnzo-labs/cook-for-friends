@@ -10,8 +10,9 @@ test("smoke: /fr loads and renders site heading", async ({ page }) => {
   // Page should not be a 404 or error
   await expect(page).not.toHaveTitle(/404|Error/)
 
-  // Should render the site name (from FR messages)
-  await expect(page.getByRole("heading", { name: "Cook for Friends" })).toBeVisible()
+  // The CMS home (seeded) renders its hero as the single h1; the site name lives in the banner link.
+  await expect(page.getByRole("banner").getByRole("link", { name: /Cook for Friends/ })).toBeVisible()
+  await expect(page.getByRole("heading", { level: 1, name: /cuisinez entre amis/i })).toBeVisible()
 })
 
 // Locale redirect depends on Accept-Language; pin it so the result never
