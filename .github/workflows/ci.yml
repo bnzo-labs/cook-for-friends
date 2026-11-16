@@ -473,8 +473,8 @@ jobs:
         run: |
           pnpm exec lhci autorun \
             --config=lighthouserc.json \
-            --collect.settings.chromeFlags="--no-sandbox --disable-dev-shm-usage" \
-            || true  # assertions at warn level — never fail the job (W4-02 flips to error)
+            --collect.settings.chromeFlags="--no-sandbox --disable-dev-shm-usage"
+          # W4-02: error-level assertions in lighthouserc.json gate the job.
 
       - name: Upload report and traces
         if: always() && steps.gate.outputs.enabled == 'true'
@@ -505,6 +505,7 @@ jobs:
         with:
           name: lighthouse-ci-reports
           path: apps/web/.lighthouseci/
+          include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
 
