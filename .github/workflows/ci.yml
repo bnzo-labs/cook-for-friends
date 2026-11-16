@@ -215,7 +215,10 @@ jobs:
     # on the same Stripe test account stream. cancel-in-progress: false ensures a
     # queued run is never dropped; the previous run always finishes first.
     concurrency:
-      group: e2e-stripe-live
+      # Serialize only when the shared live sandbox is used (set repo var E2E_STRIPE_LIVE=true
+      # together with secret STRIPE_CI_SECRET_KEY). Otherwise one group per run: GitHub keeps a
+      # single pending run per group, which starved queued PR runs.
+      group: ${{ vars.E2E_STRIPE_LIVE == 'true' && 'e2e-stripe-live' || format('e2e-{0}', github.run_id) }}
       cancel-in-progress: false
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
@@ -416,6 +419,16 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         working-directory: apps/web
         run: |
+          # W4-01: signed-events mode has no Stripe key. Redirect the app's Stripe SDK to a
+          # local fake Stripe wire so the real checkout/webhook/refund code runs.
+          if [ "$E2E_STRIPE_MODE" = "signed-events" ]; then
+            nohup node test/e2e-stripe/fake-stripe-server.mjs > "$RUNNER_TEMP/fake-stripe.log" 2>&1 &
+            for i in $(seq 1 20); do
+              if curl -fsS -o /dev/null http://127.0.0.1:12112/__e2e/health; then break; fi
+              sleep 1
+            done
+            export NODE_OPTIONS="--require $PWD/test/e2e-stripe/stripe-redirect.cjs"
+          fi
           nohup pnpm exec next start -p 3000 > "$RUNNER_TEMP/next-start.log" 2>&1 &
           for i in $(seq 1 60); do
             if curl -fsS -o /dev/null http://localhost:3000/fr; then echo "server up"; exit 0; fi
