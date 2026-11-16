@@ -205,6 +205,13 @@
       "attendeeIntro": "Your seat for {courseTitle} on {date} was cancelled.",
       "attendeeContact": "If you have questions, please reach out to the person who booked your seat.",
       "contact": "Need help? Contact us at {email}.",
+      "sessionSubject": "Session cancelled — {courseTitle}",
+      "sessionPreview": "The {courseTitle} session is cancelled",
+      "sessionHeading": "Session cancelled",
+      "sessionBuyerIntro": "We have to cancel the {courseTitle} session on {date}. We are sorry. The seat for {attendeeName} is cancelled.",
+      "sessionOutcomeNone": "Nothing remained to be refunded for this seat.",
+      "sessionAttendeeIntro": "The {courseTitle} session on {date} has been cancelled by Cook for Friends. We are sorry.",
+      "sessionAttendeeContact": "The refund goes to the person who booked your seat.",
       "footer": "Cook for Friends — Pastry classes in Montreal"
     },
     "certificateIssued": {

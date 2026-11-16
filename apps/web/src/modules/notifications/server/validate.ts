@@ -35,6 +35,7 @@ export const w3DataSchemas = {
   }),
   "cancellation-confirmation": z.object({
     recipient: z.enum(["buyer", "attendee"]),
+    reason: z.enum(["session-cancelled"]).optional(),
     attendeeName: z.string().min(1),
     cancelledByName: z.string().optional(),
     courseTitle: z.string().min(1),

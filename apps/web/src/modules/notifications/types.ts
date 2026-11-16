@@ -128,6 +128,8 @@ export type EmailData = {
   /** attendee variant renders no amount, code or order number. */
   "cancellation-confirmation": {
     recipient: "buyer" | "attendee"
+    /** W4-07: set when staff cancelled the whole session (full refund, different copy). */
+    reason?: "session-cancelled"
     attendeeName: string
     cancelledByName?: string
     courseTitle: string

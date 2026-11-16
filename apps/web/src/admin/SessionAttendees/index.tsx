@@ -3,6 +3,7 @@ import type { UIFieldServerProps } from "payload"
 import { getSeatSummary, listAttendees, type AttendeeRow } from "@/modules/commerce"
 import { isStaff } from "@/modules/identity"
 
+import { CancelSeatControl } from "../CancelSeat/CancelSeatControl"
 import { AttendanceControl } from "./AttendanceControl"
 import { attendanceOpen } from "./attendance-open"
 
@@ -25,6 +26,7 @@ const T = {
     guest: "Invité",
     none: "Aucun participant confirmé pour le moment.",
     attendance: "Présence",
+    cancelSeat: "Annulation",
     inactive: "Annulés / remboursés",
     cancelled: "Annulée",
     refunded: "Remboursée",
@@ -46,6 +48,7 @@ const T = {
     guest: "Guest",
     none: "No confirmed participants yet.",
     attendance: "Attendance",
+    cancelSeat: "Cancellation",
     inactive: "Cancelled / refunded",
     cancelled: "Cancelled",
     refunded: "Refunded",
@@ -73,7 +76,7 @@ function Table({
     <table style={{ width: "100%", borderCollapse: "collapse" }} data-testid="attendees-table">
       <thead>
         <tr style={{ borderBottom: "1px solid var(--theme-elevation-150)" }}>
-          {[t.name, t.email, t.phone, t.dietary, t.order, t.bookedBy, ...(showStatus ? [] : [t.attendance])].map((h) => (
+          {[t.name, t.email, t.phone, t.dietary, t.order, t.bookedBy, ...(showStatus ? [] : [t.attendance, t.cancelSeat])].map((h) => (
             <th key={h} style={cell} scope="col">
               {h}
             </th>
@@ -110,6 +113,15 @@ function Table({
                   initial={r.attendance}
                   lang={lang}
                   disabled={!attendanceEnabled}
+                  name={[r.firstName, r.lastName].filter(Boolean).join(" ") || r.email}
+                />
+              </td>
+            )}
+            {!showStatus && (
+              <td style={cell}>
+                <CancelSeatControl
+                  enrollmentId={r.enrollmentId}
+                  lang={lang}
                   name={[r.firstName, r.lastName].filter(Boolean).join(" ") || r.email}
                 />
               </td>

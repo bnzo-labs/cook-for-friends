@@ -6,6 +6,8 @@
  * recipient 'attendee' -> "your seat was cancelled by <name>". NEVER renders an
  *                         amount, credit code or order number (Q11/Q12).
  * No names in the subject line.
+ * reason 'session-cancelled' (W4-07) -> staff cancelled the whole session: "session
+ *                         cancelled" copy, buyer sees the (full) refund amount.
  */
 import { render, toPlainText } from "@react-email/components"
 import React from "react"
@@ -17,8 +19,12 @@ import { formatDate, formatDateTime, formatMoney, getTranslator, type Translate 
 
 type Data = EmailData["cancellation-confirmation"]
 
-function outcomeKey(outcome: Data["outcome"]): string {
-  return outcome === "refund" ? "outcomeRefund" : outcome === "credit" ? "outcomeCredit" : "outcomeNone"
+const isSession = (data: Data) => data.reason === "session-cancelled"
+
+function outcomeKey(data: Data): string {
+  if (data.outcome === "refund") return "outcomeRefund"
+  if (data.outcome === "credit") return "outcomeCredit"
+  return isSession(data) ? "sessionOutcomeNone" : "outcomeNone"
 }
 
 function BuyerBody({ locale, data, t }: { locale: Locale; data: Data; t: Translate }) {
@@ -26,13 +32,13 @@ function BuyerBody({ locale, data, t }: { locale: Locale; data: Data; t: Transla
   return (
     <>
       <BodyText>
-        {t("buyerIntro", {
+        {t(isSession(data) ? "sessionBuyerIntro" : "buyerIntro", {
           attendeeName: data.attendeeName,
           courseTitle: data.courseTitle,
           date: formatDateTime(data.sessionStartsAt, locale),
         })}
       </BodyText>
-      <BodyText>{t(outcomeKey(data.outcome), { amount })}</BodyText>
+      <BodyText>{t(outcomeKey(data), { amount })}</BodyText>
       {data.outcome === "credit" && data.creditCode && (
         <>
           <Muted>{t("creditCodeLabel")}</Muted>
@@ -49,6 +55,14 @@ function BuyerBody({ locale, data, t }: { locale: Locale; data: Data; t: Transla
 
 function AttendeeBody({ locale, data, t }: { locale: Locale; data: Data; t: Translate }) {
   const date = formatDateTime(data.sessionStartsAt, locale)
+  if (isSession(data)) {
+    return (
+      <>
+        <BodyText>{t("sessionAttendeeIntro", { courseTitle: data.courseTitle, date })}</BodyText>
+        <Muted>{t("sessionAttendeeContact")}</Muted>
+      </>
+    )
+  }
   return (
     <>
       <BodyText>
@@ -77,10 +91,10 @@ function CancellationConfirmationEmail({
   return (
     <EmailLayout
       locale={locale}
-      preview={t("preview", { courseTitle: data.courseTitle })}
+      preview={t(isSession(data) ? "sessionPreview" : "preview", { courseTitle: data.courseTitle })}
       footer={t("footer")}
     >
-      <Heading>{t("heading")}</Heading>
+      <Heading>{t(isSession(data) ? "sessionHeading" : "heading")}</Heading>
       {data.recipient === "buyer" ? (
         <BuyerBody locale={locale} data={data} t={t} />
       ) : (
@@ -94,7 +108,7 @@ export async function renderCancellationConfirmation(locale: Locale, data: Data)
   const t = getTranslator(locale, "cancellationConfirmation")
   const html = await render(<CancellationConfirmationEmail locale={locale} data={data} t={t} />)
   return {
-    subject: t("subject", { courseTitle: data.courseTitle }),
+    subject: t(isSession(data) ? "sessionSubject" : "subject", { courseTitle: data.courseTitle }),
     html,
     text: toPlainText(html),
   }

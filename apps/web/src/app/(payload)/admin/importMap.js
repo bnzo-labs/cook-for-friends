@@ -25,6 +25,8 @@ import { MoneyCell as MoneyCell_7e7791bd6a38f6718a1893f0b4210783 } from '../../.
 import { SessionAttendees as SessionAttendees_317044b54943ea577258bad2d62c8439 } from '../../../admin/SessionAttendees'
 import { LessonVideoField as LessonVideoField_91e6a70634796dd7d366b06a5963ac6b } from '../../../modules/video/admin/LessonVideoField'
 import { MoneyCell as MoneyCell_ee21e9d4bfefb906b596d1bda93f9e04 } from '../../../modules/commerce/admin/MoneyCell'
+import { MoneyDisplay as MoneyDisplay_804173d52f7e5db7524d590bee4f8c84 } from '../../../modules/commerce/admin/MoneyDisplay'
+import { CancelSeatField as CancelSeatField_f877aaaa4d66f92bc4510562a20073a7 } from '../../../admin/CancelSeat'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 
@@ -57,6 +59,8 @@ export const importMap = {
   "/admin/SessionAttendees#SessionAttendees": SessionAttendees_317044b54943ea577258bad2d62c8439,
   "/modules/video/admin/LessonVideoField#LessonVideoField": LessonVideoField_91e6a70634796dd7d366b06a5963ac6b,
   "/modules/commerce/admin/MoneyCell#MoneyCell": MoneyCell_ee21e9d4bfefb906b596d1bda93f9e04,
+  "/modules/commerce/admin/MoneyDisplay#MoneyDisplay": MoneyDisplay_804173d52f7e5db7524d590bee4f8c84,
+  "/admin/CancelSeat#CancelSeatField": CancelSeatField_f877aaaa4d66f92bc4510562a20073a7,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24
 }

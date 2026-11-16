@@ -205,6 +205,13 @@
       "attendeeIntro": "Votre place pour {courseTitle} le {date} a été annulée.",
       "attendeeContact": "Pour toute question, communiquez avec la personne qui a réservé votre place.",
       "contact": "Besoin d’aide ? Contactez-nous à {email}.",
+      "sessionSubject": "Séance annulée — {courseTitle}",
+      "sessionPreview": "La séance {courseTitle} est annulée",
+      "sessionHeading": "Séance annulée",
+      "sessionBuyerIntro": "Nous devons annuler la séance {courseTitle} du {date}. Nous en sommes désolés. La place de {attendeeName} est annulée.",
+      "sessionOutcomeNone": "Il ne restait aucun montant à rembourser pour cette place.",
+      "sessionAttendeeIntro": "La séance {courseTitle} du {date} a été annulée par Cook for Friends. Nous en sommes désolés.",
+      "sessionAttendeeContact": "Le remboursement est versé à la personne qui a réservé votre place.",
       "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
     },
     "certificateIssued": {
