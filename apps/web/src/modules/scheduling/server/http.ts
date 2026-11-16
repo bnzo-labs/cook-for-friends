@@ -4,7 +4,7 @@ import type { Result } from "@/modules/_shared"
 import { getEnrollmentView, moduleErrorResponse } from "@/modules/commerce"
 import { clientIp, consumeRateLimit, forbiddenOrigin, getCurrentCustomer, isAllowedOrigin, isStaff, jsonResponse, readBody } from "@/modules/identity"
 
-import { cancelEnrollment, cancelModeSchema, previewStaffCancellation } from "./cancel"
+import { cancelEnrollment, previewStaffCancellation } from "./cancel"
 import { markAttendance, attendanceSchema } from "./attendance"
 import { getPayload } from "./payload"
 import { joinWaitlist, joinWaitlistSchema, normalizeEmail } from "./waitlist"
@@ -32,7 +32,7 @@ async function resolveActor(request: Request): Promise<Actor | null> {
   return customer ? { by: "customer", id: Number(customer.id) } : null
 }
 
-const cancelBodySchema = z.object({ mode: cancelModeSchema.optional() })
+const cancelBodySchema = z.object({ mode: z.enum(["policy", "full"]).optional() })
 
 const validation = (issues: z.ZodIssue[]) =>
   fromResult({ ok: false, error: { code: "VALIDATION", issues: issues.map((x) => ({ path: x.path.join("."), message: x.message })) } }, () => null)
