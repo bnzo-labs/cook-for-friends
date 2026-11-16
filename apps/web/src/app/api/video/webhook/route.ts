@@ -1,3 +1,4 @@
+import { captureWebhookError } from "@/lib/observability/capture"
 import { applyVideoEvent, getVideoProvider, jsonResponse, serverError, videoErrorResponse } from "@/modules/video"
 
 export const runtime = "nodejs"
@@ -11,16 +12,21 @@ export const dynamic = "force-dynamic"
 export async function POST(request: Request): Promise<Response> {
   const provider = getVideoProvider()
   if (!provider) {
+    captureWebhookError("mux", new Error("video provider not configured"))
     return videoErrorResponse({ code: "UPSTREAM", service: "video", message: "not_configured" })
   }
   try {
     const rawBody = await request.text()
     const verified = await provider.verifyWebhook(rawBody, request.headers)
-    if (!verified.ok) return videoErrorResponse(verified.error)
+    if (!verified.ok) {
+      if (verified.error.code === "UPSTREAM") captureWebhookError("mux", new Error("webhook verify upstream error"))
+      return videoErrorResponse(verified.error)
+    }
     const outcome = await applyVideoEvent(verified.data, provider.name)
     return jsonResponse(200, { ok: true, data: { outcome } })
   } catch (error) {
     console.error("[video] POST /api/video/webhook failed", error)
+    captureWebhookError("mux", error)
     return serverError()
   }
 }

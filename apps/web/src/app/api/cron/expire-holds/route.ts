@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { captureCronFailure } from "@/lib/observability/capture"
 import { expireStaleHolds } from "@/modules/commerce"
 
 export const runtime = "nodejs"
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true, expired, checkoutSessionsExpired })
   } catch (error) {
     console.error("[commerce] GET /api/cron/expire-holds failed", error)
+    captureCronFailure("expire-holds", error)
     return NextResponse.json({ ok: false, error: "expire-holds failed" }, { status: 500 })
   }
 }
