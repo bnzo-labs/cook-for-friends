@@ -1,7 +1,7 @@
 ---
 type: task
 id: W4-07
-status: in-progress
+status: complete
 wave: 4
 batch: 4d
 module: scheduling · commerce · catalog · notifications (admin surfaces)
@@ -39,11 +39,11 @@ Close the four admin gaps W4-05 surfaced while writing `docs/GUIDE_ADMIN_FR.md` 
 5. Update `docs/GUIDE_ADMIN_FR.md` (§2 prix, §3 annuler une séance, §5 codes promo, §6 crédits, §7/§8 annulation par le personnel, §11 montants, "À vérifier").
 
 ## Done When
-- [ ] Integration tests (CI `integration`): session cancel full refund per seat incl. Dashboard-refunded order (cap), partial Stripe failure → resume without double refund, flip back stops, waitlist cleaned, emails once per seat; hook queues on → cancelled and not on → scheduled; staff `full` vs `policy` preview + cancel; customer `full` → 403.
-- [ ] Unit tests: dollars ↔ cents conversion + validation; template `session-cancelled` variant FR/EN; i18n key parity.
-- [ ] Migration `*_w4_07_session_cancel_job` (enum values only), up/down/up in CI `integration`. NOT applied to dev/staging.
-- [ ] `pnpm -C apps/web typecheck` + targeted vitest + lint locally; CI green.
-- [ ] Guide updated; CONTRACT change log entry (additive: scheduling `previewStaffCancellation`, `cancelEnrollment.mode`, `schedulingJobTasks`, route GET + body `mode`, email data `reason`).
+- [x] Integration tests (CI `integration`): session cancel full refund per seat incl. Dashboard-refunded order (cap), partial Stripe failure → resume without double refund, flip back stops, waitlist cleaned, emails once per seat; hook queues on → cancelled and not on → scheduled; staff `full` vs `policy` preview + cancel; customer `full` → 403.
+- [x] Unit tests: dollars ↔ cents conversion + validation; template `session-cancelled` variant FR/EN; i18n key parity.
+- [x] Migration `20261116_022748_w4_07_session_cancel_job` (enum values only), up/down/up in CI `integration`. NOT applied to dev/staging.
+- [x] `pnpm -C apps/web typecheck` + targeted vitest + lint locally; CI green.
+- [x] Guide updated; CONTRACT change log entry (additive: scheduling `previewStaffCancellation`, `cancelEnrollment.mode`, `schedulingJobTasks`, route GET + body `mode`, email data `reason`).
 
 ## Erick handoffs
 - None (orchestrator applies the migration after merge).
@@ -72,3 +72,23 @@ Close the four admin gaps W4-05 surfaced while writing `docs/GUIDE_ADMIN_FR.md` 
 Caveman. English only.
 
 ## Completion notes
+
+Branch `w4-07`, PR #37. CI run 43793915294: verify, integration (Neon; `session-cancel.test.ts` 10 tests ran; migrate up/down/up), e2e all green.
+
+### Items
+| # | Status | Where |
+|---|---|---|
+| 1 Session cancel | done | `scheduling/server/session-cancel.ts` (`cancelSessionSeats`, task `session-cancel`, retries 8 exp 60 s), hook `catalog/collections/sessions.ts enqueueSessionCancel` |
+| 2 Staff seat cancel UI | done | `src/admin/CancelSeat/*`, Participants column + enrollment ui field; `previewStaffCancellation`, `cancelEnrollment.mode`, `GET /api/enrollments/:id/cancel` |
+| 3 Dollars | done | virtual `courses.priceDollars`, `discount-codes.{percentValue,amountDollars}` (beforeValidate → cents); commerce money read-only `MoneyDisplay` |
+| 4 FR labels | done | discount-codes, courses Stripe fields + slug, sessions Lieu, orders, enrollments |
+| Guide | done | §2, §3, §5, §6, §8, §11, À vérifier |
+
+### Deviations / residual risks
+- Hook queues only when a staff user saves; seed/scripts without user → warn log, nothing queued.
+- In-flight refund (Stripe response lost earlier) → seat skipped without email (avoids duplicates); buyer may miss the notice in that rare case.
+- `getSessionView` needs a published course: cancel session before archiving the course (guide says so); otherwise job logs `session_unavailable` and no-ops.
+- Waitlisters are expired, not emailed (no template).
+- Multi-seat buyer gets one email per seat.
+- Staff preview after a refund requested but not yet linked shows "retry"; confirming is de-duplicated (CONFLICT, no second refund).
+- Course price cents field hidden (not conditional) so cents validation still runs; discount `value` hidden for the same reason (an admin.condition made the column nullable in the migration diff).
