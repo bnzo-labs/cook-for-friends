@@ -1,4 +1,4 @@
-import type { CollectionConfig, PayloadRequest, Validate } from "payload"
+import type { CollectionAfterChangeHook, CollectionConfig, PayloadRequest, Validate } from "payload"
 
 import { isStaffOrAdmin, publishedOrStaff } from "@/modules/identity"
 import { catalogGroup } from "../fields/labels"
@@ -50,6 +50,25 @@ export function validateEndsAfterStart(
 }
 
 /**
+ * W4-07: a session saved as `cancelled` by a staff user queues `session-cancel` (owned by
+ * scheduling: full refund + email for every seat). Queued by slug — catalog never imports
+ * scheduling/commerce — with `req`, so the job row commits with the status change. Re-saving a
+ * cancelled session queues it again (idempotent resume); `cancelled → scheduled` queues nothing.
+ * No staff user (seed/scripts) → nothing queued: the caller must queue the job itself.
+ */
+export const enqueueSessionCancel: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
+  if (operation !== "update" || doc?.status !== "cancelled") return doc
+  const user = req.user as { id?: number | string; collection?: string } | null | undefined
+  if (!user || user.collection !== "users" || user.id === undefined) {
+    req.payload.logger.warn({ sessionId: doc.id }, "sessions: cancelled without a staff user, session-cancel not queued")
+    return doc
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (req.payload.jobs.queue as any)({ task: "session-cancel", input: { sessionId: Number(doc.id), actorId: Number(user.id) }, req })
+  return doc
+}
+
+/**
  * `sessions` — in-person course dates. CONTRACT §3.1. Stored UTC; displayed
  * America/Toronto by the storefront. Index `(course, startsAt)`.
  */
@@ -72,6 +91,7 @@ export const Sessions: CollectionConfig = {
     delete: isStaffOrAdmin,
   },
   indexes: [{ fields: ["course", "startsAt"] }],
+  hooks: { afterChange: [enqueueSessionCancel] },
   fields: [
     {
       name: "course",
@@ -103,11 +123,11 @@ export const Sessions: CollectionConfig = {
       type: "group",
       label: { fr: "Lieu", en: "Location" },
       fields: [
-        { name: "name", type: "text", localized: true },
-        { name: "address", type: "text" },
-        { name: "city", type: "text" },
-        { name: "postalCode", type: "text" },
-        { name: "mapsUrl", type: "text" },
+        { name: "name", type: "text", localized: true, label: { fr: "Nom du lieu", en: "Venue name" } },
+        { name: "address", type: "text", label: { fr: "Adresse", en: "Address" } },
+        { name: "city", type: "text", label: { fr: "Ville", en: "City" } },
+        { name: "postalCode", type: "text", label: { fr: "Code postal", en: "Postal code" } },
+        { name: "mapsUrl", type: "text", label: { fr: "Lien Google Maps", en: "Google Maps link" } },
       ],
     },
     {
@@ -135,6 +155,12 @@ export const Sessions: CollectionConfig = {
       defaultValue: "scheduled",
       index: true,
       label: { fr: "Statut", en: "Status" },
+      admin: {
+        description: {
+          fr: "Passer à « Annulée » puis enregistrer annule toutes les places et rembourse intégralement chaque participant (courriel envoyé). Irréversible.",
+          en: "Saving as “Cancelled” cancels every seat and fully refunds each participant (email sent). Cannot be undone.",
+        },
+      },
       options: [
         { value: "scheduled", label: { fr: "Planifiée", en: "Scheduled" } },
         { value: "cancelled", label: { fr: "Annulée", en: "Cancelled" } },

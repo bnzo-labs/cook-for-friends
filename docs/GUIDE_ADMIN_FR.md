@@ -79,7 +79,7 @@ Les textes du site existent en deux langues. Les champs traduisibles (titre, ré
 | **Description** | Le texte complet de la page du cours. |
 | **Niveau** | **Débutant**, **Intermédiaire** ou **Avancé**. |
 | **Durée (minutes)** | Durée totale indiquée sur la page. |
-| **Prix (cents, taxes en sus)** | Le prix **avant taxes**, voir l’encadré ci-dessous. |
+| **Prix en dollars (taxes en sus)** | Le prix **avant taxes**, en dollars, voir l’encadré ci-dessous. |
 | **Image principale** | La photo de couverture. |
 | **Galerie** | Photos supplémentaires. |
 | **Leçons (ordonnées)** | Cours **en ligne** seulement : les leçons, dans l’ordre d’affichage. |
@@ -88,7 +88,7 @@ Les textes du site existent en deux langues. Les champs traduisibles (titre, ré
 | **SEO** | Titre, description et image utilisés par Google et lors des partages sur les réseaux. Facultatif mais recommandé. |
 | **Statut** | Voir « Brouillon, publié, archivé » ci-dessous. |
 
-> **Attention au prix.** Le champ **Prix (cents, taxes en sus)** se saisit **en cents**, et non en dollars. Exemples : 4 500 = 45,00 $ ; 12 000 = 120,00 $. Dans la liste des cours, le montant s’affiche en dollars pour que vous puissiez vérifier. Le prix est toujours **avant taxes** : la TPS et la TVQ sont ajoutées au paiement.
+> **Le prix.** Le champ **Prix en dollars (taxes en sus)** se saisit **en dollars** : tapez 45 ou 45,50 (deux décimales au plus). Le prix est toujours **avant taxes** : la TPS et la TVQ sont ajoutées au paiement. Dans la liste des cours, la colonne **Prix en dollars (taxes en sus)** affiche le même montant.
 
 ### Brouillon, publié, archivé
 - **Brouillon** : le cours n’est pas visible sur le site. Utilisez cet état pour préparer le cours.
@@ -100,13 +100,13 @@ Les cours ont aussi un système de versions : vous pouvez enregistrer un brouil
 ### Synchronisation automatique avec Stripe
 Quand vous publiez un cours ou que vous changez son **Titre**, son **Résumé**, son **Prix** ou son **Statut**, le site met à jour automatiquement Stripe (le service de paiement). Vous n’avez rien à faire.
 
-Dans la colonne de droite d’un cours, le champ **Stripe Sync Status** (affiché en anglais ; champ technique : `stripeSyncStatus`) indique l’état. Un second champ, **Stripe Sync Error**, contient le message d’erreur :
+Dans la colonne de droite d’un cours, le champ **Synchronisation Stripe** indique l’état. Un second champ, **Erreur de synchronisation Stripe**, contient le message d’erreur. Les champs **Stripe : produit** et **Stripe : prix** sont remplis par le système, ne les modifiez pas.
 
 | État affiché | Signification | Quoi faire |
 |---|---|---|
 | **En attente** | La mise à jour est en cours (quelques minutes au plus). | Patientez, puis rechargez la page. |
 | **Synchronisé** | Tout est à jour. Le cours peut être acheté. | Rien. |
-| **Erreur** | La mise à jour a échoué. Un message explique la cause dans **Stripe Sync Error**. | 1) Ouvrez le cours et cliquez sur **Enregistrer** de nouveau (cela relance la synchronisation). 2) Attendez quelques minutes et rechargez. 3) Si l’erreur revient, contactez le développeur en lui transmettant le message d’erreur. |
+| **Erreur** | La mise à jour a échoué. Un message explique la cause dans **Erreur de synchronisation Stripe**. | 1) Ouvrez le cours et cliquez sur **Enregistrer** de nouveau (cela relance la synchronisation). 2) Attendez quelques minutes et rechargez. 3) Si l’erreur revient, contactez le développeur en lui transmettant le message d’erreur. |
 
 > **Ne modifiez jamais le prix dans Stripe.** Le prix est géré uniquement ici. Un prix changé directement dans Stripe sera ignoré, voire écrasé, et créera de la confusion.
 
@@ -143,7 +143,16 @@ Une place retenue est libérée automatiquement si le client ne paie pas dans le
 ### Annuler une séance
 Si vous devez annuler une date entière :
 1. Ouvrez la séance et passez le **Statut** à **Annulée**, puis enregistrez.
-2. Pour chaque participant, un remboursement doit être traité. **Voir « À vérifier » à la fin de ce guide** : le changement de statut ne rembourse pas, à ce jour, automatiquement les participants ni ne les avise.
+2. C’est tout. Dans les minutes qui suivent, le site, automatiquement et place par place :
+   - annule chaque place confirmée ;
+   - **rembourse intégralement** chaque place sur la carte de l’acheteur, sans tenir compte de la politique d’annulation (si une partie a déjà été remboursée, par exemple depuis Stripe, seul le reste est remboursé) ;
+   - envoie un courriel « Séance annulée » à l’acheteur (avec le montant) et à chaque invité ;
+   - retire les personnes en **liste d’attente** de cette séance (statut **Expiré**, sans courriel).
+3. Vérifiez quelques minutes plus tard dans la section **Participants** : les places passent dans **Annulés / remboursés**.
+
+> **Irréversible.** Remettre ensuite le statut à **Planifiée** n’annule pas les remboursements déjà faits ; cela arrête seulement le traitement des places qui restent. Si Stripe ne répond pas, le site réessaie tout seul pendant quelques heures, sans jamais rembourser deux fois. Si des places restent confirmées sur une séance annulée, enregistrez de nouveau la séance : le traitement reprend là où il s’était arrêté.
+
+> **Annulez la séance avant d’archiver son cours.** Le traitement a besoin du cours publié pour rédiger les courriels.
 
 ---
 
@@ -199,25 +208,26 @@ Cochez **Aperçu gratuit** sur une leçon pour la rendre visible à tout client 
 | Champ | Explication |
 |---|---|
 | **Code** | Ce que le client tape (ex. : BIENVENUE10). Chaque code est unique. |
-| **Kind** (type) | **Pourcentage** ou **Montant (cents)**. |
+| **Type** | **Pourcentage** ou **Montant ($)**. |
+| **Pourcentage** | (type Pourcentage) De 1 à 100. |
+| **Montant en dollars** | (type Montant) Le rabais en dollars : 5 ou 12,50. |
 | **Value** (valeur) | Pour un pourcentage : de 1 à 100. Pour un montant : en **cents** (500 = 5,00 $). |
-| **Max Redemptions** (limite d’utilisation) | Nombre total d’utilisations permises. Vide = illimité. |
-| **Expires At** (expiration) | Date limite. Vide = n’expire pas. |
-| **Applies To** (s’applique à) | Les cours visés. Vide = tous les cours. |
-| **Active** (actif) | Décochez pour désactiver le code sans le supprimer. |
+| **Nombre d’utilisations max.** | Nombre total d’utilisations permises. Vide = illimité. |
+| **Expire le** | Date limite. Vide = n’expire pas. |
+| **Cours visés** | Les cours visés. Vide = tous les cours. |
+| **Actif** | Décochez pour désactiver le code sans le supprimer. |
+| **Réservé au client** | Pour un crédit personnel seulement (section 6). |
 
-> Les noms de ces champs s’affichent pour l’instant en anglais dans l’administration. Les équivalents français sont indiqués entre parenthèses.
-
-3. Enregistrez. Le code est transmis automatiquement à Stripe ; les champs `stripeCouponId` et `stripePromotionCodeId` à droite sont remplis par le système, ne les modifiez pas.
+3. Enregistrez. Le code est transmis automatiquement à Stripe ; les champs **Stripe : coupon** et **Stripe : code promotionnel** à droite sont remplis par le système, ne les modifiez pas.
 
 ### Désactiver un code
-Ouvrez le code, décochez **Active** et enregistrez. Les commandes passées ne sont pas touchées.
+Ouvrez le code, décochez **Actif** et enregistrez. Les commandes passées ne sont pas touchées.
 
 ### Codes à 100 %
 Un code de **100 %** est permis : la commande est alors à 0 $, sans paiement, et le client reçoit quand même sa confirmation, ses places et ses accès. Utilisez-les avec soin :
 - Mettez toujours une **limite d’utilisation** (par exemple 1 pour une invitation) ;
 - Mettez une **date d’expiration** ;
-- Limitez-le aux cours visés dans **Applies To** ;
+- Limitez-le aux cours dans **Cours visés** ;
 - Ne l’affichez jamais publiquement.
 
 Seul un administrateur peut supprimer un code ; le personnel peut en créer et en désactiver.
@@ -231,8 +241,8 @@ Un **crédit** est un code promo **personnel**, à usage unique, créé automati
 - Il se présente sous la forme `CFF-CR-` suivi de 8 caractères.
 - Il vaut un **montant fixe** (le montant de la place annulée).
 - Il est valable **365 jours** et s’utilise **une seule fois**.
-- Pour le voir : Ventes → Codes promo, puis cherchez « CFF-CR- ». Le champ **Personal For** (réservé à) indique à quel client il appartient.
-- Vous pouvez aussi **créer un crédit manuellement** (geste commercial) : créez un code de type **Montant (cents)**, limite d’utilisation 1, et choisissez le client dans **Personal For**.
+- Pour le voir : Ventes → Codes promo, puis cherchez « CFF-CR- ». Le champ **Réservé au client** indique à quel client il appartient.
+- Vous pouvez aussi **créer un crédit manuellement** (geste commercial) : créez un code de type **Montant ($)**, **Nombre d’utilisations max.** 1, et choisissez le client dans **Réservé au client**.
 
 > La durée de 365 jours est la valeur par défaut retenue ; elle n’est pas modifiable dans l’administration. Confirmation finale du client attendue.
 
@@ -296,7 +306,14 @@ Chaque place d’une commande a sa propre part du total (taxes et rabais compris
 Un remboursement apparaît sur la carte du client habituellement en **5 à 10 jours ouvrables**, selon sa banque. Ce délai ne dépend pas de nous. Le montant remboursé est inscrit dans la commande (**Remboursements**).
 
 ### Annulation faite par le personnel
-Voir « À vérifier » à la fin de ce guide : il n’y a pas, à ce jour, de bouton « Annuler cette place » dans l’administration.
+Pour annuler **une seule place** (par exemple un client qui vous appelle) :
+1. Ouvrez la séance (Catalogue → Séances) ; dans **Participants**, colonne **Annulation**, cliquez sur **Annuler la place** sur la bonne ligne. (Le même bouton existe dans Ventes → Inscriptions, en ouvrant la place.)
+2. Le site affiche le résultat exact des deux choix possibles :
+   - **Remboursement complet** : rembourse toute la part de cette place, quelle que soit la date (geste commercial, erreur, séance modifiée…) ;
+   - **Selon la politique d’annulation** : le même résultat que si le client annulait lui-même maintenant (remboursement, crédit ou rien).
+3. Choisissez, puis cliquez sur **Confirmer l’annulation**. L’acheteur (et l’invité, s’il y a lieu) reçoit le courriel d’annulation et la place est libérée pour la liste d’attente.
+
+Le personnel peut annuler même après le début de la séance. Si une partie a déjà été remboursée depuis Stripe, seul le reste peut être remboursé : le montant affiché en tient compte. Si Stripe ne répond pas, la place reste annulée : rouvrez **Annuler la place** plus tard, le bouton propose de relancer le remboursement (jamais en double). Pour annuler **toute une séance**, voir la section 3.
 
 ---
 
@@ -350,7 +367,7 @@ Chaque commande a un **Numéro** (format CFF-000123), le courriel et la langue d
 | **Partiellement remboursée** | Une ou plusieurs places ont été remboursées. |
 | **Annulée** | Commande annulée (par exemple, plus de place disponible au moment du paiement : le client est remboursé automatiquement). |
 
-Les montants (sous-total, rabais, TPS, TVQ, total) sont affichés en cents, en dollars canadiens.
+Les montants (**Sous-total**, **Rabais**, **TPS**, **TVQ**, **Total**, **Remboursements**) sont affichés en dollars canadiens (ex. 45,00 $), en lecture seule.
 
 Seuls les administrateurs peuvent modifier une commande ; en pratique, ne la modifiez pas à la main.
 
@@ -456,7 +473,7 @@ La seule raison d’aller dans Stripe est la configuration initiale des taxes, f
 **Mon cours n’apparaît pas sur le site.**
 1. Le **Statut** est-il **Publié** ? (pas Brouillon ni Archivé)
 2. Cours en personne : existe-t-il au moins une séance **Planifiée** à venir ?
-3. Le champ **Stripe Sync Status** est-il **Synchronisé** ? Sinon, voir la section 2.
+3. Le champ **Synchronisation Stripe** est-il **Synchronisé** ? Sinon, voir la section 2.
 4. Les textes anglais sont-ils remplis ? (sinon la page anglaise apparaît en français)
 
 **Un client dit ne pas avoir reçu de courriel.**
@@ -491,7 +508,7 @@ Contactez le développeur : le traitement horaire des rappels est peut-être à
 | **Place retenue** (réservation en cours) | seat hold | Place mise de côté pendant qu’un client paie (15 minutes par défaut). |
 | **Séance** | session | Une date précise d’un cours en personne. |
 | **Inscription** | enrollment | Une place confirmée pour une personne à une séance. |
-| **Stripe Sync Status** | stripeSyncStatus | État de la mise à jour automatique d’un cours vers Stripe. |
+| **Synchronisation Stripe** | stripeSyncStatus | État de la mise à jour automatique d’un cours vers Stripe. |
 | **Palier** | tier | Une règle de la politique d’annulation (heures, résultat, pourcentage). |
 | **Crédit** | credit code | Code promo personnel à usage unique issu d’une annulation. |
 | **Code promo** | discount code | Code de rabais saisi par le client au paiement. |
@@ -516,12 +533,9 @@ Ces points viennent de l’état actuel du site ; ils sont à confirmer avec le
 - Texte de la politique de confidentialité en français et en anglais (Loi 25).
 
 ### Fonctions absentes de l’administration à ce jour
-- Annulation d’une place par le personnel (bouton) : l’action existe côté technique mais n’a pas d’écran.
-- Annulation d’une séance : passer le statut à **Annulée** ne rembourse ni n’avise automatiquement les participants.
 - Marquer la **Présence** : à partir du jour du cours seulement.
 
 ### Libellés à vérifier après W3-11 (CI e2e) et W3-10 (revue de sécurité)
 Ces libellés ont été relevés dans le code au commit fd244d3. Les libellés **français** ci-dessous sont fiables ; ceux qui suivent sont à revalider si une autre tâche les modifie :
-- Champs **sans libellé français** (affichés par Payload en anglais) : Codes promo (**Code**, **Kind**, **Value**, **Max Redemptions**, **Expires At**, **Applies To**, **Active**, **Personal For**), cours (**Stripe Sync Status**, **Stripe Sync Error**), séances (**Lieu** : sous-champs en anglais), commandes (champs de montants).
 - Libellés d'écran « Mon compte » cités : **Mes séances**, **Reçus** (fr.json, section `portal.nav`).
 - Texte des messages de la vidéo et de la présence (composants d'administration).

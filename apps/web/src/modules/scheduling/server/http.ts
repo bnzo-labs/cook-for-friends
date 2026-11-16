@@ -4,7 +4,7 @@ import type { Result } from "@/modules/_shared"
 import { getEnrollmentView, moduleErrorResponse } from "@/modules/commerce"
 import { clientIp, consumeRateLimit, forbiddenOrigin, getCurrentCustomer, isAllowedOrigin, isStaff, jsonResponse, readBody } from "@/modules/identity"
 
-import { cancelEnrollment } from "./cancel"
+import { cancelEnrollment, previewStaffCancellation } from "./cancel"
 import { markAttendance, attendanceSchema } from "./attendance"
 import { getPayload } from "./payload"
 import { joinWaitlist, joinWaitlistSchema, normalizeEmail } from "./waitlist"
@@ -32,7 +32,15 @@ async function resolveActor(request: Request): Promise<Actor | null> {
   return customer ? { by: "customer", id: Number(customer.id) } : null
 }
 
-/** POST /api/enrollments/:id/cancel — buyer or staff, Origin check. 404 hides seats the customer has no relation to. */
+const cancelBodySchema = z.object({ mode: z.enum(["policy", "full"]).optional() })
+
+const validation = (issues: z.ZodIssue[]) =>
+  fromResult({ ok: false, error: { code: "VALIDATION", issues: issues.map((x) => ({ path: x.path.join("."), message: x.message })) } }, () => null)
+
+/**
+ * POST /api/enrollments/:id/cancel — buyer or staff, Origin check. 404 hides seats the customer has no relation to.
+ * W4-07: optional body `{ mode: 'policy' | 'full' }`; `full` (full refund, outside the tiers) is staff only.
+ */
 export async function handleCancel(request: Request, rawId: string): Promise<Response> {
   if (!isAllowedOrigin(request)) return forbiddenOrigin()
   try {
@@ -48,11 +56,31 @@ export async function handleCancel(request: Request, rawId: string): Promise<Res
         { "retry-after": String(limit.retryAfterSeconds) },
       )
     }
+    const body = cancelBodySchema.safeParse(await readBody(request))
+    if (!body.success) return validation(body.error.issues)
+    const mode = body.data.mode ?? "policy"
     if (actor.by === "customer" && !(await getEnrollmentView(id.data, actor.id))) return err(404, "NOT_FOUND")
-    const r = await cancelEnrollment({ enrollmentId: id.data, by: actor.by, actorId: actor.id })
+    if (mode === "full" && actor.by !== "staff") return err(403, "FORBIDDEN")
+    const r = await cancelEnrollment({ enrollmentId: id.data, by: actor.by, actorId: actor.id, mode })
     return fromResult(r, (data) => ({ ok: true, data }))
   } catch (error) {
     console.error("[scheduling] POST /api/enrollments/:id/cancel failed", error)
+    return serverError()
+  }
+}
+
+/** GET /api/enrollments/:id/cancel — W4-07, staff only: both outcomes (policy / full refund) before confirming. */
+export async function handleCancelPreview(request: Request, rawId: string): Promise<Response> {
+  try {
+    const actor = await resolveActor(request)
+    if (!actor) return err(401, "FORBIDDEN")
+    if (actor.by !== "staff") return err(403, "FORBIDDEN")
+    const id = ID.safeParse(rawId)
+    if (!id.success) return err(404, "NOT_FOUND")
+    const r = await previewStaffCancellation({ enrollmentId: id.data })
+    return fromResult(r, (data) => ({ ok: true, data }))
+  } catch (error) {
+    console.error("[scheduling] GET /api/enrollments/:id/cancel failed", error)
     return serverError()
   }
 }

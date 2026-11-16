@@ -24,7 +24,15 @@ export type CancellationPreview = {
 }
 
 const idSchema = z.union([z.number().int().positive(), z.string().regex(/^[1-9]\d{0,9}$/)])
-const cancelSchema = z.object({ enrollmentId: idSchema, by: z.enum(["customer", "staff"]), actorId: idSchema })
+/** W4-07: `full` = staff-only full refund of the seat's remaining refundable amount (M-2 cap), outside the tiers. */
+export const cancelModeSchema = z.enum(["policy", "full"])
+export type CancelMode = z.infer<typeof cancelModeSchema>
+const cancelSchema = z.object({
+  enrollmentId: idSchema,
+  by: z.enum(["customer", "staff"]),
+  actorId: idSchema,
+  mode: cancelModeSchema.default("policy"),
+})
 
 const fail = (error: Extract<Result<never>, { ok: false }>["error"]): Result<never> => ({ ok: false, error })
 const same = (a: ID, b: ID) => String(a) === String(b)
@@ -32,13 +40,24 @@ const same = (a: ID, b: ID) => String(a) === String(b)
 type Actor = { kind: "customer"; id: ID } | { kind: "staff" } | { kind: "any" }
 
 /** A seat whose cancellation committed but whose Stripe refund never got requested. */
-const isPendingRefund = (v: EnrollmentView): boolean =>
+export const isPendingRefund = (v: EnrollmentView): boolean =>
   v.status === "cancelled" &&
   v.cancellationOutcome === "refund" &&
   v.refundedAmount === 0 &&
   (v.cancellationAmount === null || v.cancellationAmount > 0)
 
 type Decision = { outcome: CancellationPreview["outcome"]; amount: number }
+
+/**
+ * W4-07: full refund of what is still refundable on the seat AND the order (M-2 cap,
+ * Dashboard refunds included). Nothing left → outcome `none`.
+ */
+export async function fullRefundDecision(enrollmentId: ID): Promise<Result<{ outcome: "refund" | "none"; amount: number }>> {
+  const cap = await getSeatCancellationCap(enrollmentId)
+  if (!cap.ok) return cap
+  const amount = cap.data.cap
+  return { ok: true, data: { outcome: amount > 0 ? "refund" : "none", amount } }
+}
 
 /**
  * W4-03b (M-2): the policy amount never exceeds what is still refundable on the
@@ -100,6 +119,41 @@ export async function previewCancellation(i: { enrollmentId: ID; actorCustomerId
   return { ok: true, data: preview }
 }
 
+export type StaffCancellationPreview = {
+  allowed: boolean
+  reason?: CancelReason
+  /** The cancellation policy applied as for a customer (tiers, M-2 clamp). */
+  policy: Pick<CancellationPreview, "outcome" | "percent" | "amount" | "hoursBefore">
+  /** Full refund of the seat's remaining refundable amount (M-2 cap). */
+  full: { outcome: "refund" | "none"; amount: number }
+  /** A previous cancellation's refund failed at Stripe: confirming retries it with the persisted amount. */
+  retry: boolean
+}
+
+/**
+ * W4-07: staff preview shown before "Annuler la place" in the admin. Both options, exact
+ * amounts. A pending-refund retry shows the persisted amount for both (commerce replays it).
+ */
+export async function previewStaffCancellation(i: { enrollmentId: ID }): Promise<Result<StaffCancellationPreview>> {
+  const parsed = z.object({ enrollmentId: idSchema }).safeParse(i)
+  if (!parsed.success) return fail({ code: "VALIDATION", issues: parsed.error.issues.map((x) => ({ path: x.path.join("."), message: x.message })) })
+  const view = await getEnrollmentView(parsed.data.enrollmentId)
+  if (!view) return fail({ code: "NOT_FOUND", entity: "enrollment" })
+  const { preview, retry } = await evaluate(view, { kind: "staff" }, new Date())
+  const policy = { outcome: preview.outcome, percent: preview.percent, amount: preview.amount, hoursBefore: preview.hoursBefore }
+  let full: StaffCancellationPreview["full"] = { outcome: "none", amount: 0 }
+  if (retry) full = { outcome: "refund", amount: preview.amount }
+  else if (preview.allowed) {
+    const f = await fullRefundDecision(view.id)
+    if (!f.ok) return f
+    full = f.data
+  }
+  return {
+    ok: true,
+    data: { allowed: preview.allowed, ...(preview.reason ? { reason: preview.reason } : {}), policy, full, retry },
+  }
+}
+
 type Person = { email: string; locale: Locale; name: string }
 
 async function personOf(customerId: ID): Promise<Person | null> {
@@ -110,25 +164,40 @@ async function personOf(customerId: ID): Promise<Person | null> {
   return { email: c.email, locale: c.preferredLocale === "en" ? "en" : "fr", name: name || c.email }
 }
 
+export type CancellationEmailOptions = {
+  /** Idempotency key prefix: `<prefix>-<enrollmentId>-{buyer,attendee}`. Default `cancel`. */
+  keyPrefix?: string
+  /** W4-07: staff cancelled the whole session. */
+  reason?: "session-cancelled"
+}
+
 /** Buyer gets amounts + credit code; a guest attendee (≠ buyer) gets a plain notice. Keys make retries safe. */
-async function enqueueCancellationEmails(
+export async function enqueueCancellationEmails(
   view: EnrollmentView,
   session: SessionView,
   data: { outcome: "refund" | "credit" | "none"; amount: number; creditCode?: string; creditExpiresAt?: string },
+  opts: CancellationEmailOptions = {},
 ): Promise<void> {
+  const prefix = opts.keyPrefix ?? "cancel"
   const [buyer, attendee] = await Promise.all([
     personOf(view.buyerCustomerId),
     same(view.attendeeCustomerId, view.buyerCustomerId) ? Promise.resolve(null) : personOf(view.attendeeCustomerId),
   ])
   const attendeeName = view.attendeeName ?? attendee?.name ?? buyer?.name ?? ""
-  const base = { attendeeName, courseTitle: session.courseTitle, sessionStartsAt: session.startsAt, currency: "cad" as const }
+  const base = {
+    attendeeName,
+    courseTitle: session.courseTitle,
+    sessionStartsAt: session.startsAt,
+    currency: "cad" as const,
+    ...(opts.reason ? { reason: opts.reason } : {}),
+  }
   await withTransaction(async ({ tx }) => {
     if (buyer) {
       await enqueueEmail({
         template: "cancellation-confirmation",
         to: buyer.email,
         locale: buyer.locale,
-        idempotencyKey: `cancel-${view.id}-buyer`,
+        idempotencyKey: `${prefix}-${view.id}-buyer`,
         data: {
           ...base,
           recipient: "buyer",
@@ -146,7 +215,7 @@ async function enqueueCancellationEmails(
         template: "cancellation-confirmation",
         to: attendee.email,
         locale: attendee.locale,
-        idempotencyKey: `cancel-${view.id}-attendee`,
+        idempotencyKey: `${prefix}-${view.id}-attendee`,
         data: { ...base, recipient: "attendee", outcome: data.outcome, amount: 0 },
         tx,
       })
@@ -163,10 +232,13 @@ export async function cancelEnrollment(i: {
   enrollmentId: ID
   by: "customer" | "staff"
   actorId: ID
+  /** W4-07, staff only: `full` refunds the seat's remaining refundable amount. Default `policy`. */
+  mode?: CancelMode
 }): Promise<Result<{ outcome: "refund" | "credit" | "none"; amount: number }>> {
   const parsed = cancelSchema.safeParse(i)
   if (!parsed.success) return fail({ code: "VALIDATION", issues: parsed.error.issues.map((x) => ({ path: x.path.join("."), message: x.message })) })
-  const { enrollmentId, by, actorId } = parsed.data
+  const { enrollmentId, by, actorId, mode } = parsed.data
+  if (mode === "full" && by !== "staff") return fail({ code: "FORBIDDEN" })
 
   const view = await getEnrollmentView(enrollmentId)
   if (!view) return fail({ code: "NOT_FOUND", entity: "enrollment" })
@@ -181,13 +253,20 @@ export async function cancelEnrollment(i: {
     )
   }
 
+  let decision: Decision = { outcome: preview.outcome, amount: preview.amount }
+  if (mode === "full" && !retry) {
+    const full = await fullRefundDecision(enrollmentId)
+    if (!full.ok) return full
+    decision = full.data
+  }
+
   const done = await executeSeatCancellation({
     enrollmentId,
-    outcome: preview.outcome,
-    amount: preview.amount,
+    outcome: decision.outcome,
+    amount: decision.amount,
     by,
     actorId,
-    reason: `${by}-cancel:${preview.outcome}`,
+    reason: `${by}-cancel${mode === "full" ? "-full" : ""}:${decision.outcome}`,
   })
   if (!done.ok) {
     // L-2: UPSTREAM = the seat committed `cancelled` but the Stripe refund failed. The seat is

@@ -35,9 +35,25 @@ export const readByStaffOrBuyer: FieldAccess = async ({ req, doc }) => {
 const moneyAccess = { ...adminUpdateOnly, read: readByStaffOrBuyer }
 
 const fields: Field[] = [
-  { name: "session", type: "relationship", relationTo: "sessions", required: true, index: true, access: adminUpdateOnly },
-  { name: "customer", type: "relationship", relationTo: "customers", required: true, index: true, access: adminUpdateOnly },
-  { name: "order", type: "relationship", relationTo: "orders", required: true, access: adminUpdateOnly },
+  {
+    name: "session",
+    type: "relationship",
+    relationTo: "sessions",
+    required: true,
+    index: true,
+    access: adminUpdateOnly,
+    label: { fr: "Séance", en: "Session" },
+  },
+  {
+    name: "customer",
+    type: "relationship",
+    relationTo: "customers",
+    required: true,
+    index: true,
+    access: adminUpdateOnly,
+    label: { fr: "Participant", en: "Attendee" },
+  },
+  { name: "order", type: "relationship", relationTo: "orders", required: true, access: adminUpdateOnly, label: { fr: "Commande", en: "Order" } },
   {
     name: "attendeeIndex",
     type: "number",
@@ -46,14 +62,15 @@ const fields: Field[] = [
     min: 0,
     validate: (v: unknown) => validateInteger(0)(v),
     access: adminUpdateOnly,
+    label: { fr: "N° de place (0 = acheteur)", en: "Seat no. (0 = buyer)" },
   },
-  { name: "attendeeName", type: "text", access: adminUpdateOnly },
+  { name: "attendeeName", type: "text", access: adminUpdateOnly, label: { fr: "Nom du participant", en: "Attendee name" } },
   /**
    * This seat's share of `order.total` in cents (incl. tax and discount):
    * `floor(total / N)`, remainder cents on attendeeIndex 0; sum = order.total.
    * Basis for per-seat partial refund/credit (CONTRACT §3.4, D1).
    */
-  moneyField({ name: "seatAmount", access: moneyAccess }),
+  moneyField({ name: "seatAmount", access: moneyAccess, label: { fr: "Part payée pour cette place", en: "Seat amount" } }),
   {
     name: "status",
     type: "select",
@@ -61,6 +78,7 @@ const fields: Field[] = [
     defaultValue: "confirmed",
     index: true,
     access: adminUpdateOnly,
+    label: { fr: "Statut", en: "Status" },
     options: [
       { value: "confirmed", label: { fr: "Confirmée", en: "Confirmed" } },
       { value: "cancelled", label: { fr: "Annulée", en: "Cancelled" } },
@@ -72,17 +90,19 @@ const fields: Field[] = [
     type: "select",
     required: true,
     defaultValue: "unknown",
+    label: { fr: "Présence", en: "Attendance" },
     options: [
       { value: "unknown", label: { fr: "Inconnue", en: "Unknown" } },
       { value: "present", label: { fr: "Présent", en: "Present" } },
       { value: "absent", label: { fr: "Absent", en: "Absent" } },
     ],
   },
-  { name: "cancelledAt", type: "date", access: adminUpdateOnly },
+  { name: "cancelledAt", type: "date", access: adminUpdateOnly, label: { fr: "Annulée le", en: "Cancelled at" } },
   {
     name: "cancellationOutcome",
     type: "select",
     access: adminUpdateOnly,
+    label: { fr: "Résultat de l’annulation", en: "Cancellation outcome" },
     options: [
       { value: "refund", label: { fr: "Remboursement", en: "Refund" } },
       { value: "credit", label: { fr: "Crédit", en: "Credit" } },
@@ -98,8 +118,15 @@ const fields: Field[] = [
     name: "cancellationAmount",
     access: moneyAccess,
     admin: { readOnly: true },
-    label: { fr: "Montant d'annulation", en: "Cancellation amount" },
+    label: { fr: "Montant d’annulation", en: "Cancellation amount" },
   }),
+  {
+    // W4-07: UI-only (no DB column). Staff "Annuler la place" with preview (policy / full refund).
+    name: "staffCancel",
+    type: "ui",
+    label: { fr: "Annuler la place", en: "Cancel seat" },
+    admin: { components: { Field: "/admin/CancelSeat#CancelSeatField" } },
+  },
 ]
 
 /**

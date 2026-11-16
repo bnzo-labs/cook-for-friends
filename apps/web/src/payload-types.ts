@@ -148,6 +148,7 @@ export interface Config {
       'send-email': TaskSendEmail;
       'stripe-sync-course': TaskStripeSyncCourse;
       'stripe-sync-discount': TaskStripeSyncDiscount;
+      'session-cancel': TaskSessionCancel;
       inline: {
         input: unknown;
         output: unknown;
@@ -199,6 +200,9 @@ export interface CustomerAuthOperations {
 export interface Course {
   id: number;
   title: string;
+  /**
+   * End of the page URL, e.g. homemade-croissants
+   */
   slug: string;
   format: 'in_person' | 'online';
   summary?: string | null;
@@ -220,9 +224,13 @@ export interface Course {
   level?: ('beginner' | 'intermediate' | 'advanced') | null;
   durationMinutes?: number | null;
   /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
+   * Amount in cents (CAD), API use. E.g. 4500 = $45.00
    */
   price: number;
+  /**
+   * In Canadian dollars, before tax. E.g. 45 or 45.50. GST and QST are added at checkout.
+   */
+  priceDollars?: number | null;
   heroImage?: (number | null) | Media;
   gallery?: (number | Media)[] | null;
   lessons?: (number | Lesson)[] | null;
@@ -330,6 +338,9 @@ export interface Session {
   };
   level?: ('beginner' | 'intermediate' | 'advanced') | null;
   capacity: number;
+  /**
+   * Saving as “Cancelled” cancels every seat and fully refunds each participant (email sent). Cannot be undone.
+   */
   status: 'scheduled' | 'cancelled' | 'completed';
   notes?: string | null;
   updatedAt: string;
@@ -565,33 +576,15 @@ export interface Order {
         course: number | Course;
         session?: (number | null) | Session;
         quantity: number;
-        /**
-         * Amount in cents (CAD). E.g. 4500 = $45.00
-         */
         unitAmount: number;
         description?: string | null;
         id?: string | null;
       }[]
     | null;
-  /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
-   */
   subtotal: number;
-  /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
-   */
   discountTotal: number;
-  /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
-   */
   taxGst: number;
-  /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
-   */
   taxQst: number;
-  /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
-   */
   total: number;
   currency: 'cad';
   stripeCheckoutSessionId?: string | null;
@@ -603,9 +596,6 @@ export interface Order {
   refunds?:
     | {
         stripeRefundId: string;
-        /**
-         * Amount in cents (CAD). E.g. 4500 = $45.00
-         */
         amount: number;
         reason?: string | null;
         at: string;
@@ -627,17 +617,11 @@ export interface Enrollment {
   order: number | Order;
   attendeeIndex: number;
   attendeeName?: string | null;
-  /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
-   */
   seatAmount?: number | null;
   status: 'confirmed' | 'cancelled' | 'refunded';
   attendance: 'unknown' | 'present' | 'absent';
   cancelledAt?: string | null;
   cancellationOutcome?: ('refund' | 'credit' | 'none') | null;
-  /**
-   * Amount in cents (CAD). E.g. 4500 = $45.00
-   */
   cancellationAmount?: number | null;
   updatedAt: string;
   createdAt: string;
@@ -674,12 +658,23 @@ export interface DiscountCode {
   id: number;
   code: string;
   kind: 'percent' | 'amount';
-  /**
-   * Percent (1–100) or amount in cents
-   */
   value: number;
+  /**
+   * From 1 to 100
+   */
+  percentValue?: number | null;
+  /**
+   * Discount in Canadian dollars. E.g. 5 or 12.50
+   */
+  amountDollars?: number | null;
+  /**
+   * Empty = unlimited
+   */
   maxRedemptions?: number | null;
   expiresAt?: string | null;
+  /**
+   * Empty = every course
+   */
   appliesTo?: (number | Course)[] | null;
   active?: boolean | null;
   stripeCouponId?: string | null;
@@ -853,7 +848,7 @@ export interface PayloadJob {
     | {
         executedAt: string;
         completedAt: string;
-        taskSlug: 'inline' | 'send-email' | 'stripe-sync-course' | 'stripe-sync-discount';
+        taskSlug: 'inline' | 'send-email' | 'stripe-sync-course' | 'stripe-sync-discount' | 'session-cancel';
         taskID: string;
         input?:
           | {
@@ -886,7 +881,7 @@ export interface PayloadJob {
         id?: string | null;
       }[]
     | null;
-  taskSlug?: ('inline' | 'send-email' | 'stripe-sync-course' | 'stripe-sync-discount') | null;
+  taskSlug?: ('inline' | 'send-email' | 'stripe-sync-course' | 'stripe-sync-discount' | 'session-cancel') | null;
   queue?: string | null;
   waitUntil?: string | null;
   processing?: boolean | null;
@@ -1053,6 +1048,7 @@ export interface CoursesSelect<T extends boolean = true> {
   level?: T;
   durationMinutes?: T;
   price?: T;
+  priceDollars?: T;
   heroImage?: T;
   gallery?: T;
   lessons?: T;
@@ -1434,6 +1430,8 @@ export interface DiscountCodesSelect<T extends boolean = true> {
   code?: T;
   kind?: T;
   value?: T;
+  percentValue?: T;
+  amountDollars?: T;
   maxRedemptions?: T;
   expiresAt?: T;
   appliesTo?: T;
@@ -1741,6 +1739,17 @@ export interface TaskStripeSyncCourse {
 export interface TaskStripeSyncDiscount {
   input: {
     discountCodeId: number;
+  };
+  output?: unknown;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TaskSession-cancel".
+ */
+export interface TaskSessionCancel {
+  input: {
+    sessionId: number;
+    actorId: number;
   };
   output?: unknown;
 }

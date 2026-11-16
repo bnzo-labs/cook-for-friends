@@ -17,7 +17,7 @@ import { catalogCollections, catalogGlobals } from "./modules/catalog"
 import { identityCollections } from "./modules/identity"
 import { accessCollections } from "./modules/access"
 import { commerceCollections, commerceJobTasks } from "./modules/commerce"
-import { schedulingCollections } from "./modules/scheduling"
+import { schedulingCollections, schedulingJobTasks } from "./modules/scheduling"
 import { learningCollections } from "./modules/learning"
 import { videoCollections } from "./modules/video"
 import { notificationsCollections, notificationsJobTasks } from "./modules/notifications"
@@ -60,7 +60,7 @@ export default buildConfig({
   // the Cloudflare cron worker drives GET /api/cron/jobs. Run endpoint is staff only.
   // -------------------------------------------------------------------------
   jobs: {
-    tasks: [...notificationsJobTasks, ...commerceJobTasks],
+    tasks: [...notificationsJobTasks, ...commerceJobTasks, ...schedulingJobTasks],
     access: { run: jobsRunAccess },
   },
 

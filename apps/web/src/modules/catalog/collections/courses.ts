@@ -1,8 +1,8 @@
-import type { CollectionAfterChangeHook, CollectionConfig } from "payload"
+import type { CollectionAfterChangeHook, CollectionBeforeValidateHook, CollectionConfig } from "payload"
 
 import { isStaffOrAdmin, publishedOrStaff } from "@/modules/identity"
 import { catalogGroup } from "../fields/labels"
-import { moneyField, validateInteger } from "../fields/money"
+import { applyDollarMirror, dollarsField, moneyField, validateInteger } from "../fields/money"
 import { seoField } from "../fields/seo"
 
 /** Fields whose change on a published course must reach Stripe. */
@@ -33,6 +33,10 @@ export const enqueueStripeSync: CollectionAfterChangeHook = async ({ doc, previo
   return doc
 }
 
+/** W4-07: the admin edits `priceDollars` (virtual); stored cents `price` are derived here. */
+export const priceFromDollars: CollectionBeforeValidateHook = ({ data, originalDoc }) =>
+  data ? applyDollarMirror(data, originalDoc, [["priceDollars", "price"]]) : data
+
 /**
  * `courses` — CONTRACT §3.1. Drafts enabled. Stripe fields are written only by
  * the commerce sync job (W2-01), so they are read-only in the admin.
@@ -45,11 +49,11 @@ export const Courses: CollectionConfig = {
   },
   admin: {
     useAsTitle: "title",
-    defaultColumns: ["title", "format", "price", "status", "stripeSyncStatus"],
+    defaultColumns: ["title", "format", "priceDollars", "status", "stripeSyncStatus"],
     group: catalogGroup,
   },
   versions: { drafts: true },
-  hooks: { afterChange: [enqueueStripeSync] },
+  hooks: { beforeValidate: [priceFromDollars], afterChange: [enqueueStripeSync] },
   access: {
     read: publishedOrStaff({ status: { equals: "published" } }),
     create: isStaffOrAdmin,
@@ -60,7 +64,16 @@ export const Courses: CollectionConfig = {
   },
   fields: [
     { name: "title", type: "text", required: true, localized: true, label: { fr: "Titre", en: "Title" } },
-    { name: "slug", type: "text", required: true, localized: true, unique: true, index: true },
+    {
+      name: "slug",
+      type: "text",
+      required: true,
+      localized: true,
+      unique: true,
+      index: true,
+      label: { fr: "Adresse (slug)", en: "Slug" },
+      admin: { description: { fr: "Fin de l’adresse de la page, ex. croissants-maison", en: "End of the page URL, e.g. homemade-croissants" } },
+    },
     {
       name: "format",
       type: "select",
@@ -90,10 +103,23 @@ export const Courses: CollectionConfig = {
       label: { fr: "Durée (minutes)", en: "Duration (minutes)" },
       validate: (v: unknown) => validateInteger(0)(v),
     },
+    // W4-07: stored in cents (Stripe, checkout); staff type dollars in `priceDollars`.
     moneyField({
       name: "price",
       required: true,
-      label: { fr: "Prix (cents, taxes en sus)", en: "Price (cents, tax-exclusive)" },
+      label: { fr: "Prix (taxes en sus)", en: "Price (tax-exclusive)" },
+      // hidden (not conditional): the cents validator must still run on every write
+      admin: { hidden: true },
+    }),
+    dollarsField({
+      name: "priceDollars",
+      cents: "price",
+      required: true,
+      label: { fr: "Prix en dollars (taxes en sus)", en: "Price in dollars (tax-exclusive)" },
+      description: {
+        fr: "En dollars canadiens, avant taxes. Ex. : 45 ou 45,50. La TPS et la TVQ sont ajoutées au paiement.",
+        en: "In Canadian dollars, before tax. E.g. 45 or 45.50. GST and QST are added at checkout.",
+      },
     }),
     { name: "heroImage", type: "upload", relationTo: "media", label: { fr: "Image principale", en: "Hero image" } },
     { name: "gallery", type: "upload", relationTo: "media", hasMany: true, label: { fr: "Galerie", en: "Gallery" } },
@@ -127,17 +153,20 @@ export const Courses: CollectionConfig = {
       name: "stripeProductId",
       type: "text",
       index: true,
+      label: { fr: "Stripe : produit", en: "Stripe product" },
       admin: { readOnly: true, position: "sidebar" },
     },
     {
       name: "stripePriceId",
       type: "text",
+      label: { fr: "Stripe : prix", en: "Stripe price" },
       admin: { readOnly: true, position: "sidebar" },
     },
     {
       name: "stripeSyncStatus",
       type: "select",
       defaultValue: "pending",
+      label: { fr: "Synchronisation Stripe", en: "Stripe sync" },
       options: [
         { value: "pending", label: { fr: "En attente", en: "Pending" } },
         { value: "synced", label: { fr: "Synchronisé", en: "Synced" } },
@@ -148,6 +177,7 @@ export const Courses: CollectionConfig = {
     {
       name: "stripeSyncError",
       type: "textarea",
+      label: { fr: "Erreur de synchronisation Stripe", en: "Stripe sync error" },
       admin: { readOnly: true, position: "sidebar" },
     },
     seoField,
