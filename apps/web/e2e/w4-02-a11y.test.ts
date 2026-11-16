@@ -68,7 +68,8 @@ test.describe("axe sweep", () => {
       for (const p of PUBLIC) {
         const res = await page.goto(p[locale])
         expect(res?.status(), p[locale]).toBeLessThan(500)
-        await page.waitForLoadState("networkidle")
+        await page.waitForLoadState("load")
+        await expect(page.locator("main")).toBeVisible()
         await audit(page, p[locale])
       }
     })
@@ -79,7 +80,8 @@ test.describe("axe sweep", () => {
       for (const p of PORTAL) {
         const res = await page.goto(p[locale])
         expect(res?.status(), p[locale]).toBe(200)
-        await page.waitForLoadState("networkidle")
+        await page.waitForLoadState("load")
+        await expect(page.locator("main")).toBeVisible()
         await audit(page, p[locale])
       }
     })
@@ -156,7 +158,8 @@ test.describe("reduced motion", () => {
   for (const path of ["/fr", "/en/courses", "/en/courses/french-macarons"]) {
     test(`no running CSS animations or long transitions ${path}`, async ({ page }) => {
       await page.goto(path)
-      await page.waitForLoadState("networkidle")
+      await page.waitForLoadState("load")
+        await expect(page.locator("main")).toBeVisible()
       const running = await page.evaluate(() =>
         document
           .getAnimations()
@@ -175,7 +178,8 @@ test.describe("target size (WCAG 2.5.8)", () => {
     test(`interactive controls >= 24px ${path}`, async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 800 })
       await page.goto(path)
-      await page.waitForLoadState("networkidle")
+      await page.waitForLoadState("load")
+        await expect(page.locator("main")).toBeVisible()
       const small = await page.evaluate(() => {
         const sel = "button, [role='button'], input:not([type='hidden']), select, textarea, a[href]"
         return Array.from(document.querySelectorAll<HTMLElement>(sel))
