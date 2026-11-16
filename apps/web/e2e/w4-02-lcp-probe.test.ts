@@ -38,3 +38,15 @@ for (const url of URLS) {
     expect(lcp.length).toBeGreaterThan(0)
   })
 }
+
+test("redirect probe: first request to /fr", async ({ playwright }) => {
+  const ctx = await playwright.request.newContext({ baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000" })
+  for (const url of ["/fr", "/en/courses"]) {
+    const res = await ctx.get(url, { maxRedirects: 0, headers: { "accept-language": "en-US,en;q=0.9" } })
+    const h = res.headers()
+    console.log(
+      `REDIRECT-PROBE ${url} status=${res.status()} location=${h["location"] ?? "-"} cookie=${(h["set-cookie"] ?? "-").slice(0, 80)} cache=${h["cache-control"] ?? "-"}`,
+    )
+  }
+  await ctx.dispose()
+})

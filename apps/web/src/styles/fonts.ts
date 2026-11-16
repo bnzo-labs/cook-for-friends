@@ -7,7 +7,8 @@ import { Fraunces, Inter } from "next/font/google"
 export const fontDisplay = Fraunces({
   subsets: ["latin"],
   weight: ["500", "600"],
-  display: "swap",
+  // EXPERIMENT (W4-02): optional avoids the late swap that moves LCP to font arrival.
+  display: "optional",
   variable: "--font-fraunces",
 })
 
