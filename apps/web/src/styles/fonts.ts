@@ -13,7 +13,8 @@ export const fontDisplay = Fraunces({
 
 export const fontBody = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  // Variable font: one file instead of three static weights (fewer requests, same 400-600 range).
   display: "swap",
+  adjustFontFallback: true,
   variable: "--font-inter",
 })
