@@ -28,7 +28,9 @@ describe("W4-07 commerce admin: FR labels, dollars", () => {
     const f = new Map(named(DiscountCodes.fields).map((x) => [x.name, x]))
     expect(f.get("amountDollars")?.virtual).toBe(true)
     const showDollars = f.get("amountDollars")?.admin?.condition as (d: unknown, s: { kind?: string }) => boolean
-    const showValue = f.get("value")?.admin?.condition as (d: unknown, s: { kind?: string }) => boolean
+    const showValue = f.get("percentValue")?.admin?.condition as (d: unknown, s: { kind?: string }) => boolean
+    expect(f.get("value")?.admin?.hidden).toBe(true)
+    expect(f.get("value")?.admin?.condition).toBeUndefined()
     expect(showDollars({}, { kind: "amount" })).toBe(true)
     expect(showDollars({}, { kind: "percent" })).toBe(false)
     expect(showValue({}, { kind: "percent" })).toBe(true)
@@ -42,6 +44,10 @@ describe("W4-07 commerce admin: FR labels, dollars", () => {
     expect(await hook({ data: { kind: "percent", value: 20, amountDollars: 0.2 }, originalDoc: { kind: "percent", value: 20 } })).toEqual({
       kind: "percent",
       value: 20,
+    })
+    expect(await hook({ data: { kind: "percent", value: 20, percentValue: 35 }, originalDoc: { kind: "percent", value: 20 } })).toEqual({
+      kind: "percent",
+      value: 35,
     })
   })
 

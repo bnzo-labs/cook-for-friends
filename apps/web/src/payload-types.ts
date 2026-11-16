@@ -658,10 +658,11 @@ export interface DiscountCode {
   id: number;
   code: string;
   kind: 'percent' | 'amount';
+  value: number;
   /**
    * From 1 to 100
    */
-  value?: number | null;
+  percentValue?: number | null;
   /**
    * Discount in Canadian dollars. E.g. 5 or 12.50
    */
@@ -1429,6 +1430,7 @@ export interface DiscountCodesSelect<T extends boolean = true> {
   code?: T;
   kind?: T;
   value?: T;
+  percentValue?: T;
   amountDollars?: T;
   maxRedemptions?: T;
   expiresAt?: T;

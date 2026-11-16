@@ -31,19 +31,20 @@ export const enqueueDiscountSync: CollectionAfterChangeHook = async ({ doc, prev
 }
 
 const isAmount = (sibling: { kind?: unknown }) => sibling?.kind === "amount"
+const isPercent = (sibling: { kind?: unknown }) => sibling?.kind === "percent"
 
 /**
- * W4-07: for `kind: amount` the admin edits `amountDollars` (virtual); stored cents `value`
- * are derived here. For `percent` the mirror is dropped and `value` stays the percent.
+ * W4-07: staff type `percentValue` (percent) or `amountDollars` (amount, in dollars); both are
+ * virtual. The stored `value` (percent, or cents) is derived here; an API write of `value`
+ * alone still works. Mirror values equal to the stored value never override it.
  */
 export const valueFromDollars: CollectionBeforeValidateHook = ({ data, originalDoc }) => {
   if (!data) return data
   const kind = data.kind ?? originalDoc?.kind
-  if (kind !== "amount") {
-    const { amountDollars: _drop, ...rest } = data
-    return rest
-  }
-  return applyDollarMirror(data, originalDoc, [["amountDollars", "value"]])
+  const { amountDollars, percentValue, ...rest } = data
+  if (kind === "amount") return applyDollarMirror({ ...rest, amountDollars }, originalDoc, [["amountDollars", "value"]])
+  if (kind === "percent" && typeof percentValue === "number" && percentValue !== originalDoc?.value) return { ...rest, value: percentValue }
+  return rest
 }
 
 export const DiscountCodes: CollectionConfig = {
@@ -77,18 +78,29 @@ export const DiscountCodes: CollectionConfig = {
       ],
     },
     {
-      // Percent (1–100), or the amount in cents for `kind: amount` (entered in dollars below).
+      // Stored value: percent (1–100) or amount in cents. Never typed directly in the admin:
+      // staff use `percentValue` or `amountDollars` (virtual) below; filled in `beforeValidate`.
+      // Not conditional (an admin.condition would make the column nullable).
       name: "value",
       type: "number",
       required: true,
       min: 0,
-      label: { fr: "Pourcentage", en: "Percent" },
-      admin: {
-        description: { fr: "De 1 à 100", en: "From 1 to 100" },
-        condition: (_data, sibling) => !isAmount(sibling ?? {}),
-      },
+      label: { fr: "Valeur enregistrée (% ou cents)", en: "Stored value (% or cents)" },
+      admin: { hidden: true },
       validate: ((v, { siblingData }) =>
         validateDiscountValue(v, { siblingData: siblingData as { kind?: unknown } })) as Validate,
+    },
+    {
+      name: "percentValue",
+      type: "number",
+      virtual: true,
+      min: 1,
+      max: 100,
+      label: { fr: "Pourcentage", en: "Percent" },
+      admin: { description: { fr: "De 1 à 100", en: "From 1 to 100" }, condition: (_data, sibling) => isPercent(sibling ?? {}) },
+      hooks: {
+        afterRead: [({ siblingData }) => (isPercent(siblingData ?? {}) && typeof siblingData?.value === "number" ? siblingData.value : null)],
+      },
     },
     dollarsField({
       name: "amountDollars",
