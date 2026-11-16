@@ -14,9 +14,10 @@ export const config = {
      * - /admin (Payload admin panel — handled by Payload's own routing)
      * - /api (Payload REST API and custom route handlers)
      * - /_next (Next.js internals)
+     * - /monitoring (Sentry tunnel route, W4-04)
      * - /favicon.ico, /sitemap.xml, /robots.txt and other static files
      * - Files with an extension (.png, .jpg, .css, .js, etc.)
      */
-    "/((?!admin|api|_next|_vercel|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\..*).*)",
+    "/((?!admin|api|_next|_vercel|monitoring|favicon\\.ico|sitemap\\.xml|robots\\.txt|.*\\..*).*)",
   ],
 }

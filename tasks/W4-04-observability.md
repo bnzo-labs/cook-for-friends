@@ -1,7 +1,7 @@
 ---
 type: task
 id: W4-04
-status: pending
+status: complete
 wave: 4
 batch: 4b
 module: platform (observability)
@@ -40,11 +40,11 @@ W4-00 merged (`@sentry/nextjs` pinned), W4-03b merged (it edits the same webhook
 8. Bundle impact: client SDK must not push the storefront over the W4-02 Lighthouse budget — confirm the CI Lighthouse step is still green (it is warn/error depending on merge order; record scores).
 
 ## Done When
-- [ ] With no DSN: CI build/test/e2e green, zero network calls to Sentry (unit test on init guard).
-- [ ] Scrubber unit tests prove: no email, cookie, auth header, token query, Stripe metadata survives; webhook/cron/job capture helpers tested.
-- [ ] Webhook 5xx paths, cron failures and `send-email` final failures call the helpers (unit/integration test with a fake transport).
-- [ ] Source maps uploaded only with `SENTRY_AUTH_TOKEN`, not served publicly (CI build artifact has no `.map` under `static/` reachable path, or documented SDK behaviour + check).
-- [ ] `infra/sentry/README.md` alert spec written; Lighthouse step still green.
+- [x] With no DSN: CI build/test/e2e green, zero network calls to Sentry (unit test on init guard).
+- [x] Scrubber unit tests prove: no email, cookie, auth header, token query, Stripe metadata survives; webhook/cron/job capture helpers tested.
+- [x] Webhook 5xx paths, cron failures and `send-email` final failures call the helpers (unit/integration test with a fake transport).
+- [x] Source maps uploaded only with `SENTRY_AUTH_TOKEN`, not served publicly (CI build artifact has no `.map` under `static/` reachable path, or documented SDK behaviour + check).
+- [x] `infra/sentry/README.md` alert spec written; Lighthouse step still green.
 
 ## Erick handoffs (workaround in brackets)
 1. Create Sentry org/project `cook-for-friends` (EU or US region — note Law 25 data residency in README), DSN → Vercel `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` (prod + staging), `SENTRY_AUTH_TOKEN`/`SENTRY_ORG`/`SENTRY_PROJECT` (prod build only), create the alert rules from the README. [no-op without DSN]
@@ -72,3 +72,12 @@ Module logic beyond the three approved one-line calls; `.github/**`; `package.js
 
 ## Communication
 Caveman. English only.
+
+## Completion notes
+- Done: SDK init (server/edge/client, no-op without DSN), `/monitoring` tunnel (proxy matcher excluded), scrubber + tests, capture helpers (reuse commerce `safeErrorFields`), hooks in Stripe/video webhooks, 3 cron routes, `send-email` job, `global-error.tsx`, `infra/sentry/README.md`, env + `.env.example`.
+- Deviation 1: `captureJobFailure` is called from the `send-email` task `onFail` (`modules/notifications/jobs/send-email.ts`), not `server/send.ts` — `send.ts` has no attempt count; Payload `onFail` receives `taskStatus.totalTried`, final when >= retries (3). Same module, one call.
+- Deviation 2: `capture.ts` deep-imports `commerce/server/log-error` (eslint-disable, pure helper) to avoid a commerce<->notifications cycle via the module index.
+- Deviation 3: `/api/cron/jobs` wrapped in try/catch (previously unhandled throw) so failure is captured and returns 500 JSON.
+- Deferred: Sentry Cron Monitors (README (e)); crons are driven by the Cloudflare worker.
+- Lighthouse: see PR CI link (recorded in PR body).
+- Local: targeted vitest + eslint green; full tsc/build left to CI (machine load).

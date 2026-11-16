@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
+import { captureCronFailure } from "@/lib/observability/capture"
 import { sendDueReminders } from "@/modules/scheduling"
 
 export const runtime = "nodejs"
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true, sent })
   } catch (error) {
     console.error("[scheduling] GET /api/cron/reminders failed", error)
+    captureCronFailure("reminders", error)
     return NextResponse.json({ ok: false, error: "Reminder run failed" }, { status: 500 })
   }
 }
