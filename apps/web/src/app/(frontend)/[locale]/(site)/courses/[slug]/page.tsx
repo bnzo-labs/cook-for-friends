@@ -181,7 +181,7 @@ export default async function CourseDetailPage({
               <dl className="flex flex-wrap gap-x-8 gap-y-2">
                 {course.level && (
                   <div className="flex flex-col gap-0.5">
-                    <dt className="text-xs uppercase tracking-widest text-fg-subtle">
+                    <dt className="text-xs uppercase tracking-widest text-fg-muted">
                       {tc("level")}
                     </dt>
                     <dd className="text-sm font-medium text-fg capitalize">
@@ -191,7 +191,7 @@ export default async function CourseDetailPage({
                 )}
                 {course.durationMinutes && (
                   <div className="flex flex-col gap-0.5">
-                    <dt className="text-xs uppercase tracking-widest text-fg-subtle">
+                    <dt className="text-xs uppercase tracking-widest text-fg-muted">
                       {tc("duration")}
                     </dt>
                     <dd className="text-sm font-medium text-fg">
@@ -271,7 +271,7 @@ export default async function CourseDetailPage({
                       key={String(lesson.id)}
                       className="flex items-center gap-4 px-5 py-4"
                     >
-                      <span className="shrink-0 font-body tabular-nums text-sm text-fg-subtle">
+                      <span className="shrink-0 font-body tabular-nums text-sm text-fg-muted">
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       <span className="text-fg">{lesson.title}</span>

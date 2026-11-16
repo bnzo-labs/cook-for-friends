@@ -13,6 +13,8 @@ export interface CourseCardProps {
   formatNextSession: (formattedDate: string) => string
   taxesLabel: string
   availableInFrenchLabel: string
+  /** First card of the list: the likely LCP image, so load it eagerly. */
+  priority?: boolean
 }
 
 /** Price in cents → localized currency string. */
@@ -47,6 +49,7 @@ export function CourseCard({
   formatNextSession,
   taxesLabel,
   availableInFrenchLabel,
+  priority = false,
 }: CourseCardProps) {
   const href = { pathname: "/courses/[slug]" as const, params: { slug: course.slug } }
   const price = formatPrice(course.price.amount, locale)
@@ -71,6 +74,7 @@ export function CourseCard({
               src={course.heroImageUrl}
               alt={course.title}
               fill
+              priority={priority}
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover transition-transform duration-[var(--duration-normal)] ease-out group-hover:scale-[1.02]"
             />
