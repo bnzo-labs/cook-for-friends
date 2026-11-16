@@ -215,7 +215,10 @@ jobs:
     # on the same Stripe test account stream. cancel-in-progress: false ensures a
     # queued run is never dropped; the previous run always finishes first.
     concurrency:
-      group: e2e-stripe-live
+      # Serialize only when the shared live sandbox is used (set repo var E2E_STRIPE_LIVE=true
+      # together with secret STRIPE_CI_SECRET_KEY). Otherwise one group per run: GitHub keeps a
+      # single pending run per group, which starved queued PR runs.
+      group: ${{ vars.E2E_STRIPE_LIVE == 'true' && 'e2e-stripe-live' || format('e2e-{0}', github.run_id) }}
       cancel-in-progress: false
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
