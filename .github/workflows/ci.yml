@@ -189,16 +189,34 @@ jobs:
           branch: ${{ env.BRANCH_NAME }}
 
   # ---------------------------------------------------------------------------
-  # E2E (W3-11) — Playwright against `next build && next start` on a throwaway
-  # Neon branch (migrated + seeded). Same gating as `integration`. Stripe is
-  # never contacted: placeholder key, and specs stub /api/checkout and refunds
-  # at the network edge. Magic-link tokens are minted into the DB by the specs.
+  # E2E (W3-11 + W4-00) — Playwright + Lighthouse against `next build && next start`
+  # on a throwaway Neon branch (migrated + seeded).
+  #
+  # Stripe mode gate (W4-00):
+  #   STRIPE_CI_SECRET_KEY set (sk_test_ / rk_test_)  → E2E_STRIPE_MODE=live-test
+  #     • Stripe CLI installed at pinned release, SHA-256 verified.
+  #     • stripe listen --print-secret → STRIPE_WEBHOOK_SECRET (masked).
+  #     • stripe listen --forward-to ... starts before next start, logs to artifact.
+  #   STRIPE_CI_SECRET_KEY absent                      → E2E_STRIPE_MODE=signed-events
+  #     • Random whsec_ci_<hex> generated → STRIPE_WEBHOOK_SECRET (masked).
+  #     • W4-01 signs synthetic events with that secret.
+  #
+  # Concurrency note: always serialized on group "e2e-stripe-live" with
+  # cancel-in-progress: false to prevent two concurrent runners from
+  # contending on the same Stripe CLI account stream. This applies in both
+  # modes (simpler than conditional concurrency; no-op for signed-events).
   # ---------------------------------------------------------------------------
   e2e:
-    name: E2E (Playwright)
+    name: E2E (Playwright + Lighthouse)
     runs-on: ubuntu-latest
     needs: [verify]
-    timeout-minutes: 30
+    timeout-minutes: 45
+    # Always serialized — prevents two concurrent stripe listen sessions competing
+    # on the same Stripe test account stream. cancel-in-progress: false ensures a
+    # queued run is never dropped; the previous run always finishes first.
+    concurrency:
+      group: e2e-stripe-live
+      cancel-in-progress: false
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
@@ -209,6 +227,7 @@ jobs:
       PLAYWRIGHT_BASE_URL: http://localhost:3000
       VIDEO_PROVIDER: fake
       VIDEO_FAKE_ALLOWED: "true"
+      # Defaults overridden by the Stripe mode gate step below via $GITHUB_ENV.
       STRIPE_SECRET_KEY: sk_test_ci_placeholder
       STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
       RESEND_API_KEY: re_ci_placeholder
@@ -246,6 +265,47 @@ jobs:
       - name: Install dependencies
         if: steps.gate.outputs.enabled == 'true'
         run: pnpm install --frozen-lockfile
+
+      # -------------------------------------------------------------------
+      # W4-00: Stripe mode gate
+      # Validates key prefix (sk_test_ / rk_test_ only — live keys rejected
+      # with a failing step). Sets output: mode = "live-test" | "signed-events".
+      # -------------------------------------------------------------------
+      - name: Stripe mode gate
+        id: stripe-mode
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          STRIPE_CI_SECRET_KEY: ${{ secrets.STRIPE_CI_SECRET_KEY }}
+        run: |
+          if [ -n "$STRIPE_CI_SECRET_KEY" ]; then
+            # Guard: reject non-test key prefixes (live keys must never reach CI)
+            if [[ "$STRIPE_CI_SECRET_KEY" != sk_test_* ]] && \
+               [[ "$STRIPE_CI_SECRET_KEY" != rk_test_* ]]; then
+              echo "::error::STRIPE_CI_SECRET_KEY must start with sk_test_ or rk_test_. Live keys are not permitted in CI."
+              exit 1
+            fi
+            echo "mode=live-test" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Stripe mode::Stripe test key present — live-test mode"
+          else
+            echo "mode=signed-events" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Stripe mode::Stripe test key absent — signed-events mode"
+          fi
+
+      # -------------------------------------------------------------------
+      # W4-00: Install Stripe CLI (pinned release, SHA-256 verified, no Homebrew)
+      # Only in live-test mode.
+      # -------------------------------------------------------------------
+      - name: Install Stripe CLI
+        if: steps.gate.outputs.enabled == 'true' && steps.stripe-mode.outputs.mode == 'live-test'
+        run: |
+          STRIPE_VERSION="1.55.11"
+          STRIPE_SHA256="c710bdb63045ea8e4c3d218efe4c269a90a32bd807c1306a29438e54f80bcfdc"
+          curl -sSfL \
+            "https://github.com/stripe/stripe-cli/releases/download/v${STRIPE_VERSION}/stripe_${STRIPE_VERSION}_linux_x86_64.tar.gz" \
+            -o /tmp/stripe.tar.gz
+          echo "${STRIPE_SHA256}  /tmp/stripe.tar.gz" | sha256sum --check --strict
+          sudo tar -xzf /tmp/stripe.tar.gz -C /usr/local/bin stripe
+          stripe version
 
       - name: Compute branch expiry
         id: expiry
@@ -288,17 +348,69 @@ jobs:
             echo "E2E_STAFF_PASSWORD=$SEED_PASSWORD"
           } >> "$GITHUB_ENV"
 
-      - name: Migrate, seed, create e2e fixtures
+      # -------------------------------------------------------------------
+      # W4-00: Stripe env setup (runs in both modes)
+      # live-test     → stripe listen --print-secret gets session whsec_...
+      # signed-events → random whsec_ci_<hex> generated
+      # Both modes write E2E_STRIPE_MODE + STRIPE_WEBHOOK_SECRET to $GITHUB_ENV,
+      # overriding the job-level placeholder values for all subsequent steps.
+      # -------------------------------------------------------------------
+      - name: Stripe env setup
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          STRIPE_CI_SECRET_KEY: ${{ secrets.STRIPE_CI_SECRET_KEY }}
+          STRIPE_MODE: ${{ steps.stripe-mode.outputs.mode }}
+        run: |
+          if [ "$STRIPE_MODE" = "live-test" ]; then
+            echo "::add-mask::$STRIPE_CI_SECRET_KEY"
+            WHSEC="$(stripe listen --api-key "$STRIPE_CI_SECRET_KEY" --print-secret 2>/dev/null)"
+            echo "::add-mask::$WHSEC"
+            {
+              echo "E2E_STRIPE_MODE=live-test"
+              echo "STRIPE_WEBHOOK_SECRET=$WHSEC"
+              echo "STRIPE_SECRET_KEY=$STRIPE_CI_SECRET_KEY"
+            } >> "$GITHUB_ENV"
+          else
+            WHSEC="whsec_ci_$(openssl rand -hex 32)"
+            echo "::add-mask::$WHSEC"
+            {
+              echo "E2E_STRIPE_MODE=signed-events"
+              echo "STRIPE_WEBHOOK_SECRET=$WHSEC"
+            } >> "$GITHUB_ENV"
+          fi
+
+      - name: Migrate, seed, create e2e + lighthouse fixtures
         if: steps.gate.outputs.enabled == 'true'
         working-directory: apps/web
         run: |
           pnpm payload migrate
           pnpm seed
           pnpm payload run test/e2e-seed.ts
+          pnpm payload run test/lighthouse-seed.ts
 
       - name: Build
         if: steps.gate.outputs.enabled == 'true'
         run: pnpm --filter @cff/web exec next build
+
+      # -------------------------------------------------------------------
+      # W4-00: Start Stripe listener (live-test mode, before next start)
+      # Logs to $RUNNER_TEMP/stripe-listen.log — uploaded as artifact below.
+      # -------------------------------------------------------------------
+      - name: Start Stripe listener
+        if: steps.gate.outputs.enabled == 'true' && steps.stripe-mode.outputs.mode == 'live-test'
+        env:
+          STRIPE_CI_SECRET_KEY: ${{ secrets.STRIPE_CI_SECRET_KEY }}
+        run: |
+          echo "::add-mask::$STRIPE_CI_SECRET_KEY"
+          nohup stripe listen \
+            --api-key "$STRIPE_CI_SECRET_KEY" \
+            --forward-to http://localhost:3000/api/stripe/webhook \
+            --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,charge.refunded,invoice.finalized \
+            > "$RUNNER_TEMP/stripe-listen.log" 2>&1 &
+          echo "STRIPE_LISTENER_PID=$!" >> "$GITHUB_ENV"
+          # Allow the listener to establish its session before the server starts
+          sleep 3
+          echo "::notice::Stripe listener started (PID $STRIPE_LISTENER_PID)"
 
       - name: Start server
         if: steps.gate.outputs.enabled == 'true'
@@ -338,6 +450,32 @@ jobs:
           NODE_OPTIONS: --import ./test/e2e-esm-register.mjs
         run: pnpm exec playwright test
 
+      # -------------------------------------------------------------------
+      # W4-00: Lighthouse CI — runs against the already-running next start server.
+      # Reuses the Playwright chromium install to avoid a second browser download.
+      # Assertions at warn level (W4-02 flips to error after tuning).
+      # -------------------------------------------------------------------
+      - name: Locate Chromium for Lighthouse
+        id: chromium
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          CHROME=$(find ~/.cache/ms-playwright -name "chrome" -type f 2>/dev/null | head -1)
+          if [ -z "$CHROME" ]; then
+            CHROME="$(which google-chrome-stable 2>/dev/null || which chromium-browser 2>/dev/null || echo '')"
+          fi
+          echo "path=$CHROME" >> "$GITHUB_OUTPUT"
+
+      - name: Run Lighthouse CI
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/web
+        env:
+          CHROME_PATH: ${{ steps.chromium.outputs.path }}
+        run: |
+          pnpm exec lhci autorun \
+            --config=lighthouserc.json \
+            --collect.settings.chromeFlags="--no-sandbox --disable-dev-shm-usage" \
+            || true  # assertions at warn level — never fail the job (W4-02 flips to error)
+
       - name: Upload report and traces
         if: always() && steps.gate.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
@@ -357,6 +495,27 @@ jobs:
           path: apps/web/e2e/__screenshots__/w3-*
           if-no-files-found: ignore
           retention-days: 14
+
+      # -------------------------------------------------------------------
+      # W4-00: Upload Lighthouse reports and Stripe listener log
+      # -------------------------------------------------------------------
+      - name: Upload Lighthouse reports
+        if: always() && steps.gate.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-ci-reports
+          path: apps/web/.lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Stripe listener log
+        if: always() && steps.gate.outputs.enabled == 'true' && steps.stripe-mode.outputs.mode == 'live-test'
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-listen-log
+          path: ${{ runner.temp }}/stripe-listen.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Server log (on failure)
         if: failure() && steps.gate.outputs.enabled == 'true'

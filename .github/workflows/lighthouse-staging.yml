@@ -1,0 +1,92 @@
+name: Lighthouse (Staging)
+# Dispatch-only — never gates merge, never runs on PR or push.
+# Requires VERCEL_AUTOMATION_BYPASS_SECRET to be set; skips with a notice otherwise.
+on:
+  workflow_dispatch:
+
+env:
+  NEXT_PUBLIC_SKIP_ENV_VALIDATION: "1"
+
+jobs:
+  lighthouse-staging:
+    name: Lighthouse against staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "11.28.5"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Check bypass secret
+        id: gate
+        run: |
+          if [ -z "${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Staging Lighthouse skipped::VERCEL_AUTOMATION_BYPASS_SECRET not set — staging Lighthouse skipped"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Lighthouse CI against staging
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/web
+        env:
+          BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          echo "::add-mask::$BYPASS"
+          # Build a staging config with the bypass header injected
+          cat > /tmp/lhci-staging.json << EOF
+          {
+            "ci": {
+              "collect": {
+                "url": [
+                  "https://cook-for-friends.vercel.app/fr",
+                  "https://cook-for-friends.vercel.app/fr/cours",
+                  "https://cook-for-friends.vercel.app/fr/cours/macarons-francais",
+                  "https://cook-for-friends.vercel.app/en",
+                  "https://cook-for-friends.vercel.app/en/courses",
+                  "https://cook-for-friends.vercel.app/en/courses/french-macarons"
+                ],
+                "numberOfRuns": 3,
+                "settings": {
+                  "extraHeaders": {
+                    "x-vercel-protection-bypass": "$BYPASS"
+                  },
+                  "chromeFlags": "--no-sandbox --disable-dev-shm-usage"
+                }
+              },
+              "assert": {
+                "assertions": {
+                  "categories:performance": ["warn", { "minScore": 0.9 }],
+                  "categories:accessibility": ["warn", { "minScore": 0.9 }]
+                }
+              },
+              "upload": {
+                "target": "filesystem",
+                "outputDir": ".lighthouseci"
+              }
+            }
+          }
+          EOF
+          pnpm exec lhci autorun --config=/tmp/lhci-staging.json \
+            || true  # warn-level assertions: never fail this dispatch-only workflow
+
+      - name: Upload Lighthouse reports
+        if: always() && steps.gate.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-staging-reports
+          path: apps/web/.lighthouseci/
+          if-no-files-found: ignore
+          retention-days: 7
