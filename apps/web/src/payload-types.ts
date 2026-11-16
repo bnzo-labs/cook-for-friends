@@ -226,7 +226,7 @@ export interface Course {
   /**
    * Amount in cents (CAD), API use. E.g. 4500 = $45.00
    */
-  price?: number | null;
+  price: number;
   /**
    * In Canadian dollars, before tax. E.g. 45 or 45.50. GST and QST are added at checkout.
    */

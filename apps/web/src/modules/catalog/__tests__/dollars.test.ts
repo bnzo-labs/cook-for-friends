@@ -53,9 +53,9 @@ describe("W4-07 catalog money in dollars (stored in cents)", () => {
 
   it("courses: price entered in dollars (cents hidden), FR labels on Stripe sync fields", () => {
     const byName = new Map(Courses.fields.filter((f) => "name" in f).map((f) => [(f as { name: string }).name, f as Record<string, any>]))
-    // cents field kept as list column (formatted $), never shown as an input in the edit view
-    expect(byName.get("price")?.admin?.condition?.({}, {})).toBe(false)
-    expect(byName.get("price")?.admin?.components?.Cell).toBe("/modules/catalog/admin/MoneyCell#MoneyCell")
+    // cents field hidden (validation still runs on every write), dollars shown instead
+    expect(byName.get("price")?.admin?.hidden).toBe(true)
+    expect(byName.get("price")?.admin?.condition).toBeUndefined()
     expect(byName.get("priceDollars")?.virtual).toBe(true)
     for (const n of ["stripeProductId", "stripePriceId", "stripeSyncStatus", "stripeSyncError", "slug"]) {
       expect(byName.get(n)?.label?.fr, n).toBeTruthy()

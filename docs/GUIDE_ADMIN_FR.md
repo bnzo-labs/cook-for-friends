@@ -88,7 +88,7 @@ Les textes du site existent en deux langues. Les champs traduisibles (titre, ré
 | **SEO** | Titre, description et image utilisés par Google et lors des partages sur les réseaux. Facultatif mais recommandé. |
 | **Statut** | Voir « Brouillon, publié, archivé » ci-dessous. |
 
-> **Le prix.** Le champ **Prix en dollars (taxes en sus)** se saisit **en dollars** : tapez 45 ou 45,50 (deux décimales au plus). Le prix est toujours **avant taxes** : la TPS et la TVQ sont ajoutées au paiement. Dans la liste des cours, la colonne **Prix (taxes en sus)** affiche le même montant formaté (45,00 $).
+> **Le prix.** Le champ **Prix en dollars (taxes en sus)** se saisit **en dollars** : tapez 45 ou 45,50 (deux décimales au plus). Le prix est toujours **avant taxes** : la TPS et la TVQ sont ajoutées au paiement. Dans la liste des cours, la colonne **Prix en dollars (taxes en sus)** affiche le même montant.
 
 ### Brouillon, publié, archivé
 - **Brouillon** : le cours n’est pas visible sur le site. Utilisez cet état pour préparer le cours.

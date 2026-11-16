@@ -230,7 +230,11 @@ describe.skipIf(!hasTestDb)("W4-07 staff seat cancel: full vs policy (integratio
     expect(r).toEqual({ ok: true, data: { outcome: "refund", amount: 5000 } })
     expect(seatRefunds(seat)).toHaveLength(1)
     const after = await scheduling.previewStaffCancellation({ enrollmentId: seat })
-    expect(after).toMatchObject({ ok: true, data: { allowed: false, reason: "NOT_CONFIRMED" } })
+    // refund requested but not yet linked by charge.refunded → shown as a (de-duplicated) retry
+    expect(after).toMatchObject({ ok: true, data: { retry: true, full: { outcome: "refund", amount: 5000 } } })
+    const again = await scheduling.cancelEnrollment({ enrollmentId: seat, by: "staff", actorId: staff.id, mode: "full" })
+    expect(!again.ok && again.error.code).toBe("CONFLICT")
+    expect(seatRefunds(seat)).toHaveLength(1)
   })
 
   it("staff policy mode = existing behaviour; customer cannot use full", async () => {

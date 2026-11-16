@@ -49,7 +49,7 @@ export const Courses: CollectionConfig = {
   },
   admin: {
     useAsTitle: "title",
-    defaultColumns: ["title", "format", "price", "status", "stripeSyncStatus"],
+    defaultColumns: ["title", "format", "priceDollars", "status", "stripeSyncStatus"],
     group: catalogGroup,
   },
   versions: { drafts: true },
@@ -108,7 +108,8 @@ export const Courses: CollectionConfig = {
       name: "price",
       required: true,
       label: { fr: "Prix (taxes en sus)", en: "Price (tax-exclusive)" },
-      admin: { condition: () => false },
+      // hidden (not conditional): the cents validator must still run on every write
+      admin: { hidden: true },
     }),
     dollarsField({
       name: "priceDollars",
