@@ -9,8 +9,7 @@ import localFont from "next/font/local"
  */
 export const fontDisplay = localFont({
   src: [{ path: "./fonts-files/fraunces-latin-var.woff2", weight: "500 600", style: "normal" }],
-  // EXPERIMENT (W4-02): optional avoids the late swap that moves LCP to font arrival.
-  display: "optional",
+  display: "swap",
   adjustFontFallback: "Times New Roman",
   fallback: ["Georgia", "serif"],
   variable: "--font-fraunces",
