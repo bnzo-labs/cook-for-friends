@@ -28,6 +28,7 @@ export const routing = defineRouting({
     },
     "/auth/login": { fr: "/connexion", en: "/auth/login" },
     "/auth/verify": { fr: "/connexion/verifier", en: "/auth/verify" },
+    "/waitlist/remove": { fr: "/liste-attente/retrait", en: "/waitlist/remove" },
     "/account": { fr: "/compte", en: "/account" },
     "/account/courses/[slug]": { fr: "/compte/cours/[slug]", en: "/account/courses/[slug]" },
     "/account/courses/[slug]/[lesson]": {

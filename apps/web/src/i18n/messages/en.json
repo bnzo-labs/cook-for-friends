@@ -188,7 +188,8 @@
       "mapsLink": "View on Google Maps",
       "firstToPay": "Seats are not reserved: the first person to complete payment gets the seat.",
       "cta": "Book my seat",
-      "footer": "Cook for Friends — Pastry classes in Montreal"
+      "footer": "Cook for Friends — Pastry classes in Montreal",
+      "removeLink": "Remove me from the waitlist"
     },
     "cancellationConfirmation": {
       "subject": "Seat cancelled — {courseTitle}",
@@ -365,6 +366,16 @@
         "invalid": "Enter a valid email address.",
         "rate_limited": "Too many requests. Try again later.",
         "generic": "Something went wrong. Try again in a moment."
+      },
+      "remove": {
+        "meta_title": "Leave the waitlist",
+        "title": "Leave the waitlist?",
+        "intro": "Confirm and we'll stop emailing you about this session.",
+        "submit": "Remove me from the waitlist",
+        "done": "Done. You're off the waitlist and won't be emailed about this session.",
+        "invalid_title": "Link invalid or expired",
+        "invalid_body": "This link is no longer valid. If you still receive waitlist emails, contact us.",
+        "error_generic": "Something went wrong. Try again in a moment."
       }
     },
     "certificate": {

@@ -22,4 +22,8 @@ export { sendDueReminders } from "./server/reminders"
 export { markAttendance, attendanceSchema } from "./server/attendance"
 
 // Route handlers for src/app/api/{waitlist,enrollments}/** (thin wrappers)
-export { handleAttendance, handleCancel, handleCancelPreview, handleWaitlist } from "./server/http"
+export { handleAttendance, handleCancel, handleCancelPreview, handleWaitlist, handleWaitlistRemove } from "./server/http"
+
+// W4-08: waitlist "remove me" link
+export { removeWaitlistEntryByToken } from "./server/unsubscribe"
+export { signWaitlistRemoveToken, verifyWaitlistRemoveToken, WAITLIST_REMOVE_TTL_SECONDS } from "./server/unsubscribe-token"
