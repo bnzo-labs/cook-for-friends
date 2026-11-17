@@ -532,6 +532,7 @@
           "none": "This cancellation does not qualify for a refund or credit."
         },
         "credit_emailed": "The credit code is sent to you by email. It is not shown here.",
+        "credit_terms": "Keep this code private: whoever holds it can use it. It is valid once, for 12 months. If your next order costs less than the credit, the unused balance is lost.",
         "none_hint": "There are less than {hours} h left before the session. You can still cancel to free the seat.",
         "deadline": "This outcome applies until {date}.",
         "policy_link": "Read the cancellation policy",

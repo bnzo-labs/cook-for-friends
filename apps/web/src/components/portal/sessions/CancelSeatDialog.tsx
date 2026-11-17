@@ -110,7 +110,12 @@ export function CancelSeatDialog({ enrollmentId, courseTitle, dateLabel, preview
         </DialogHeader>
         <div className="flex flex-col gap-2 text-fg" data-cancel-outcome>
           <p className="font-medium">{t(`outcome.${preview.outcome}`, values)}</p>
-          {preview.outcome === "credit" ? <p className="text-sm text-fg-muted">{t("credit_emailed")}</p> : null}
+          {preview.outcome === "credit" ? (
+            <>
+              <p className="text-sm text-fg-muted">{t("credit_emailed")}</p>
+              <p className="text-sm text-fg-muted">{t("credit_terms")}</p>
+            </>
+          ) : null}
           {preview.outcome === "none" ? <p className="text-sm text-fg-muted">{t("none_hint", values)}</p> : null}
           {preview.deadlineNextTier ? (
             <p className="text-sm text-fg-muted">{t("deadline", { date: formatDateTime(preview.deadlineNextTier, locale) })}</p>

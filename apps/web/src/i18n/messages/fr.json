@@ -532,6 +532,7 @@
           "none": "Cette annulation ne donne droit à aucun remboursement ni crédit."
         },
         "credit_emailed": "Le code de crédit vous sera envoyé par courriel : il ne s'affiche pas ici.",
+        "credit_terms": "Gardez ce code confidentiel : toute personne qui le détient peut l'utiliser. Il est valable une seule fois, pendant 12 mois. Si votre prochaine commande coûte moins que le crédit, le solde non utilisé est perdu.",
         "none_hint": "Il reste moins de {hours} h avant la séance. Vous pouvez tout de même annuler pour libérer la place.",
         "deadline": "Ce résultat est valable jusqu'au {date}.",
         "policy_link": "Lire la politique d'annulation",
