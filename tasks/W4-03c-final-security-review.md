@@ -78,7 +78,26 @@ Caveman. English only.
 Reviewed tree: `origin/main` @ 13a20bc. Doc lives here (brief: `docs/**` read-only). Sections filled area by area.
 
 ### A. Session-cancel job + staff cancel-seat (authz, refund cap, double refund, idempotency)
-_pending_
+Paths relative to `apps/web/src/`.
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| POST cancel authn/authz | PASS | `modules/scheduling/server/http.ts:45-66`: Origin first, anon 401, staff = `users` + `isStaff`, customer must have a relation to the seat (`getEnrollmentView(id, customer)`) else 404 (no oracle), guest buyer path → NOT_BUYER (W3-10) |
+| `mode: full` staff only | PASS | `http.ts:64` 403 for customers; zod enum on body (`:36`) |
+| GET preview staff only | PASS | `http.ts:74-80` 401/403 before id parse; read-only |
+| Rate limit | PASS | 20/h per actor (`http.ts:24,52`) on POST. GET preview unlimited but staff-only |
+| Refund cap | PASS | `commerce/seats/cancel.ts:126-131` cap = min(seat − linked refunds, order total − all refunds incl. Dashboard − sibling promises) (`seats/cap.ts:42-47`), evaluated inside tx with `FOR UPDATE` on enrollment AND order (`:117-122`); `amount` zod int 0..10M |
+| Double refund (concurrent / retry) | PASS | Per-seat `pg_advisory_xact_lock` held across plan + Stripe call (`cancel.ts:193-198`); Stripe idempotency key `seat-cancel-<id>`; retry replays PERSISTED amount (L-2) and checks `refunds.list` metadata first (`:154-166`); retry re-checked vs cap (`:142`) |
+| Session-cancel job trigger | PASS | `catalog/collections/sessions.ts:59-69` queues only on update by a `users` record; `sessions.update` = `isStaffOrAdmin`. Payload jobs `run` endpoint staff only (`lib/jobs-access.ts`) |
+| Session-cancel job idempotent / resumable | PASS | `scheduling/server/session-cancel.ts`: sequential, re-reads session status per seat (flip back stops run), non-confirmed seats skipped, pending refunds retried with persisted amount, emails keyed `session-cancel-<id>-*`, throws only on transient → Payload retry (8, exp) |
+| Session-cancel amount | PASS | `fullRefundDecision` → commerce re-clamps under lock; job cannot exceed cap |
+| Duplicate jobs | **FINDING** LOW A-1 | Hook fires on EVERY update while `status=cancelled` (no `previousDoc.status` transition check, `sessions.ts:60`). Each save of an already-cancelled session queues another full run. Safe (seat guard + skip + idempotency key) but extra Stripe `refunds.list` calls and log noise |
+| Concurrent duplicate runs | PASS | Two runs on one seat serialize on the advisory lock; second sees cancelled → skip or REFUND_ALREADY_REQUESTED → skip (no 2nd email) |
+| PII in logs | PASS | ids/codes/counts only (`session-cancel.ts:35-39`, `seatLog`) |
+
+Note → area G: customers are Payload auth users (`customers.auth`), so any collection relying on Payload default access (`Boolean(req.user)`) is open to customers. `payload-jobs` collection REST (not just `run`) checked in G.
+
+Area A result: 0 CRIT · 0 HIGH · 0 MED · 1 LOW.
 
 ### B. Waitlist remove token + route (HMAC, expiry, scanner-safe GET, rate limit, enumeration) — W4-08
 _pending_
@@ -108,3 +127,4 @@ _pending_
 ### Post-launch backlog (MEDIUM/LOW)
 | ID | Sev | Summary | Accept for launch | Reason |
 |----|-----|---------|-------------------|--------|
+| A-1 | LOW | session-cancel queued on every save of a cancelled session (no transition check) | yes | idempotent; cost = extra Stripe list calls; fix: `previousDoc.status !== 'cancelled'` |
