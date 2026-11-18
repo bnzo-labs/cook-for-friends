@@ -1,7 +1,7 @@
 ---
 type: task
 id: W4-03c
-status: pending
+status: complete
 wave: 4
 batch: 4d
 module: quality (review)
@@ -41,11 +41,11 @@ All of 4a–4c merged. Parallel with W4-06 drafting (W4-06 cannot be marked read
 - **Prod config review:** cross-check `docs/RUNBOOK_PROD.md` env list vs `src/lib/env.ts` (no `VIDEO_FAKE_ALLOWED`, `CSP_MODE=enforce`, test keys rejected in prod?).
 
 ## Done When
-- [ ] Findings table in this file (id, severity, location, evidence, fix owner per CONTRACT §1).
-- [ ] PoC tests for CRITICAL/HIGH under `apps/web/test/security/w4-*.test.ts`.
-- [ ] Every CRITICAL/HIGH → `tasks/W4-1N-fix-<slug>.md` (same frontmatter/sections + standing rules, owner per CONTRACT §1, `depends-on: [W4-03c]`); this task `blocked` ("fixes required") until they merge, then `complete`.
-- [ ] MEDIUM/LOW → listed as post-launch backlog with an explicit "accept for launch: yes/no" recommendation for Erick.
-- [ ] Explicit **GO / NO-GO** line for W4-06 at the top of Completion notes.
+- [x] Findings table in this file (id, severity, location, evidence, fix owner per CONTRACT §1).
+- [x] PoC tests for CRITICAL/HIGH under `apps/web/test/security/w4-*.test.ts`.
+- [x] Every CRITICAL/HIGH → `tasks/W4-1N-fix-<slug>.md` (same frontmatter/sections + standing rules, owner per CONTRACT §1, `depends-on: [W4-03c]`); this task `blocked` ("fixes required") until they merge, then `complete`.
+- [x] MEDIUM/LOW → listed as post-launch backlog with an explicit "accept for launch: yes/no" recommendation for Erick.
+- [x] Explicit **GO / NO-GO** line for W4-06 at the top of Completion notes.
 
 ## Erick handoffs
 - None (privacy policy text is tracked in W4-06's checklist).
@@ -74,8 +74,8 @@ All of 4a–4c merged. Parallel with W4-06 drafting (W4-06 cannot be marked read
 ## Communication
 Caveman. English only.
 
-## Review log (W4-03c — in progress)
-Reviewed tree: `origin/main` @ 13a20bc. Doc lives here (brief: `docs/**` read-only). Sections filled area by area.
+## Review log (W4-03c)
+Reviewed tree: `origin/main` @ 13a20bc. Doc lives here (brief: `docs/**` read-only). Method: code read + targeted greps (no local build/suite, machine load). Paths relative to `apps/web/src/` unless stated.
 
 ### A. Session-cancel job + staff cancel-seat (authz, refund cap, double refund, idempotency)
 Paths relative to `apps/web/src/`.
@@ -234,6 +234,22 @@ Area H result: all 5 residuals still acceptable; 1 new LOW H-6 (R2 bucket public
 ### Findings table
 | ID | Sev | Location | Evidence | Fix owner | Status |
 |----|-----|----------|----------|-----------|--------|
+| D-1 | MED | `lib/observability/scrub.ts:69` | span/trace URL attrs not URL-scrubbed → magic-link token to Sentry; PoC `test/security/w4-sentry-span-url.test.ts` (`it.fails`) | platform/observability (W4-04 owner) | open — fix before DSN |
+| F-4 | MED | `components/portal/player/MuxStage.tsx:24` | Mux Data `muxData` cookie, no consent (Law 25 s.8.1) | portal | open — `tasks/W4-10-fix-mux-data-cookie.md` |
+| G-3 | MED | Payload built-in `payload-locked-documents` | default access `Boolean(req.user)`; customers are auth users | platform | open — backlog |
+| A-1 | LOW | `catalog/collections/sessions.ts:60` | session-cancel queued on every save while cancelled | catalog | backlog |
+| C-1 | LOW | `catalog/fields/money.ts:75` | dollars max dead code, cents unbounded | catalog | backlog |
+| D-2 | LOW | Sentry transaction name / URL | certificate code in path | platform | backlog |
+| E-1 | LOW | `lib/security-headers.ts:64` | `script-src 'unsafe-inline'` | platform | accepted |
+| E-2 | LOW | `next.config.ts:52` | public `/monitoring` tunnel | platform | accepted |
+| F-1 | LOW | `.github/workflows/*.yml` | no explicit `permissions:` | platform | backlog |
+| F-2 | LOW | `ci.yml` | `pnpm/action-setup` not SHA-pinned | platform | backlog |
+| F-3 | LOW | `lighthouse-staging.yml:48-60` | bypass secret in LHR artifact | platform | backlog + rotate |
+| F-5 | LOW | `components/layout/*` | no privacy policy link/route | storefront/ui + W4-06 | handoff |
+| G-1 | LOW | `identity/collections/users.ts:11` | staff cookie no `Secure` | identity | backlog |
+| G-2 | LOW | `payload.config.ts` | empty Payload `csrf` allowlist | platform | backlog |
+| G-4 | LOW | `lib/env.ts` | prod accepts test key / skip validation / report-only | platform + W4-06 | runbook |
+| H-6 | LOW | infra (R2) | bucket public access unverified | W4-06 | runbook |
 
 ### Post-launch backlog (MEDIUM/LOW)
 | ID | Sev | Summary | Accept for launch | Reason |
@@ -254,3 +270,21 @@ Area H result: all 5 residuals still acceptable; 1 new LOW H-6 (R2 bucket public
 | G-3 | MED | customers can read/create/delete `payload-locked-documents` via REST | yes | admin UX integrity only, no data/money; fix first patch |
 | G-4 | LOW | env accepts test Stripe key / skip-validation / CSP report-only in prod | yes | W4-06 runbook assertions |
 | H-6 | LOW | R2 bucket public access unverified (`R2_PUBLIC_URL` required) | yes **iff** W4-06 confirms bucket private | public bucket would bypass material access (HIGH) |
+
+## Completion notes
+
+**GO for W4-06** (0 CRITICAL, 0 HIGH open), with launch conditions:
+1. Merge `tasks/W4-10-fix-mux-data-cookie.md` (F-4, MEDIUM, not accepted: Law 25 consent; one prop) before public launch — or Erick explicitly accepts it.
+2. Do not set `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` until D-1 is fixed (PoC flips green).
+3. W4-06 runbook asserts: R2 bucket private (H-6), `STRIPE_SECRET_KEY` live, no `VIDEO_FAKE_ALLOWED` / `NEXT_PUBLIC_SKIP_ENV_VALIDATION` / `NODE_OPTIONS`, `CSP_MODE` unset or `enforce` (G-4); Mux referrer allow-list; one live purchase + staff refund smoke (H); named owner for daily Vercel/Stripe error check while Sentry is off.
+
+Counts: 0 CRITICAL · 0 HIGH · 3 MEDIUM (D-1, F-4, G-3) · 13 LOW.
+
+Deliverables: findings above (areas A–H); PoC `apps/web/test/security/w4-sentry-span-url.test.ts` (D-1, `it.fails`); CI check `apps/web/e2e/w4-03c-bundle-secrets.test.ts` (public bundle secret grep + `.map` probe); fix brief `tasks/W4-10-fix-mux-data-cookie.md`.
+
+Deviations:
+- Review doc = this file (brief: `docs/**` read-only), not `docs/SECURITY_REVIEW_W4.md`.
+- `.next/static` grep: CI uploads no build artifact and `.github/**` is DO-NOT-TOUCH → scan runs as a Playwright spec in the e2e job against the CI `next build` output (quality-owned `e2e/**`).
+- PoC written for a MEDIUM (D-1) because it is pure and cheap; no CRIT/HIGH needed one.
+- `docs/RUNBOOK_PROD.md` absent → prod env cross-check turned into W4-06 runbook assertions (G-4).
+- CI noise seen during review: run 44276793747 failed only on Lighthouse perf/LCP (docs-only diff, runner variance); runs 44303115939/44303183442 failed at "Create Neon branch" 422 (branch quota from rapid pushes), not code.
