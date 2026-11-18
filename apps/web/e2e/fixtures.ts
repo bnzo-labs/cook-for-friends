@@ -13,6 +13,7 @@ export const test = base.extend<{ cspGuard: void }>({
     async ({ context }, use) => {
       const violations: string[] = []
       await context.exposeBinding("__reportCsp", (_src, msg: string) => {
+        console.log(`[CSP] ${msg}`)
         violations.push(msg)
       })
       await context.addInitScript(() => {
@@ -23,7 +24,10 @@ export const test = base.extend<{ cspGuard: void }>({
       })
       const watch = (page: import("@playwright/test").Page) =>
         page.on("console", (m) => {
-          if (/content security policy/i.test(m.text())) violations.push(m.text().slice(0, 300))
+          if (/content security policy/i.test(m.text())) {
+            console.log(`[CSP console] ${m.text().slice(0, 300)}`)
+            violations.push(m.text().slice(0, 300))
+          }
         })
       context.pages().forEach(watch)
       context.on("page", watch)

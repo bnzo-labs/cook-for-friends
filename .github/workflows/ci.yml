@@ -348,6 +348,7 @@ jobs:
             echo "PAYLOAD_SECRET=$PAYLOAD_SECRET"
             echo "CRON_SECRET=$CRON_SECRET"
             echo "SEED_PASSWORD=$SEED_PASSWORD"
+            echo "E2E_STAFF_EMAIL=admin@example.com"
             echo "E2E_STAFF_PASSWORD=$SEED_PASSWORD"
           } >> "$GITHUB_ENV"
 
@@ -461,7 +462,7 @@ jobs:
           W305_SCREENSHOTS: "1"
           # Native-ESM resolution shims for the Local API seeding done inside specs.
           NODE_OPTIONS: --import ./test/e2e-esm-register.mjs
-        run: pnpm exec playwright test
+        run: pnpm exec playwright test --max-failures=3 # TEMP W4-03a diagnosis, remove
 
       # -------------------------------------------------------------------
       # W4-00: Lighthouse CI — runs against the already-running next start server.
