@@ -100,7 +100,21 @@ Note → area G: customers are Payload auth users (`customers.auth`), so any col
 Area A result: 0 CRIT · 0 HIGH · 0 MED · 1 LOW.
 
 ### B. Waitlist remove token + route (HMAC, expiry, scanner-safe GET, rate limit, enumeration) — W4-08
-_pending_
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| Token construction | PASS | `modules/scheduling/server/unsubscribe-token.ts:14-21`: HMAC-SHA256 over `waitlist-remove|<id>|<exp>` (purpose-bound, no PII), base64url; id regex + exp regex before MAC |
+| Verify | PASS | `:24-37` length cap 200, exactly 3 parts, `timingSafeEqual` after length check, expiry checked after MAC; every failure → `null` (no reason) |
+| Expiry | PASS | 90 d TTL; entries purged 30 d after session end anyway (W4-03b L-10) |
+| Forgery / IDOR | PASS | Entry id is sequential but MAC-bound; no way to delete another entry without its token |
+| Scanner-safe GET | PASS | `app/(frontend)/[locale]/waitlist/remove/page.tsx`: GET renders a confirm button only, no DB call; mutation via POST `/api/waitlist/remove` |
+| Token leakage | PASS | Page `robots: noindex`, `referrer: no-referrer` (`page.tsx:11-14`). Query-string token in access logs / Sentry URL → area D |
+| POST route | PASS | `server/http.ts:131-149`: Origin check, 10/IP/h (IP via `x-vercel-forwarded-for`, L-6), zod 1..200, generic 400 `INVALID_TOKEN`, `{ ok: true }` even if entry already gone (idempotent, no existence oracle) |
+| Join enumeration | PASS | Duplicate join silent success; 5/IP/h + 3/email/h (`http.ts:96-118`) |
+| Key management | PASS (note) | Key = `PAYLOAD_SECRET` (domain-separated by purpose prefix; Payload JWT derives its own key). Rotating `PAYLOAD_SECRET` invalidates outstanding remove links + staff sessions — acceptable, runbook note |
+| Delete semantics | PASS | Hard delete with `overrideAccess` only after valid MAC (`unsubscribe.ts:10-16`); good for Law 25 minimisation |
+
+Area B result: 0 findings.
 
 ### C. Dollars→cents conversion (rounding, negative, >2 dp) — money fields, discount codes
 _pending_
