@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 /**
  * W3-04 (local only, throwaway DB): staff sees a pending comment in the Payload

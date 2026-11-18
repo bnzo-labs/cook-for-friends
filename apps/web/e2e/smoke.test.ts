@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test"
+import { test, expect } from "./fixtures"
 
 /**
  * Smoke test — verifies the /fr route loads and renders the site name.

@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright"
-import { test, expect } from "@playwright/test"
+import { test, expect } from "./fixtures"
 import type { Payload } from "payload"
 
 import { getTestPayload, uid } from "../test/integration"

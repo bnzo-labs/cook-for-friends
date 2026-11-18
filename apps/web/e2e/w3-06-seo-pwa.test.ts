@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test"
+import { test, expect, type Page } from "./fixtures"
 
 /**
  * W3-06 SEO + PWA.

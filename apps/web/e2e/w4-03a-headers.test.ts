@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test"
+import { test, expect, type Page } from "./fixtures"
 
 /**
  * W4-03a security headers. Runs against a production build in CI (CSP_MODE unset = enforce).
