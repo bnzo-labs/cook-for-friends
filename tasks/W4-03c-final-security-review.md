@@ -151,8 +151,23 @@ Sentry inactive at launch (no DSN) → D-1 has no exposure until a DSN is set. *
 
 Area D result: 0 CRIT · 0 HIGH · 1 MED · 1 LOW.
 
-### E. CSP/headers (W4-03a) + fake-Stripe / fake-video test code unreachable in prod
-_pending_
+### E. CSP/headers (W4-03a) + test-only code unreachable in prod
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| Header set | PASS | `lib/security-headers.ts:93-111` via `next.config.ts headers()` on `/:path*` (pages, API, admin, static): CSP, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/mic/geo/payment off), COOP same-origin |
+| CSP directives | PASS | `default-src 'self'`; `object-src 'none'`; `base-uri 'self'`; `frame-ancestors 'none'`; `frame-src 'none'`; `form-action 'self' https://checkout.stripe.com`; img/media/connect limited to self + Mux (+ R2 origin) + Gravatar (admin); no wildcard hosts except `*.mux.com`/`*.litix.io`; `upgrade-insecure-requests` on https prod |
+| CSP mode | PASS (note) | `CSP_MODE` default `enforce`; only literal `report-only` downgrades (`:53-55`). Runbook must not set it in prod (checked in G) |
+| `script-src 'unsafe-inline'` | ACCEPTED residual (LOW E-1) | No nonce (would make every page dynamic, kills ISR). CSP gives no XSS script-injection defence; remaining defences: React escaping, no `dangerouslySetInnerHTML` except escaped JSON-LD (W3-10), Lexical renderer, comments plain text, `object-src`/`base-uri`/`form-action`/`frame-ancestors` still cut exfil/clickjack paths. Accept for launch: yes. Post-launch: hash-based or nonce on dynamic routes only (`/account/**`, admin) |
+| HSTS | PASS (note) | `max-age=31536000` only on https, no `includeSubDomains`/`preload` until D8 (domain shared with Shopify) — correct scope |
+| CSP report | PASS | `report-uri` only when a DSN is set; key in report URI is the public DSN key |
+| Sentry tunnel `/monitoring` | LOW E-2 | Public ingest relay (standard `@sentry/nextjs` tunnel, fixed org/project): anyone can POST junk events → Sentry quota burn. No data exposure. Accept: yes |
+| Fake Stripe (`test/e2e-stripe/*`) | PASS | Not imported by `src/**` (grep). Loaded only by CI `next start` via `NODE_OPTIONS=--require test/e2e-stripe/stripe-redirect.cjs` (`ci.yml:426-431`) in `signed-events` mode. Prod reachability requires a Vercel `NODE_OPTIONS` env pointing at it → runbook check (G) |
+| Fake video provider | PASS | `video/server/config.ts:17-25` refuses fake when `VERCEL_ENV=production` even with opt-in (W4-03b L-5) |
+| Test seams in `src` | PASS (note) | `setStripeForTests`, `setMuxPortForTests`, `setSeatFaultForTests`, `setWebhookFaultForTests` throw outside test env. `setEmailTransportForTests` (`notifications/server/transport.ts:77`) is unguarded but has no caller outside tests and no route reaches it |
+| Public bundle secrets + source maps | see below | New CI check `apps/web/e2e/w4-03c-bundle-secrets.test.ts` scans the CI `next build` `.next/static` for `sk_/rk_/whsec_`, DB URLs and the literal values of 15 secret env vars, and probes `GET <chunk>.map` ≠ 200. Brief asked to download a CI build artifact; CI uploads none and `.github/**` is DO-NOT-TOUCH, so the scan runs inside the e2e job instead (deviation). Result: _pending CI_ |
+
+Area E result: 0 CRIT · 0 HIGH · 0 MED · 2 LOW (pending bundle scan).
 
 ### F. CI secrets handling (ci.yml) + Law 25 privacy
 _pending_
@@ -174,3 +189,5 @@ _pending_
 | C-1 | LOW | $100k max on dollars fields is dead code (mirror strips key before validation); cents unbounded | yes | staff-only, fails closed at Stripe/DB; fix: max in `validateCents` or in mirror |
 | D-1 | MED | Sentry scrubber misses span/trace URL attrs (`http.url`, `http.target`, `url.full`, `url.query`, `http.query`) → magic-link/waitlist tokens to Sentry | yes **only while no Sentry DSN**; no if DSN set at launch | gate on DSN; PoC `test/security/w4-sentry-span-url.test.ts` |
 | D-2 | LOW | certificate verify code in URL path reaches Sentry | yes | code is public by design |
+| E-1 | LOW | CSP `script-src 'unsafe-inline'` (no nonce) | yes | ISR trade-off (W4-03a); no known injection sink; revisit nonce on dynamic routes |
+| E-2 | LOW | `/monitoring` Sentry tunnel accepts arbitrary events | yes | quota abuse only |
