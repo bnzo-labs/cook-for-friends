@@ -133,7 +133,23 @@ Area B result: 0 findings.
 Area C result: 0 CRIT · 0 HIGH · 0 MED · 1 LOW.
 
 ### D. Sentry scrubber + capture (PII) — lib/observability
-_pending_
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| Init options | PASS | `lib/observability/init.ts:29-44`: `sendDefaultPii: false`, no `replayIntegration`, `beforeSend`/`beforeSendTransaction`/`beforeBreadcrumb` = scrubber; strict no-op without DSN (`sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation-client.ts`) |
+| Request scrubbing | PASS | `scrub.ts:98-106` drops cookies, body, `query_string`; headers drop cookie/auth/stripe-signature/mux-signature/bypass/IP (`:11-20`); `request.url` query `token,next,code,session_id,email,key` + signed-URL keys stripped (`:22-25,40-61`) |
+| User | PASS | `user` reduced to `{ id }` (`:125`) |
+| Free text | PASS (note) | messages/exception values: emails + 13–19 digit runs redacted (`:35-37`). Names inside free-text error messages are not detected (structured `name`/`first_name`… keys are) |
+| Stripe metadata / customer_details | PASS | `DROP_KEYS` (`:31`) |
+| Capture helpers | PASS | `capture.ts`: rebuilt `Error` from `safeErrorFields` (no Stripe params echo), tags = source/event id/type/idempotency key only |
+| Span / trace URL attributes | **FINDING** MEDIUM D-1 | `scrubValue` runs `scrubUrl` only for keys exactly `url`/`href`/`referer(r)` (`:69`). Span data + `contexts.trace.data` keys `http.url`, `http.target`, `url.full`, `url.query`, `http.query` get only `scrubString` → `?token=` survives. Exposure: GET `/<locale>/auth/verify?token=…` (magic link, 15-min TTL, single use; consumed by POST seconds later) and `/waitlist/remove?token=…` (90 d). `tracesSampleRate` 0.1 in prod. Impact: anyone with Sentry project access could replay an unconsumed magic link → account takeover window ≤ 15 min. PoC `apps/web/test/security/w4-sentry-span-url.test.ts` (`it.fails`, pure, runs in verify job). Runtime presence of the query in those attributes not observed (no DSN in CI) — scrubber gap proven, SDK emission inferred from OTel semconv |
+| Certificate code in path | LOW D-2 | `/<locale>/certificates/verify/<code>` path (transaction name, request.url) not scrubbed → Sentry sees code → name + course. Code is meant to be shareable (public verify page), so low |
+| Source maps | see area E | `next.config.ts:53` `sourcemaps.disable: "disable-upload"` when no auth token — public `.map` check in E |
+| Tunnel | PASS | `/monitoring` same-origin, excluded from proxy (CSP `connect-src 'self'`) |
+
+Sentry inactive at launch (no DSN) → D-1 has no exposure until a DSN is set. **Fix before setting `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN`**: scrub any key matching `/(^|\.)(url|target|query|full)$/i` (and `http.fragment`) with `scrubUrl`, or drop query from all span data.
+
+Area D result: 0 CRIT · 0 HIGH · 1 MED · 1 LOW.
 
 ### E. CSP/headers (W4-03a) + fake-Stripe / fake-video test code unreachable in prod
 _pending_
@@ -156,3 +172,5 @@ _pending_
 |----|-----|---------|-------------------|--------|
 | A-1 | LOW | session-cancel queued on every save of a cancelled session (no transition check) | yes | idempotent; cost = extra Stripe list calls; fix: `previousDoc.status !== 'cancelled'` |
 | C-1 | LOW | $100k max on dollars fields is dead code (mirror strips key before validation); cents unbounded | yes | staff-only, fails closed at Stripe/DB; fix: max in `validateCents` or in mirror |
+| D-1 | MED | Sentry scrubber misses span/trace URL attrs (`http.url`, `http.target`, `url.full`, `url.query`, `http.query`) → magic-link/waitlist tokens to Sentry | yes **only while no Sentry DSN**; no if DSN set at launch | gate on DSN; PoC `test/security/w4-sentry-span-url.test.ts` |
+| D-2 | LOW | certificate verify code in URL path reaches Sentry | yes | code is public by design |
