@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test"
+import { test, expect } from "./fixtures"
 
 /**
  * W4-02 diagnostic: logs the LCP element of each Lighthouse URL (real Chromium, no

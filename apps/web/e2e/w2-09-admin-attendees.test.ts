@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test } from "./fixtures"
 
 /**
  * W2-09 (local only): staff opens a seeded session with enrollments, sees the

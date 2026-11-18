@@ -93,6 +93,10 @@ export const serverSchema = z.object({
       SENTRY_ENVIRONMENT: z.string().optional(),
     }),
   )
+  .merge(
+    // W4-03a — CSP rollout switch (read directly in next.config.ts at build time)
+    z.object({ CSP_MODE: z.enum(["enforce", "report-only"]).optional() }),
+  )
   .superRefine((data, ctx) => {
     // Validate video-provider-specific vars
     if (data.VIDEO_PROVIDER === "fake") {

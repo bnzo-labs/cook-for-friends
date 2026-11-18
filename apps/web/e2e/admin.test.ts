@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test"
+import { test, expect } from "./fixtures"
 
 /**
  * Admin smoke — guards against the 307-counted-as-pass regression:

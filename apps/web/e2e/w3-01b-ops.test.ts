@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test"
+import { test, expect, type Page } from "./fixtures"
 import AxeBuilder from "@axe-core/playwright"
 import { randomInt } from "node:crypto"
 import path from "node:path"
