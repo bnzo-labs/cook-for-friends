@@ -117,7 +117,20 @@ Area A result: 0 CRIT · 0 HIGH · 0 MED · 1 LOW.
 Area B result: 0 findings.
 
 ### C. Dollars→cents conversion (rounding, negative, >2 dp) — money fields, discount codes
-_pending_
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| Float drift | PASS | `modules/catalog/fields/money.ts:54-59` `Math.round(v*100)` then rejects if residue > 1e-6: `19.99`→1999, `45.5`→4550, `1.005`→NaN (3 dp), `0.001`→NaN |
+| Negative / NaN / Infinity | PASS | `dollarsToCents` → NaN; mirror copies the raw value into cents so `validateCents` (integer ≥ 0) rejects the save (`:96`, `:4-11`) |
+| > 2 decimals | PASS | rejected (NaN → non-integer cents → validation error); never silently rounded |
+| Upper bound | **FINDING** LOW C-1 | `validateDollars` max $100,000 (`:75`) is dead code: the collection `beforeValidate` mirror (`courses.ts:36-38`, `discount-codes.ts:43-46`) deletes the virtual dollars key before field validation, so the dollars validator sees `undefined`; cents validator has no max. Staff typo `1000000` → price 100,000,000 cents → Stripe price sync/checkout fails (Stripe max 99,999,999), or Postgres int overflow error above 2^31. Staff-only, fails closed (no wrong charge) |
+| API write of cents | PASS | Mirror only overrides when dollars differ from stored cents (`:87-99`), API/seed cents writes untouched |
+| Discount percent | PASS | `validateDiscountValue` integer 1..100 for `percent` (`commerce/collections/discount-codes.ts:13-20`); `percentValue` max 100 |
+| Discount amount | PASS | same `applyDollarMirror` path → integer cents ≥ 0; amount > price handled by Stripe (amount_off clamps to 0 → zero-amount path, W4-01) |
+| Who writes money | PASS | `courses`/`discount-codes` create/update staff only; checkout reads cents server-side (never client-supplied amounts, W2-11) |
+| Kind switch | PASS (note) | Switching `percent`→`amount` without retyping keeps `value` (e.g. 20 → $0.20 off). Wrong discount is staff-visible in the admin list column; UX, not security |
+
+Area C result: 0 CRIT · 0 HIGH · 0 MED · 1 LOW.
 
 ### D. Sentry scrubber + capture (PII) — lib/observability
 _pending_
@@ -142,3 +155,4 @@ _pending_
 | ID | Sev | Summary | Accept for launch | Reason |
 |----|-----|---------|-------------------|--------|
 | A-1 | LOW | session-cancel queued on every save of a cancelled session (no transition check) | yes | idempotent; cost = extra Stripe list calls; fix: `previousDoc.status !== 'cancelled'` |
+| C-1 | LOW | $100k max on dollars fields is dead code (mirror strips key before validation); cents unbounded | yes | staff-only, fails closed at Stripe/DB; fix: max in `validateCents` or in mirror |
