@@ -219,8 +219,17 @@ Magic link, webhooks, video, comments, certificates, cancellation were PASS in W
 
 Area G result: 0 CRIT · 0 HIGH · 1 MED · 3 LOW.
 
-### H. Accepted residuals re-evaluated (H-1 images, bearer credit codes, Mux token, Sentry inactive, live Stripe e2e)
-_pending_
+### H. Accepted residuals re-evaluated
+
+| Residual | Still acceptable? | Reasoning / condition |
+|----------|-------------------|-----------------------|
+| W3-10 H-1 remainder: image uploaded to `media` is public until attached to a material (+ ≤ 30 s cache on other instances) | **Yes** | `mediaReadAccess` (`catalog/server/material-media.ts:76-84`) fails closed; window only between upload and attach; guide tells staff to upload inside the material form. **Condition (W4-06):** R2 bucket must have NO public access (no `r2.dev`, no custom domain). `R2_PUBLIC_URL` is a required env (`lib/env.ts:52`) and in CSP `img-src`; if it points at a publicly readable bucket, every material file (PDF/image) is fetchable by key, bypassing all material access control → that would be HIGH. Not verifiable from code (no R2 creds) → explicit W4-06 runbook check (H-6) |
+| Credit codes are bearer codes (W3-10 L-3) | **Yes** | 40-bit CSPRNG, single redemption, 365 d, Stripe-side brute force infeasible; loss = one seat value, buyer-controlled sharing. Policy/FAQ copy (W4-02) |
+| Mux playback token not viewer-bound (W3-10 L-4) | **Yes** | Entitled viewer could share a URL valid ≤ 1 h; same as any signed-URL VOD. Condition: Mux referrer allow-list in W4-06 runbook |
+| Sentry inactive at launch | **Yes, with conditions** | No DSN → no PII path, but also no alerting (OWASP A09): incidents seen only via Vercel logs / Stripe Dashboard / customer emails. Conditions: (1) fix D-1 before ever setting a DSN; (2) W4-06 runbook names who checks Vercel error logs + Stripe failed-webhook emails daily for the first 2 weeks |
+| Live Stripe e2e unverified (CI = signed-events fake wire) | **Yes, with condition** | Code path (signature, idempotency, refunds) is exercised end-to-end against a wire-compatible fake; real Checkout redirect, live webhook delivery/secret, Stripe Tax and live refunds are not. Condition: W4-06 production smoke = one real purchase (lowest price or 100 % code → zero-amount path is separate, so use a real card), verify order `paid` + entitlement + email, then staff cancel → refund visible in Stripe and order `partially_refunded/refunded`; webhook endpoint shows 2xx |
+
+Area H result: all 5 residuals still acceptable; 1 new LOW H-6 (R2 bucket public-access check, W4-06).
 
 ### Findings table
 | ID | Sev | Location | Evidence | Fix owner | Status |
@@ -244,3 +253,4 @@ _pending_
 | G-2 | LOW | Payload `csrf` allowlist empty → cookie auth from any origin | yes | SameSite=Lax covers cross-site; matters if D8 = Shopify sibling subdomain |
 | G-3 | MED | customers can read/create/delete `payload-locked-documents` via REST | yes | admin UX integrity only, no data/money; fix first patch |
 | G-4 | LOW | env accepts test Stripe key / skip-validation / CSP report-only in prod | yes | W4-06 runbook assertions |
+| H-6 | LOW | R2 bucket public access unverified (`R2_PUBLIC_URL` required) | yes **iff** W4-06 confirms bucket private | public bucket would bypass material access (HIGH) |
