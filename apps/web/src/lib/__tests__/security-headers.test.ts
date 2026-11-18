@@ -39,9 +39,12 @@ describe("security headers", () => {
     expect(csp).toMatch(/connect-src 'self' https:\/\/\*\.mux\.com https:\/\/\*\.litix\.io(;|$)/)
     expect(csp).not.toContain("unsafe-eval")
   })
-  it("upgrade-insecure-requests only in production", () => {
+  it("upgrade-insecure-requests only in production on an https site", () => {
     expect(buildCsp({ ...base, isProduction: true })).toContain("upgrade-insecure-requests")
     expect(buildCsp(base)).not.toContain("upgrade-insecure-requests")
+    expect(buildCsp({ isProduction: true, siteUrl: "http://localhost:3000" })).not.toContain(
+      "upgrade-insecure-requests",
+    )
   })
   it("dev allows eval + ws", () => {
     const csp = buildCsp({ ...base, isDevelopment: true })

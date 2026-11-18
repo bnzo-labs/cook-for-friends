@@ -83,7 +83,9 @@ export function buildCsp(env: SecurityHeaderEnv): string {
   ]
 
   const parts = directives.map(([name, values]) => `${name} ${values.join(" ")}`)
-  if (env.isProduction) parts.push("upgrade-insecure-requests")
+  // Only when the site itself is https: on an http origin (CI `next start`, local prod build)
+  // it rewrites same-origin http redirects/fetches and breaks the magic-link verify flow.
+  if (env.isProduction && env.siteUrl?.startsWith("https://")) parts.push("upgrade-insecure-requests")
   if (report) parts.push(`report-uri ${report}`)
   return parts.join("; ")
 }
