@@ -73,3 +73,38 @@ All of 4a–4c merged. Parallel with W4-06 drafting (W4-06 cannot be marked read
 
 ## Communication
 Caveman. English only.
+
+## Review log (W4-03c — in progress)
+Reviewed tree: `origin/main` @ 13a20bc. Doc lives here (brief: `docs/**` read-only). Sections filled area by area.
+
+### A. Session-cancel job + staff cancel-seat (authz, refund cap, double refund, idempotency)
+_pending_
+
+### B. Waitlist remove token + route (HMAC, expiry, scanner-safe GET, rate limit, enumeration) — W4-08
+_pending_
+
+### C. Dollars→cents conversion (rounding, negative, >2 dp) — money fields, discount codes
+_pending_
+
+### D. Sentry scrubber + capture (PII) — lib/observability
+_pending_
+
+### E. CSP/headers (W4-03a) + fake-Stripe / fake-video test code unreachable in prod
+_pending_
+
+### F. CI secrets handling (ci.yml) + Law 25 privacy
+_pending_
+
+### G. Auth / webhooks / access control / rate limits / prod config (brief checklist)
+_pending_
+
+### H. Accepted residuals re-evaluated (H-1 images, bearer credit codes, Mux token, Sentry inactive, live Stripe e2e)
+_pending_
+
+### Findings table
+| ID | Sev | Location | Evidence | Fix owner | Status |
+|----|-----|----------|----------|-----------|--------|
+
+### Post-launch backlog (MEDIUM/LOW)
+| ID | Sev | Summary | Accept for launch | Reason |
+|----|-----|---------|-------------------|--------|
