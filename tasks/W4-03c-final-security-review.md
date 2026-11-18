@@ -170,7 +170,33 @@ Area D result: 0 CRIT · 0 HIGH · 1 MED · 1 LOW.
 Area E result: 0 CRIT · 0 HIGH · 0 MED · 2 LOW (pending bundle scan).
 
 ### F. CI secrets handling (ci.yml) + Law 25 privacy
-_pending_
+
+**CI secrets**
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| Fork / untrusted PRs | PASS | `on: pull_request` + `push: main` only; no `pull_request_target`, no `workflow_run` (`ci.yml:3-7`, comment `:89`) |
+| GITHUB_TOKEN scope | PASS (note) | No `permissions:` block in `ci.yml` / `lighthouse-staging.yml`, but repo default workflow permissions = `read` (GitHub API). Add explicit `permissions: contents: read` for defence in depth (LOW F-1) |
+| Ephemeral secrets | PASS | `PAYLOAD_SECRET`, `CRON_SECRET`, `SEED_PASSWORD` generated per run with `openssl rand`, `::add-mask::` before `$GITHUB_ENV` (`ci.yml:336-353`); Neon branch URL masked (`:172`, `:337`); per-run Neon branch with expiry + delete |
+| Live Stripe keys | PASS | Gate rejects anything not `sk_test_`/`rk_test_` (`ci.yml:278-296`); key + derived `whsec` masked (`:369-371`, `:408`) |
+| Action pinning | LOW F-2 | Neon actions SHA-pinned; `actions/*` and third-party `pnpm/action-setup@v4` tag-pinned. Pin `pnpm/action-setup` to SHA |
+| Artifacts | LOW F-3 | `lighthouse-staging.yml` writes the Vercel bypass secret into LHCI `extraHeaders`; Lighthouse JSON reports echo `configSettings.extraHeaders` → uploaded artifact `lighthouse-staging-reports` (7 d) contains `VERCEL_AUTOMATION_BYPASS_SECRET` in clear (`::add-mask::` only masks logs). `stripe-listen.log` artifact (live-test mode) contains the CLI-session `whsec_` (test mode). Repo private, collaborators only → staging protection bypass for anyone with repo read. Fix: delete `configSettings` from LHR before upload or upload only HTML w/ header stripped; rotate bypass after |
+| gitleaks | PASS | `secret-scan` job gates all others; green on this PR |
+| `.env.example` | PASS (G) | checked in G |
+
+**Law 25 / privacy**
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| Non-essential cookies | **FINDING** MEDIUM F-4 | `components/portal/player/MuxStage.tsx:24-36` renders `<MuxPlayer>` without `disableCookies`/`disableTracking`; Mux Data is on by default (CSP allows `*.litix.io`, `security-headers.ts:75`) and sets a persistent first-party `muxData` cookie (random `mux_viewer_id`, multi-year) + sends viewing analytics to Mux. That is a tracking technology, not strictly necessary → Law 25 s.8.1 requires it off by default / consent; site has no consent banner. Fix (1 prop): `disableCookies` (keeps QoS beacons, no cookie) — or `disableTracking` if Erick prefers no Mux Data at all. Fix brief `tasks/W4-10-fix-mux-data-cookie.md` |
+| Other cookies | PASS | Only `set-cookie` writers: cart (`app/api/checkout/route.ts:29`), session (magic-link verify), logout clear, Payload admin auth, `NEXT_LOCALE` (next-intl preference) — all strictly necessary |
+| Privacy policy reachable | LOW F-5 | No privacy route and no footer/nav link (`components/layout/nav-items.ts`, `SiteFooter.tsx`; no `privacy`/`confidentialit` string in `src`). Can be a CMS `pages` doc via `[...slug]`, but nothing links it. Content = client handoff (W4-06 checklist); add footer link when the page exists |
+| Hold PII retention 7 d | PASS | `commerce/server/expire.ts:9,27-31` deletes `seat_holds_attendees` of non-active holds 7 d after expiry |
+| Waitlist retention | PASS | purge 30 d after session end (W4-03b L-10); one-click removal (B) |
+| Logs | PASS (note) | Structured logs carry ids/codes only (W4-03b L-5, `seatLog`, session-cancel `log`); retention = Vercel plan default, no log drain configured |
+| Sentry | see D-1 | PII scrubbed except token gap; inactive at launch |
+
+Area F result: 0 CRIT · 0 HIGH · 1 MED · 4 LOW.
 
 ### G. Auth / webhooks / access control / rate limits / prod config (brief checklist)
 _pending_
@@ -191,3 +217,8 @@ _pending_
 | D-2 | LOW | certificate verify code in URL path reaches Sentry | yes | code is public by design |
 | E-1 | LOW | CSP `script-src 'unsafe-inline'` (no nonce) | yes | ISR trade-off (W4-03a); no known injection sink; revisit nonce on dynamic routes |
 | E-2 | LOW | `/monitoring` Sentry tunnel accepts arbitrary events | yes | quota abuse only |
+| F-1 | LOW | no explicit `permissions:` in workflows | yes | repo default already `read` |
+| F-2 | LOW | `pnpm/action-setup` tag-pinned | yes | supply-chain hygiene |
+| F-3 | LOW | Vercel bypass secret in `lighthouse-staging-reports` artifact (LHR `configSettings.extraHeaders`) | yes | private repo; strip before upload, rotate bypass |
+| F-4 | MED | Mux Data cookie `muxData` set without consent (Law 25 s.8.1) | **no** | one-prop fix, brief `tasks/W4-10-fix-mux-data-cookie.md` |
+| F-5 | LOW | privacy policy page not linked / no route | yes (handoff) | content tracked in W4-06 |
