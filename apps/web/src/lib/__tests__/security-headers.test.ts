@@ -20,6 +20,9 @@ describe("security headers", () => {
     expect(csp).not.toContain("/bucket")
     expect(csp).toMatch(/media-src [^;]*https:\/\/cdn\.example\.com/)
   })
+  it("allows Gravatar for the Payload admin avatar", () => {
+    expect(buildCsp(base)).toMatch(/img-src [^;]*https:\/\/www\.gravatar\.com/)
+  })
   it("core directives", () => {
     const csp = buildCsp(base)
     for (const d of [

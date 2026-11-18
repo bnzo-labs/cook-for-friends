@@ -63,7 +63,11 @@ export function buildCsp(env: SecurityHeaderEnv): string {
     ["default-src", ["'self'"]],
     ["script-src", ["'self'", "'unsafe-inline'", ...(dev ? ["'unsafe-eval'"] : [])]],
     ["style-src", ["'self'", "'unsafe-inline'"]],
-    ["img-src", ["'self'", "data:", "blob:", "https://image.mux.com", ...(r2 ? [r2] : [])]],
+    // www.gravatar.com: Payload admin user avatar (admin-only; no app surface uses it).
+    [
+      "img-src",
+      ["'self'", "data:", "blob:", "https://image.mux.com", "https://www.gravatar.com", ...(r2 ? [r2] : [])],
+    ],
     ["media-src", ["'self'", "blob:", "https://*.mux.com", ...(r2 ? [r2] : [])]],
     ["font-src", ["'self'"]],
     [
