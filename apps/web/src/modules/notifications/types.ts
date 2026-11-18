@@ -124,6 +124,8 @@ export type EmailData = {
     sessionStartsAt: ISODate
     location: Location
     bookUrl: string
+    /** W4-08: signed "remove me from the waitlist" link, built by the sender. */
+    removeUrl?: string
   }
   /** attendee variant renders no amount, code or order number. */
   "cancellation-confirmation": {

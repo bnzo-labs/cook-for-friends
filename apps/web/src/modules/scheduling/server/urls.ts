@@ -16,3 +16,9 @@ export async function courseUrl(locale: Locale, slug: string | null | undefined)
   const { getPathname } = await import("@/i18n/navigation")
   return `${siteOrigin()}${getPathname({ locale, href: { pathname: "/courses/[slug]", params: { slug } } })}`
 }
+
+/** W4-08: absolute, localized waitlist "remove me" confirm page carrying the signed token. */
+export async function waitlistRemoveUrl(locale: Locale, token: string): Promise<string> {
+  const { getPathname } = await import("@/i18n/navigation")
+  return `${siteOrigin()}${getPathname({ locale, href: { pathname: "/waitlist/remove", query: { token } } })}`
+}

@@ -8,7 +8,8 @@ import { enqueueEmail } from "@/modules/notifications"
 import { emailLocation } from "./email-data"
 import { getPayload } from "./payload"
 import { withTransaction } from "./tx"
-import { courseUrl } from "./urls"
+import { signWaitlistRemoveToken } from "./unsubscribe-token"
+import { courseUrl, waitlistRemoveUrl } from "./urls"
 
 const PAGE = 50
 
@@ -44,6 +45,7 @@ async function markConverted(id: number): Promise<void> {
  */
 async function claimAndNotify(entry: Entry, view: SessionView): Promise<boolean> {
   const bookUrl = await courseUrl(entry.locale, view.courseSlug)
+  const removeUrl = await waitlistRemoveUrl(entry.locale, signWaitlistRemoveToken(entry.id))
   return withTransaction(async ({ db, tx }) => {
     const { rows } = await db.execute(
       sql`UPDATE waitlist_entries SET status = 'notified', notified_at = now(), updated_at = now()
@@ -55,7 +57,7 @@ async function claimAndNotify(entry: Entry, view: SessionView): Promise<boolean>
       to: entry.email,
       locale: entry.locale,
       idempotencyKey: `waitlist-${entry.id}`,
-      data: { courseTitle: view.courseTitle, sessionStartsAt: view.startsAt, location: emailLocation(view), bookUrl },
+      data: { courseTitle: view.courseTitle, sessionStartsAt: view.startsAt, location: emailLocation(view), bookUrl, removeUrl },
       tx,
     })
     return true

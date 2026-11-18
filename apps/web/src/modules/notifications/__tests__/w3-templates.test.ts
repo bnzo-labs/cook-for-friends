@@ -139,6 +139,20 @@ describe("Wave 3 templates", () => {
     expect(e.text.toLowerCase()).toContain("first person to complete payment")
   })
 
+  it("waitlist: remove link rendered FR/EN when removeUrl set, absent otherwise", async () => {
+    const removeUrl = "https://example.com/fr/liste-attente/retrait?token=abc.123.sig"
+    await send("waitlist-seat-available", "fr", { ...waitlist, removeUrl })
+    await send("waitlist-seat-available", "en", { ...waitlist, removeUrl })
+    await send("waitlist-seat-available", "en", waitlist)
+    const [fr, en, none] = [captured[0]!, captured[1]!, captured[2]!]
+    expect(fr.html).toContain(removeUrl)
+    expect(fr.text).toContain("Me retirer de la liste d'attente")
+    expect(en.html).toContain(removeUrl)
+    expect(en.text).toContain("Remove me from the waitlist")
+    expect(none.html).not.toContain("token=")
+    expect(none.text).not.toContain("Remove me from the waitlist")
+  })
+
   it("cancellation buyer credit: amount fr-CA/en-CA, mono code, expiry, order number", async () => {
     await send("cancellation-confirmation", "fr", cancelBuyer)
     const fr = captured[0]!

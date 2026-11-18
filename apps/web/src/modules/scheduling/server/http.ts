@@ -7,6 +7,7 @@ import { clientIp, consumeRateLimit, forbiddenOrigin, getCurrentCustomer, isAllo
 import { cancelEnrollment, previewStaffCancellation } from "./cancel"
 import { markAttendance, attendanceSchema } from "./attendance"
 import { getPayload } from "./payload"
+import { removeWaitlistEntryByToken } from "./unsubscribe"
 import { joinWaitlist, joinWaitlistSchema, normalizeEmail } from "./waitlist"
 
 const err = (status: number, code: string) => jsonResponse(status, { ok: false, error: { code, messageKey: `errors.${code}` } })
@@ -130,6 +131,29 @@ export async function handleWaitlist(request: Request): Promise<Response> {
     return fromResult(r, () => ({ ok: true }))
   } catch (error) {
     console.error("[scheduling] POST /api/waitlist failed", error)
+    return serverError()
+  }
+}
+
+const REMOVE_LIMIT = { scope: "ip", namespace: "waitlist-remove", limit: 10, windowSeconds: 3600 } as const
+const removeBodySchema = z.object({ token: z.string().min(1).max(200) })
+
+/**
+ * POST /api/waitlist/remove — W4-08. Public, Origin check, 10/IP/h. Idempotent `{ ok: true }`;
+ * bad / expired / malformed token → one generic 400 `INVALID_TOKEN`.
+ */
+export async function handleWaitlistRemove(request: Request): Promise<Response> {
+  if (!isAllowedOrigin(request)) return forbiddenOrigin()
+  try {
+    const limit = await consumeRateLimit({ ...REMOVE_LIMIT, key: clientIp(request.headers) })
+    if (!limit.allowed) return limited(limit.retryAfterSeconds)
+    const invalid = () => err(400, "INVALID_TOKEN")
+    const body = removeBodySchema.safeParse(await readBody(request))
+    if (!body.success) return invalid()
+    const r = await removeWaitlistEntryByToken(body.data.token)
+    return r.ok ? jsonResponse(200, { ok: true }) : invalid()
+  } catch (error) {
+    console.error("[scheduling] POST /api/waitlist/remove failed", error)
     return serverError()
   }
 }

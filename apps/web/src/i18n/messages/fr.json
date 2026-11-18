@@ -188,7 +188,8 @@
       "mapsLink": "Voir sur Google Maps",
       "firstToPay": "Les places ne sont pas réservées : la première personne qui complète son paiement obtient la place.",
       "cta": "Réserver ma place",
-      "footer": "Cook for Friends — Cours de pâtisserie à Montréal"
+      "footer": "Cook for Friends — Cours de pâtisserie à Montréal",
+      "removeLink": "Me retirer de la liste d'attente"
     },
     "cancellationConfirmation": {
       "subject": "Place annulée — {courseTitle}",
@@ -365,6 +366,16 @@
         "invalid": "Entrez une adresse courriel valide.",
         "rate_limited": "Trop de demandes. Réessayez plus tard.",
         "generic": "Une erreur est survenue. Réessayez dans un instant."
+      },
+      "remove": {
+        "meta_title": "Quitter la liste d'attente",
+        "title": "Quitter la liste d'attente ?",
+        "intro": "Confirmez et nous cesserons de vous écrire au sujet de cette séance.",
+        "submit": "Me retirer de la liste d'attente",
+        "done": "C'est fait. Vous n'êtes plus sur la liste d'attente et ne recevrez plus de courriel pour cette séance.",
+        "invalid_title": "Lien invalide ou expiré",
+        "invalid_body": "Ce lien n'est plus valide. Si vous recevez encore des courriels de liste d'attente, contactez-nous.",
+        "error_generic": "Une erreur est survenue. Réessayez dans un instant."
       }
     },
     "certificate": {
