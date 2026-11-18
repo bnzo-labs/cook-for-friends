@@ -199,7 +199,25 @@ Area E result: 0 CRIT · 0 HIGH · 0 MED · 2 LOW (pending bundle scan).
 Area F result: 0 CRIT · 0 HIGH · 1 MED · 4 LOW.
 
 ### G. Auth / webhooks / access control / rate limits / prod config (brief checklist)
-_pending_
+Magic link, webhooks, video, comments, certificates, cancellation were PASS in W2-11/W3-10 and their findings fixed in W4-03b (re-verified by reading the W4-03b diff targets listed there). Delta review on `main` @ 13a20bc:
+
+| Item | Verdict | Evidence |
+|------|---------|----------|
+| Magic link | PASS (re-check) | 15-min TTL (`identity/server/magic-link.ts:17`), POST verify, 5/email/h + 20/IP/h (`:105-106`), `sanitizeNext` idempotent (W4-03b L-1) |
+| Customer cookie | PASS | `customers.auth.cookies`: `SameSite=Lax`, `Secure` in prod, HttpOnly (Payload), 7 d, `sessionVersion` revocation (`identity/collections/customers.ts:14-23`) |
+| Staff cookie `Secure` | **FINDING** LOW G-1 | `users` collection `auth: true` (`identity/collections/users.ts:11`) → Payload default `cookies.secure: false` (`payload/dist/collections/config/defaults.js:135`). Staff `payload-token` is sent over plain http on a first http request before HSTS is cached (no preload/includeSubDomains, D8). Fix: `auth: { cookies: { sameSite: "Lax", secure: NODE_ENV === "production" } }` |
+| Payload REST CSRF allowlist | **FINDING** LOW G-2 | No `csrf` / `serverURL` in `payload.config.ts` → `config.csrf = []` → Payload `extractJWT` accepts cookie auth from ANY Origin (`payload/dist/auth/extractJWT.js:19-28`). Cross-site is still blocked by `SameSite=Lax`, but SameSite is per registrable domain: if D8 puts the app on a subdomain of the Shopify store's domain, Shopify theme/app scripts are same-site and can drive Payload REST with the customer/staff cookie. Custom routes have their own Origin check (all 14 mutating handlers checked). Fix: `csrf: [NEXT_PUBLIC_SITE_URL]` (platform, `payload.config.ts`) |
+| Payload system collection `payload-locked-documents` | **FINDING** MEDIUM G-3 | Payload default access `Boolean(req.user)` (`payload/dist/locked-documents/config.js:43-48`); customers are Payload auth users (magic-link strategy, see `lib/jobs-access.ts` comment). A signed-in customer can `GET /api/payload-locked-documents` (which admin docs are being edited, staff user ids, timestamps) and `POST`/`DELETE` locks on any document → staff see "locked by another user" / lose locks (admin integrity/DoS, no business data: populated `document` still goes through each collection's read access). Same class as W2-11 L-1 (jobs `run`). `payload-jobs` (all access false), `payload-preferences` (own only), `payload-migrations` (`endpoints: false`) are fine. GraphQL disabled (`payload.config.ts:157`). Fix: shadow `app/api/payload-locked-documents/[[...rest]]/route.ts` → 404 unless staff, or `lockDocuments: false` where not needed. Accept for launch: yes (no data/money impact), fix in first patch |
+| Staff login brute force | PASS (note) | Payload per-account lockout 5 attempts / 10 min; no per-IP limit on `/api/users/login` (few staff accounts; spraying bounded by lockout) |
+| Webhooks | PASS (re-check) | Stripe raw-body signature + event-id ledger; Mux `unwrap` 300 s; Sentry capture sends ids/types only (D) |
+| Video | PASS | entitlement-gated playback, TTL ≤ 2 h, `no-store`; fake refused on `VERCEL_ENV=production` |
+| Access matrix | PASS (re-check) | `readVersions` staff on drafts collections (W4-03b L-8); field-level reads fixed (W4-03b L-3, L-7); GraphQL off |
+| Rate limits §8 | PASS | auth (magic link), checkout (`app/api/checkout/route.ts:32`), waitlist join/remove, comments, progress, playback, materials, certificates, cancel — keys via `clientIp` (L-6) or customer id |
+| Origin check | PASS | every `POST/PUT/PATCH/DELETE` under `app/api/**` either calls `isAllowedOrigin` or delegates to a module `handle*` that does; exceptions by design: Stripe/Mux webhooks (signature), cron (Bearer `CRON_SECRET`) |
+| `.env.example` | PASS | every value empty or a non-secret default (`fake`, `enforce`, `http://localhost:3000`) |
+| Prod config guards | LOW G-4 | `lib/env.ts` accepts `sk_test_` keys and `NEXT_PUBLIC_SKIP_ENV_VALIDATION` in production; `CSP_MODE=report-only` allowed in prod. Misconfig → test-mode "paid" orders grant real entitlements. `docs/RUNBOOK_PROD.md` does not exist yet → env cross-check deferred to W4-06: runbook must assert `STRIPE_SECRET_KEY` starts `sk_live_`/`rk_live_`, no `VIDEO_FAKE_ALLOWED`, no `NEXT_PUBLIC_SKIP_ENV_VALIDATION`, `CSP_MODE` unset/`enforce`, no `NODE_OPTIONS` (fake Stripe preload, E). Optional code guard: refuse `sk_test_` when `VERCEL_ENV=production` |
+
+Area G result: 0 CRIT · 0 HIGH · 1 MED · 3 LOW.
 
 ### H. Accepted residuals re-evaluated (H-1 images, bearer credit codes, Mux token, Sentry inactive, live Stripe e2e)
 _pending_
@@ -222,3 +240,7 @@ _pending_
 | F-3 | LOW | Vercel bypass secret in `lighthouse-staging-reports` artifact (LHR `configSettings.extraHeaders`) | yes | private repo; strip before upload, rotate bypass |
 | F-4 | MED | Mux Data cookie `muxData` set without consent (Law 25 s.8.1) | **no** | one-prop fix, brief `tasks/W4-10-fix-mux-data-cookie.md` |
 | F-5 | LOW | privacy policy page not linked / no route | yes (handoff) | content tracked in W4-06 |
+| G-1 | LOW | staff `payload-token` cookie lacks `Secure` | yes | HTTPS + HSTS on prod; one-line fix |
+| G-2 | LOW | Payload `csrf` allowlist empty → cookie auth from any origin | yes | SameSite=Lax covers cross-site; matters if D8 = Shopify sibling subdomain |
+| G-3 | MED | customers can read/create/delete `payload-locked-documents` via REST | yes | admin UX integrity only, no data/money; fix first patch |
+| G-4 | LOW | env accepts test Stripe key / skip-validation / CSP report-only in prod | yes | W4-06 runbook assertions |
