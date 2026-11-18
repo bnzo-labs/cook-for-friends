@@ -2,7 +2,7 @@
  * notifications/templates/waitlist-seat-available.tsx — a seat freed up (CCR-W3-3).
  * No reservation: first to pay wins. `bookUrl` is built by the sender.
  */
-import { render, toPlainText } from "@react-email/components"
+import { Link, render, toPlainText } from "@react-email/components"
 import React from "react"
 import type { Locale } from "@/modules/_shared"
 import type { EmailData } from "../types"
@@ -41,6 +41,13 @@ function WaitlistSeatAvailableEmail({
 
       <CtaButton href={data.bookUrl}>{t("cta")}</CtaButton>
       <Muted>{t("firstToPay")}</Muted>
+      {data.removeUrl ? (
+        <Muted>
+          <Link href={data.removeUrl} style={{ color: "inherit", textDecoration: "underline" }}>
+            {t("removeLink")}
+          </Link>
+        </Muted>
+      ) : null}
     </EmailLayout>
   )
 }

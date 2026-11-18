@@ -32,6 +32,7 @@ export const w3DataSchemas = {
     sessionStartsAt: iso,
     location,
     bookUrl: url,
+    removeUrl: url.optional(),
   }),
   "cancellation-confirmation": z.object({
     recipient: z.enum(["buyer", "attendee"]),
