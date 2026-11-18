@@ -165,9 +165,9 @@ Area D result: 0 CRIT · 0 HIGH · 1 MED · 1 LOW.
 | Fake Stripe (`test/e2e-stripe/*`) | PASS | Not imported by `src/**` (grep). Loaded only by CI `next start` via `NODE_OPTIONS=--require test/e2e-stripe/stripe-redirect.cjs` (`ci.yml:426-431`) in `signed-events` mode. Prod reachability requires a Vercel `NODE_OPTIONS` env pointing at it → runbook check (G) |
 | Fake video provider | PASS | `video/server/config.ts:17-25` refuses fake when `VERCEL_ENV=production` even with opt-in (W4-03b L-5) |
 | Test seams in `src` | PASS (note) | `setStripeForTests`, `setMuxPortForTests`, `setSeatFaultForTests`, `setWebhookFaultForTests` throw outside test env. `setEmailTransportForTests` (`notifications/server/transport.ts:77`) is unguarded but has no caller outside tests and no route reaches it |
-| Public bundle secrets + source maps | see below | New CI check `apps/web/e2e/w4-03c-bundle-secrets.test.ts` scans the CI `next build` `.next/static` for `sk_/rk_/whsec_`, DB URLs and the literal values of 15 secret env vars, and probes `GET <chunk>.map` ≠ 200. Brief asked to download a CI build artifact; CI uploads none and `.github/**` is DO-NOT-TOUCH, so the scan runs inside the e2e job instead (deviation). Result: _pending CI_ |
+| Public bundle secrets + source maps | see below | New CI check `apps/web/e2e/w4-03c-bundle-secrets.test.ts` scans the CI `next build` `.next/static` for `sk_/rk_/whsec_`, DB URLs and the literal values of 15 secret env vars, and probes `GET <chunk>.map` ≠ 200. Brief asked to download a CI build artifact; CI uploads none and `.github/**` is DO-NOT-TOUCH, so the scan runs inside the e2e job instead (deviation). Result (CI run 44303544704, all jobs green): PASS — 92 files scanned, 6 secret env values present in the job, 0 hits; 0 `.map` files in `.next/static`, `<chunk>.map` not served |
 
-Area E result: 0 CRIT · 0 HIGH · 0 MED · 2 LOW (pending bundle scan).
+Area E result: 0 CRIT · 0 HIGH · 0 MED · 2 LOW. Note: the scan ran on the CI build (no Sentry auth token); re-check `.map` absence on the first prod build with `SENTRY_AUTH_TOKEN` (upload then delete) in W4-06.
 
 ### F. CI secrets handling (ci.yml) + Law 25 privacy
 
@@ -287,4 +287,5 @@ Deviations:
 - `.next/static` grep: CI uploads no build artifact and `.github/**` is DO-NOT-TOUCH → scan runs as a Playwright spec in the e2e job against the CI `next build` output (quality-owned `e2e/**`).
 - PoC written for a MEDIUM (D-1) because it is pure and cheap; no CRIT/HIGH needed one.
 - `docs/RUNBOOK_PROD.md` absent → prod env cross-check turned into W4-06 runbook assertions (G-4).
-- CI noise seen during review: run 44276793747 failed only on Lighthouse perf/LCP (docs-only diff, runner variance); runs 44303115939/44303183442 failed at "Create Neon branch" 422 (branch quota from rapid pushes), not code.
+- Green CI evidence: run 44303544704 (verify, integration, e2e incl. bundle scan + Lighthouse). D-1 PoC ran in verify (11 tests, expected-fail).
+- CI noise seen during review: run 44276793747 failed only on Lighthouse perf/LCP (docs-only diff, runner variance); runs 44303115939/44303183442/44303973030/44304159739 failed at "Create Neon branch" 422 (branch quota from rapid pushes), not code.
