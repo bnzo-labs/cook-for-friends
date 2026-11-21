@@ -27,7 +27,7 @@ migration-owner: false
 - [x] `MuxStage` passes `disableCookies` (default choice: keeps Mux QoS beacons, no cookie). If Erick prefers no Mux Data at all: `disableTracking` and drop `https://*.litix.io` from CSP connect-src in a separate platform change (not here).
 - [x] Unit or e2e proof: after the player mounts and plays (fake provider is fine — assert the prop is passed; real Mux cookie behaviour can't run in CI), `document.cookie` has no `muxData`.
 - [x] No other `set-cookie`/`document.cookie` writer added.
-- [ ] CI green (pending push).
+- [x] CI green (run 44946929336 — all 4 jobs pass: Secret scan, Lint·Typecheck·Test·Build, Integration, E2E).
 
 ## DO NOT TOUCH
 `apps/web/src/lib/security-headers.ts`, migrations, `docs/**`, `.github/**`.
