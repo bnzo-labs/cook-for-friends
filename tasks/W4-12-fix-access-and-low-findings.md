@@ -1,7 +1,7 @@
 ---
 type: task
 id: W4-12
-status: in-progress
+status: complete
 wave: 4
 batch: 4d
 module: platform
@@ -30,15 +30,15 @@ Fix all five open app-layer findings from `tasks/W4-03c-final-security-review.md
 - `apps/web/src/modules/catalog/__tests__/validators.test.ts` (unit tests G-1 config check, A-1, C-1)
 
 ## Acceptance criteria
-- [ ] G-3: `GET/POST/DELETE /api/payload-locked-documents` returns 404 for unauthenticated and customer requests; staff requests forwarded to Payload. Integration test proves customer → 404, staff → 200.
-- [ ] G-3: `payload-preferences` reviewed and confirmed not affected (own-only access, no change needed).
-- [ ] G-1: `users.ts` `auth.cookies.secure` is `true` in production, `false` otherwise.
-- [ ] G-2: `payload.config.ts` has `csrf: [clientEnv.NEXT_PUBLIC_SITE_URL]`.
-- [ ] A-1: `enqueueSessionCancel` only queues the job on the `cancelled` status transition (`previousDoc?.status !== "cancelled"`).
-- [ ] C-1: `validateCents` enforces max 10_000_000 (= $100,000 in cents) and unit test passes.
-- [ ] `pnpm -C apps/web typecheck` exits 0.
-- [ ] `pnpm -C apps/web test` exits 0.
-- [ ] CI green.
+- [x] G-3: `GET/POST/DELETE /api/payload-locked-documents` returns 404 for unauthenticated and customer requests; staff requests forwarded to Payload. Integration test proves customer → 404, staff → 200.
+- [x] G-3: `payload-preferences` reviewed and confirmed not affected (own-only access, no change needed).
+- [x] G-1: `users.ts` `auth.cookies.secure` is `true` in production, `false` otherwise.
+- [x] G-2: `payload.config.ts` has `csrf: [clientEnv.NEXT_PUBLIC_SITE_URL]`.
+- [x] A-1: `enqueueSessionCancel` only queues the job on the `cancelled` status transition (`previousDoc?.status !== "cancelled"`).
+- [x] C-1: `validateCents` enforces max 10_000_000 (= $100,000 in cents) and unit test passes.
+- [x] `pnpm -C apps/web typecheck` exits 0.
+- [x] `pnpm -C apps/web test` exits 0 (597 passed, 10 expected fail, 335 skipped).
+- [ ] CI green (PR #49, pending).
 
 ## DO NOT TOUCH
 `lib/observability/**`, portal player components, `.github/**`, `docs/RUNBOOK_PROD.md`.
@@ -50,4 +50,13 @@ Same Wave 4 standing rules as `tasks/W4-03c-final-security-review.md` (worktree 
 Caveman. English only.
 
 ## Completion notes
-<!-- filled by agent on task complete -->
+
+All 5 findings fixed in a single commit `5b2b0ac`. PR #49 open, not merged.
+
+**G-3 implementation detail:** `@payloadcms/next/routes` does not export `REST_PUT` from its main index; only `REST_GET/POST/DELETE/PATCH/OPTIONS` are available. The `payload-preferences` collection uses its own `preferenceAccess` function scoped to `req.user.id` and needed no change.
+
+**G-1 implementation detail:** Changing `auth: true` to `auth: { cookies: { ... } }` required updating the G-1 unit test to cast through `as any` since `IncomingAuthType` doesn't expose a typed cookie shape.
+
+**Test isolation note:** Route test for G-3 required `vi.hoisted()` for mock variables (factory hoisting issue) and a selective barrel mock for `@/modules/identity` to avoid transitive Payload DB dependencies in test context. 10 new tests all pass.
+
+**CI:** Secret scan passed. Main CI job (Lint·Typecheck·Test·Build) and Vercel deploy pending at time of task completion.
