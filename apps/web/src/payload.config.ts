@@ -9,7 +9,7 @@ import { fr } from "@payloadcms/translations/languages/fr"
 import { en } from "@payloadcms/translations/languages/en"
 
 import { locales, defaultLocale } from "./i18n/locales"
-import { env } from "./lib/env"
+import { env, clientEnv } from "./lib/env"
 import { jobsRunAccess } from "./lib/jobs-access"
 
 // Module collections — W1-02 populates these
@@ -138,6 +138,16 @@ export default buildConfig({
       },
     }),
   ],
+
+  // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // G-2 (W4-03c): restrict Payload cookie auth to same-origin requests.
+  // Without this, config.csrf=[] and Payload accepts cookie auth from ANY Origin.
+  // SameSite=Lax provides a first layer, but on a Shopify-subdomain deployment
+  // the store's scripts are same-site and could drive Payload REST with the
+  // customer/staff cookie. NEXT_PUBLIC_SITE_URL is validated in env.ts.
+  // -------------------------------------------------------------------------
+  csrf: [clientEnv.NEXT_PUBLIC_SITE_URL],
 
   // -------------------------------------------------------------------------
   // Secret

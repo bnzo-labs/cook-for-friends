@@ -8,7 +8,14 @@ import { isAdmin, isAdminField, isAdminUser, isStaff } from "../access"
  */
 export const Users: CollectionConfig = {
   slug: "users",
-  auth: true,
+  // G-1 (W4-03c): Payload default cookies.secure=false → staff payload-token sent over plain
+  // HTTP before HSTS is cached. Set secure in production so the cookie is HTTPS-only.
+  auth: {
+    cookies: {
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production",
+    },
+  },
   labels: {
     singular: { fr: "Membre du personnel", en: "Staff member" },
     plural: { fr: "Personnel", en: "Staff" },
