@@ -47,11 +47,14 @@ const URL_VALUE_KEYS = new Set([
 
 /**
  * D-2: Parameterise the certificate verify code in a URL path.
- * Pattern: /<locale>/certificates/verify/<code> → /<locale>/certificates/verify/[code]
+ * Both locale variants must be covered (see apps/web/src/i18n/routing.ts pathnames):
+ *   EN: /<locale>/certificates/verify/<code>
+ *   FR: /<locale>/certificats/verifier/<code>
  * The code is a public shareable slug, but its presence in Sentry links it to a named
  * recipient, so we replace it with a placeholder.
+ * Update this regex whenever routing.ts certificate pathnames change.
  */
-const CERT_VERIFY_RE = /(\/[^/?#]+\/certificates\/verify\/)([^/?#]+)/
+const CERT_VERIFY_RE = /(\/[^/?#]+\/(?:certificates\/verify|certificats\/verifier)\/)([^/?#]+)/
 
 export function scrubString(value: string): string {
   return value.replace(EMAIL_RE, REDACTED).replace(LONG_DIGITS_RE, REDACTED)

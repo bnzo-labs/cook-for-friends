@@ -106,3 +106,43 @@ describe("W4-03c D-2: certificate verify code parameterisation", () => {
     expect(scrubUrl("/fr/certificates/my-cert")).toBe("/fr/certificates/my-cert")
   })
 })
+
+describe("W4-03c D-2: FR route — certificats/verifier", () => {
+  const certCode = "CERT-ABC-XYZ-9999"
+  const frPath = `/fr/certificats/verifier/${certCode}`
+  const frUrl = `https://cookforfriends.ca${frPath}`
+
+  it("scrubUrl replaces cert code in FR relative path", () => {
+    expect(scrubUrl(frPath)).toBe("/fr/certificats/verifier/[code]")
+  })
+
+  it("scrubUrl replaces cert code in FR full URL", () => {
+    expect(scrubUrl(frUrl)).toBe("https://cookforfriends.ca/fr/certificats/verifier/[code]")
+  })
+
+  it("FR cert code is not visible in transaction name", () => {
+    const out = scrubEvent({ type: "transaction", transaction: `GET ${frUrl}` })
+    expect(JSON.stringify(out)).not.toContain(certCode)
+  })
+
+  it("FR cert code is not visible in request.url", () => {
+    const out = scrubEvent({ type: "transaction", request: { url: frUrl } })
+    expect(JSON.stringify(out)).not.toContain(certCode)
+  })
+
+  it("FR cert code is not visible in span http.url (D-1 + D-2)", () => {
+    const out = scrubEvent({
+      type: "transaction",
+      spans: [{ description: "render FR cert page", data: { "http.url": frUrl } }],
+    })
+    expect(JSON.stringify(out)).not.toContain(certCode)
+  })
+
+  it("FR cert code not visible in contexts.trace.data http.target (D-1 + D-2)", () => {
+    const out = scrubEvent({
+      type: "transaction",
+      contexts: { trace: { data: { "http.target": frPath } } },
+    })
+    expect(JSON.stringify(out)).not.toContain(certCode)
+  })
+})
