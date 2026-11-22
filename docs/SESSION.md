@@ -79,6 +79,20 @@ Planning only. Briefs `tasks/W4-00`, `W4-01`, `W4-02`, `W4-03a/b/c`, `W4-04`, `W
 
 ---
 
+## 2026-11-22 — W4-12 CI regression fix: cookie secure + csrf scheme-based gate (backend-engineer, Sonnet)
+**Done** — Fixed two regressions introduced by W4-12 that caused PR #49 CI red.
+
+**G-1 root cause:** `auth.cookies.secure = NODE_ENV === "production"` in users.ts (and customers.ts). CI runs `next start` (NODE_ENV=production) over `http://localhost:3000`. The `Secure` flag on the cookie prevents browsers from sending it over HTTP → E2E staff CSV tests got 401. Fix: `secure = NEXT_PUBLIC_SITE_URL.startsWith("https://")` — false in CI/dev, true in production.
+
+**G-2 root cause:** `csrf: [NEXT_PUBLIC_SITE_URL]` in payload.config.ts. With csrf non-empty, Payload's `extractJWT` rejects cookie auth when neither `Origin` nor `Sec-Fetch-Site` header is present. Integration tests call `payload.auth({ headers: { cookie: ... } })` without those headers (non-browser clients). Customer auth was unaffected because `magicLinkStrategy` reads the cookie directly without the CSRF check; only the standard `JWTAuthentication` (staff/users) goes through `extractJWT`. Fix: `csrf = siteUrl.startsWith("https://") ? [siteUrl] : []` — empty in CI/dev.
+
+Files changed: `users.ts`, `customers.ts`, `payload.config.ts`, `identity/__tests__/access.test.ts` (G-1 unit test updated to URL-scheme assertion). Merged origin/main (commit a79861d). PR #49 CI run: https://github.com/bnzo-labs/cook-for-friends/actions/runs/45026082305
+
+**Blocked** — none.
+**Next step** — Wait for CI run 45026082305 to complete; merge PR #49 when green.
+
+---
+
 ## 2026-11-08 — W2-21 zero-amount checkout + M-1/L-1/L-2 (backend-engineer, Opus)
 **Done**
 - H-1: `checkout.session.completed` with `payment_status = no_payment_required` (100 % promo) now fulfils like `paid` (order total 0, no PaymentIntent, N enrollments seatAmount 0, entitlements, emails). Zero-amount oversell → no Stripe refund, order `cancelled`, hold `expired`, `oversell-refund` email amount 0, outcome `refunded` (no 500 loop).
