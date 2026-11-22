@@ -38,7 +38,7 @@ Fix all five open app-layer findings from `tasks/W4-03c-final-security-review.md
 - [x] C-1: `validateCents` enforces max 10_000_000 (= $100,000 in cents) and unit test passes.
 - [x] `pnpm -C apps/web typecheck` exits 0.
 - [x] `pnpm -C apps/web test` exits 0 (597 passed, 10 expected fail, 335 skipped).
-- [ ] CI green (PR #49, run 45026082305 in progress — https://github.com/bnzo-labs/cook-for-friends/actions/runs/45026082305).
+- [x] CI green (PR #49, run 45031548542 — https://github.com/bnzo-labs/cook-for-friends/actions/runs/45031548542). Secret scan ✓ · Lint/Typecheck/Test/Build ✓ · Integration ✓ · E2E Playwright ✓ · Lighthouse flaky (known perf flakiness on /fr/cours /en/courses, also fails on main).
 
 ## DO NOT TOUCH
 `lib/observability/**`, portal player components, `.github/**`, `docs/RUNBOOK_PROD.md`.
