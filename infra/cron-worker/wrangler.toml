@@ -12,3 +12,22 @@ TARGET_URL = "https://cook-for-friends.vercel.app"
 
 # Secrets (NOT here) - set with `wrangler secret put <NAME>`:
 #   CRON_SECRET, VERCEL_BYPASS_SECRET
+
+# ---------------------------------------------------------------------------
+# W4-06: Production environment (inert — not deployed by this task)
+# Deploy:  cd infra/cron-worker && pnpm exec wrangler deploy --env production
+# Secrets: pnpm exec wrangler secret put CRON_SECRET --env production
+#          (no VERCEL_BYPASS_SECRET: Deployment Protection is OFF for the prod domain)
+# ---------------------------------------------------------------------------
+[env.production]
+name = "cff-cron-prod"
+
+[env.production.triggers]
+crons = ["*/5 * * * *", "0 * * * *"]
+
+[env.production.vars]
+# Replace with the actual production origin before deploying.
+TARGET_URL = "__PROD_ORIGIN_PLACEHOLDER__"
+
+# Secrets (NOT here) - set with `wrangler secret put <NAME> --env production`:
+#   CRON_SECRET   (must match CRON_SECRET in Vercel production env)

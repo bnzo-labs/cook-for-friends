@@ -47,12 +47,36 @@ Never commit them. `.dev.vars` is gitignored.
 Wrangler is pinned in `package.json` (4.144.0); use `pnpm exec wrangler` so the
 pin is used.
 
+## Production deploy (W4-06, Erick)
+
+The `[env.production]` block in `wrangler.toml` is **inert** until you run these steps.
+Full procedure in `docs/RUNBOOK_PROD.md` §8.
+
+1. Update `TARGET_URL` in `wrangler.toml` `[env.production.vars]` to the actual production
+   origin (e.g. `https://cookforfriends.ca`) before deploying.
+2. `cd infra/cron-worker && pnpm exec wrangler login` (if not already authenticated).
+3. Set the production `CRON_SECRET` (must match `CRON_SECRET` in Vercel production env):
+   `pnpm exec wrangler secret put CRON_SECRET --env production`
+4. **Do not** set `VERCEL_BYPASS_SECRET` for production — Deployment Protection is disabled
+   for the public production domain (step 2.5 of the runbook).
+5. `pnpm exec wrangler deploy --env production`
+6. `pnpm exec wrangler tail --env production` — wait for the next `*/5` tick; expect 200s.
+
+### Production secrets
+
+| Name | Source | Rotate |
+|------|--------|--------|
+| `CRON_SECRET` (production) | Same value as `CRON_SECRET` in Vercel production env | Annually, or on suspected leak. Update Vercel env + `wrangler secret put CRON_SECRET --env production` together. Redeploy. |
+
 ## Rollback
 
 `pnpm exec wrangler rollback` (previous Worker version), or delete the
 triggers / Worker in the Cloudflare dashboard. Cron routes are idempotent
 housekeeping; pausing them is safe (seat correctness never depends on cron,
 DISCOVERY F2).
+
+For production: `pnpm exec wrangler rollback --env production`
+or `pnpm exec wrangler delete --env production` to remove the worker entirely.
 
 ## Local development
 
