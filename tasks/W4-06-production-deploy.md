@@ -1,7 +1,7 @@
 ---
 type: task
 id: W4-06
-status: pending
+status: ready-for-approval
 wave: 4
 batch: 4d
 module: platform (release)
@@ -45,11 +45,11 @@ Draft may start once W4-04 and W4-03a are merged; marked **ready** only after W4
 13. **Day-1/7 checks:** Sentry digest, Stripe disputes/refunds, Neon usage, Resend bounces, Lighthouse staging-dispatch on prod URL.
 
 ## Done When
-- [ ] `docs/RUNBOOK_PROD.md` covers sections 0–13; env table generated from `env.ts` (scripted or manual diff recorded; zero missing keys).
-- [ ] Every step has expected result + verification + abort criteria; no secret values anywhere.
-- [ ] Inert `[env.production]` block in `wrangler.toml` (not deployed) + README section.
-- [ ] Consolidated Erick checklist at the top of the runbook (one checkbox per external action).
-- [ ] PR open; status `ready-for-approval` (not `complete`) — `complete` only after Erick reports the launch done.
+- [x] `docs/RUNBOOK_PROD.md` covers sections 0–13; env table generated from `env.ts` (manual diff — zero missing keys; all keys from `serverSchema` + `clientSchema` present; `NEXT_PUBLIC_SENTRY_DSN` added as it is set in Vercel but not validated by env.ts).
+- [x] Every step has expected result + verification + abort criteria; no secret values anywhere.
+- [x] Inert `[env.production]` block in `wrangler.toml` (not deployed) + README section.
+- [x] Consolidated Erick checklist at the top of the runbook (one checkbox per external action).
+- [x] PR open; status `ready-for-approval` (not `complete`) — `complete` only after Erick reports the launch done.
 
 ## Erick handoffs
 Everything in the runbook. This task never performs them.
@@ -77,3 +77,32 @@ Vercel/Neon/Stripe/Resend/Mux/Cloudflare/Sentry consoles or APIs in write mode; 
 
 ## Communication
 Caveman. English only.
+
+## Completion notes
+
+Runbook written 2026-11-21. Status: `ready-for-approval`.
+
+**Files changed:**
+- `docs/RUNBOOK_PROD.md` — full production runbook (sections 0–13)
+- `infra/cron-worker/wrangler.toml` — added inert `[env.production]` block (name `cff-cron-prod`, `TARGET_URL` placeholder)
+- `infra/cron-worker/README.md` — added Production deploy section and production secrets table
+- `tasks/W4-06-production-deploy.md` — this file; status set to `ready-for-approval`
+
+**Env cross-check vs env.ts:**
+All keys from `serverSchema` and `clientSchema` are present in the runbook table. Additional
+key `NEXT_PUBLIC_SENTRY_DSN` added (set in Vercel per `infra/sentry/README.md`; not in env.ts
+but required for Sentry client config). No keys missing; no extra test-only keys included.
+
+**W4-03c launch conditions addressed:**
+- W4-10 merge gate: pre-flight checklist §0
+- Sentry DSN gate (D-1 / W4-11): pre-flight + §9 step gate note
+- R2 bucket private (H-6): pre-flight checklist
+- Live Stripe key / no fake flags (G-4): pre-flight checklist + §3.2 "must not be present"
+- Mux referrer allow-list: §7 step 7.5
+- Live purchase + staff refund smoke: §11 steps 11.5–11.6
+- Named daily error owner: pre-flight checklist
+- Privacy policy route + link (F-5): pre-flight checklist
+
+**W2-12 real-infra criteria:** covered in §11 (steps 11.9 Cloudflare cron, 11.10 real Resend, 11.8 Vercel Ready, 11.5 real purchase webhook delivery).
+
+**Deviations:** none. This task executes nothing against production or staging.
