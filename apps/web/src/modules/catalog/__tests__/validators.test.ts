@@ -103,7 +103,7 @@ describe("catalog validators", () => {
       expect(req.payload.jobs.queue).toHaveBeenCalledOnce()
     })
 
-    it("skips the job when re-saving an already-cancelled session (previousDoc.status === cancelled)", async () => {
+    it("re-queues the job when re-saving an already-cancelled session (idempotent resume)", async () => {
       const req = makeReq()
       await enqueueSessionCancel({
         doc: makeDoc("cancelled"),
@@ -114,7 +114,9 @@ describe("catalog validators", () => {
         context: {} as HookArgs,
         data: {} as HookArgs,
       })
-      expect(req.payload.jobs.queue).not.toHaveBeenCalled()
+      // Re-saving while already cancelled must re-queue (resume path in case first run failed).
+      // The job task itself is idempotent via per-seat advisory lock + idempotency key.
+      expect(req.payload.jobs.queue).toHaveBeenCalledOnce()
     })
 
     it("skips when operation is not update", async () => {
