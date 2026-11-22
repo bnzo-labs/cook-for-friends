@@ -56,12 +56,8 @@ export function validateEndsAfterStart(
  * cancelled session queues it again (idempotent resume); `cancelled → scheduled` queues nothing.
  * No staff user (seed/scripts) → nothing queued: the caller must queue the job itself.
  */
-export const enqueueSessionCancel: CollectionAfterChangeHook = async ({ doc, operation, previousDoc, req }) => {
+export const enqueueSessionCancel: CollectionAfterChangeHook = async ({ doc, operation, req }) => {
   if (operation !== "update" || doc?.status !== "cancelled") return doc
-  // A-1 (W4-03c): only queue on the transition into cancelled; re-saves of an already-cancelled
-  // session must not enqueue a duplicate run. Each run is idempotent (per-seat advisory lock,
-  // idempotency key) but extra runs waste Stripe refunds.list calls and produce log noise.
-  if (previousDoc?.status === "cancelled") return doc
   const user = req.user as { id?: number | string; collection?: string } | null | undefined
   if (!user || user.collection !== "users" || user.id === undefined) {
     req.payload.logger.warn({ sessionId: doc.id }, "sessions: cancelled without a staff user, session-cancel not queued")
