@@ -18,6 +18,12 @@ export interface MuxStageProps {
  * Thin wrapper over @mux/mux-player-react. Loaded only through `next/dynamic`
  * (ssr: false) from VideoPlayer, so none of this ships on pages without video.
  * Captions: the player renders the HLS text tracks when the asset has them.
+ *
+ * Law 25 / privacy: `disableCookies` suppresses the persistent `muxData`
+ * first-party cookie that Mux Data sets by default. QoS beacon pings to
+ * *.litix.io still fire (acceptable); no viewer-id cookie is written.
+ * If Mux Data analytics must be removed entirely, replace with
+ * `disableTracking` and drop `*.litix.io` from the CSP connect-src.
  */
 export default function MuxStage(props: MuxStageProps) {
   return (
@@ -28,6 +34,7 @@ export default function MuxStage(props: MuxStageProps) {
       startTime={props.startTime}
       metadata={{ video_title: props.title }}
       className="aspect-video w-full overflow-hidden rounded-card bg-surface-muted"
+      disableCookies
       onPlay={props.onPlay}
       onPause={(e) => props.onPause((e.target as MuxPlayerElement).currentTime)}
       onEnded={(e) => props.onEnded((e.target as MuxPlayerElement).currentTime)}
