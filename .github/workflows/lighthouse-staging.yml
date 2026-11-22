@@ -7,6 +7,10 @@ on:
 env:
   NEXT_PUBLIC_SKIP_ENV_VALIDATION: "1"
 
+# W4-13 (F-1): explicit least-privilege — reads repo, uploads artifacts only.
+permissions:
+  contents: read
+
 jobs:
   lighthouse-staging:
     name: Lighthouse against staging
@@ -15,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4 (W4-13 F-2)
         with:
           version: "11.28.5"
 
@@ -81,6 +85,23 @@ jobs:
           EOF
           pnpm exec lhci autorun --config=/tmp/lhci-staging.json \
             || true  # warn-level assertions: never fail this dispatch-only workflow
+
+      # W4-13 (F-3): strip configSettings (contains extraHeaders → bypass secret) from every
+      # LHR JSON before upload. jq is pre-installed on ubuntu-latest. HTML reports are unaffected.
+      # Rotate VERCEL_AUTOMATION_BYPASS_SECRET after this PR merges (Erick handoff).
+      - name: Strip configSettings from LHR JSON reports
+        if: always() && steps.gate.outputs.enabled == 'true'
+        run: |
+          if command -v jq &>/dev/null; then
+            find apps/web/.lighthouseci -name "*.json" -type f | while read -r f; do
+              tmp="$f.tmp"
+              jq 'del(.configSettings)' "$f" > "$tmp" && mv "$tmp" "$f"
+            done
+            echo "::notice::configSettings stripped from LHR JSON reports"
+          else
+            echo "::warning::jq not found — LHR JSON not stripped; upload skipped"
+            rm -rf apps/web/.lighthouseci/*.json
+          fi
 
       - name: Upload Lighthouse reports
         if: always() && steps.gate.outputs.enabled == 'true'
