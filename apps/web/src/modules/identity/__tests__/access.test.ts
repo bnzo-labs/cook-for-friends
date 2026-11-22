@@ -71,7 +71,7 @@ describe("identity access helpers", () => {
   })
 
   // G-1 (W4-03c): staff payload-token cookie must be Secure in production
-  it("Users collection: auth is a config object with sameSite=Lax and secure tied to NODE_ENV", () => {
+  it("Users collection: auth is a config object with sameSite=Lax and secure tied to NEXT_PUBLIC_SITE_URL scheme", () => {
     const authConfig = Users.auth
     // auth must be an object (not just `true`) so the cookie config can be set
     expect(typeof authConfig).toBe("object")
@@ -80,7 +80,8 @@ describe("identity access helpers", () => {
     const cookies = (authConfig as any)?.cookies as { secure?: unknown; sameSite?: unknown } | undefined
     expect(cookies).toBeDefined()
     expect(cookies?.sameSite).toBe("Lax")
-    // In a test/dev environment NODE_ENV !== 'production', so secure=false
-    expect(cookies?.secure).toBe(process.env.NODE_ENV === "production")
+    // secure=true only when NEXT_PUBLIC_SITE_URL is https:// (production).
+    // In CI and dev the URL is http://localhost:3000, so secure=false.
+    expect(cookies?.secure).toBe((process.env.NEXT_PUBLIC_SITE_URL ?? "").startsWith("https://"))
   })
 })
