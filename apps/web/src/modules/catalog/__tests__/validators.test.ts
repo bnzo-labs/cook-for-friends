@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { formatCents } from "../admin/MoneyCell"
-import { validateEndsAfterStart } from "../collections/sessions"
-import { moneyField, validateCents, validateInteger } from "../fields/money"
+import { enqueueSessionCancel, validateEndsAfterStart } from "../collections/sessions"
+import { MAX_CENTS, moneyField, validateCents, validateInteger } from "../fields/money"
 import { validateTiers } from "../globals/cancellation-policy"
 import { validateReminderOffsets } from "../globals/site-settings"
 
@@ -15,6 +15,15 @@ describe("catalog validators", () => {
     expect(validateCents(10.5)).toBeTypeOf("string")
     expect(validateCents(-1)).toBeTypeOf("string")
     expect(validateCents("100")).toBeTypeOf("string")
+  })
+
+  // C-1 (W4-03c): cents max enforcement (dollars max was dead code — mirror strips virtual field)
+  it("validateCents rejects values above MAX_CENTS ($100k)", () => {
+    expect(validateCents(MAX_CENTS)).toBe(true)         // exact cap is valid
+    expect(validateCents(MAX_CENTS + 1)).toBeTypeOf("string") // one cent over → error
+    expect(validateCents(99_999_999)).toBeTypeOf("string")    // Stripe max+1 → error
+    expect(validateCents(0)).toBe(true)
+    expect(validateCents(1999)).toBe(true)
   })
 
   it("validateInteger enforces min", () => {
@@ -60,5 +69,82 @@ describe("catalog validators", () => {
     expect(validateEndsAfterStart("2026-11-01T17:00:00.000Z", { siblingData: { startsAt } })).toBe(true)
     expect(validateEndsAfterStart("2026-11-01T13:00:00.000Z", { siblingData: { startsAt } })).toBeTypeOf("string")
     expect(validateEndsAfterStart(undefined, { siblingData: { startsAt } })).toBe(true)
+  })
+
+  // A-1 (W4-03c): session-cancel hook only queues on the transition into cancelled
+  describe("enqueueSessionCancel — transition guard (A-1)", () => {
+    type FakeReq = { payload: { jobs: { queue: ReturnType<typeof vi.fn> }; logger: { warn: ReturnType<typeof vi.fn> } }; user: unknown }
+
+    function makeReq(user: unknown = { id: 1, collection: "users", role: "staff" }): FakeReq {
+      return {
+        payload: { jobs: { queue: vi.fn().mockResolvedValue(undefined) }, logger: { warn: vi.fn() } },
+        user,
+      }
+    }
+
+    function makeDoc(status: string) {
+      return { id: 42, status }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type HookArgs = any
+
+    it("queues the job when status transitions to cancelled (previousDoc.status !== cancelled)", async () => {
+      const req = makeReq()
+      await enqueueSessionCancel({
+        doc: makeDoc("cancelled"),
+        previousDoc: makeDoc("scheduled"),
+        operation: "update",
+        req: req as HookArgs,
+        collection: {} as HookArgs,
+        context: {} as HookArgs,
+        data: {} as HookArgs,
+      })
+      expect(req.payload.jobs.queue).toHaveBeenCalledOnce()
+    })
+
+    it("re-queues the job when re-saving an already-cancelled session (idempotent resume)", async () => {
+      const req = makeReq()
+      await enqueueSessionCancel({
+        doc: makeDoc("cancelled"),
+        previousDoc: makeDoc("cancelled"),
+        operation: "update",
+        req: req as HookArgs,
+        collection: {} as HookArgs,
+        context: {} as HookArgs,
+        data: {} as HookArgs,
+      })
+      // Re-saving while already cancelled must re-queue (resume path in case first run failed).
+      // The job task itself is idempotent via per-seat advisory lock + idempotency key.
+      expect(req.payload.jobs.queue).toHaveBeenCalledOnce()
+    })
+
+    it("skips when operation is not update", async () => {
+      const req = makeReq()
+      await enqueueSessionCancel({
+        doc: makeDoc("cancelled"),
+        previousDoc: makeDoc("scheduled"),
+        operation: "create",
+        req: req as HookArgs,
+        collection: {} as HookArgs,
+        context: {} as HookArgs,
+        data: {} as HookArgs,
+      })
+      expect(req.payload.jobs.queue).not.toHaveBeenCalled()
+    })
+
+    it("skips when doc.status is not cancelled", async () => {
+      const req = makeReq()
+      await enqueueSessionCancel({
+        doc: makeDoc("scheduled"),
+        previousDoc: makeDoc("scheduled"),
+        operation: "update",
+        req: req as HookArgs,
+        collection: {} as HookArgs,
+        context: {} as HookArgs,
+        data: {} as HookArgs,
+      })
+      expect(req.payload.jobs.queue).not.toHaveBeenCalled()
+    })
   })
 })

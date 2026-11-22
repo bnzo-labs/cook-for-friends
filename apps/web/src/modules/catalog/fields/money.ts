@@ -1,12 +1,19 @@
 import type { NumberField } from "payload"
 
-/** Validates an integer amount in cents ≥ 0. Exported for unit tests. */
+/** C-1 (W4-03c): $100,000 cap in cents (mirrors validateDollars MAX_DOLLARS). Staff-only but
+ * enforceable here since the dollars max was dead code (the mirror strips the virtual field
+ * before Payload field validation runs). Max 10_000_000 cents = $100,000 CAD.
+ */
+export const MAX_CENTS = 10_000_000
+
+/** Validates an integer amount in cents ≥ 0, max MAX_CENTS. Exported for unit tests. */
 export function validateCents(value: unknown): true | string {
   if (value === null || value === undefined) return true
   if (typeof value !== "number" || !Number.isInteger(value)) {
     return "Montant entier en cents requis / Amount must be an integer in cents"
   }
   if (value < 0) return "Le montant doit être ≥ 0 / Amount must be ≥ 0"
+  if (value > MAX_CENTS) return `Montant trop élevé (max. ${MAX_CENTS / 100} $) / Amount too high (max $${MAX_CENTS / 100})`
   return true
 }
 

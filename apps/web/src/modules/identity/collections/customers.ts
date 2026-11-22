@@ -19,7 +19,7 @@ export const Customers: CollectionConfig = {
     useSessions: false,
     // Customer sessions last 7 days; the cookie is HttpOnly + SameSite=Lax.
     tokenExpiration: 60 * 60 * 24 * 7,
-    cookies: { sameSite: "Lax", secure: process.env.NODE_ENV === "production" },
+    cookies: { sameSite: "Lax", secure: (process.env.NEXT_PUBLIC_SITE_URL ?? "").startsWith("https://") },
   },
   labels: {
     singular: { fr: "Client", en: "Customer" },

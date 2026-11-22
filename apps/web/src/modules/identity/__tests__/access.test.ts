@@ -12,6 +12,7 @@ import {
   ownsDocument,
   publishedOrStaff,
 } from "../access"
+import { Users } from "../collections/users"
 
 const admin = { id: 1, collection: "users", role: "admin" }
 const staff = { id: 2, collection: "users", role: "staff" }
@@ -67,5 +68,20 @@ describe("identity access helpers", () => {
     expect(access(req(staff) as never)).toBe(true)
     expect(access(req(customer) as never)).toEqual(where)
     expect(access(req(undefined) as never)).toEqual(where)
+  })
+
+  // G-1 (W4-03c): staff payload-token cookie must be Secure in production
+  it("Users collection: auth is a config object with sameSite=Lax and secure tied to NEXT_PUBLIC_SITE_URL scheme", () => {
+    const authConfig = Users.auth
+    // auth must be an object (not just `true`) so the cookie config can be set
+    expect(typeof authConfig).toBe("object")
+    expect(authConfig).not.toBe(true)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cookies = (authConfig as any)?.cookies as { secure?: unknown; sameSite?: unknown } | undefined
+    expect(cookies).toBeDefined()
+    expect(cookies?.sameSite).toBe("Lax")
+    // secure=true only when NEXT_PUBLIC_SITE_URL is https:// (production).
+    // In CI and dev the URL is http://localhost:3000, so secure=false.
+    expect(cookies?.secure).toBe((process.env.NEXT_PUBLIC_SITE_URL ?? "").startsWith("https://"))
   })
 })

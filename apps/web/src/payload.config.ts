@@ -9,7 +9,7 @@ import { fr } from "@payloadcms/translations/languages/fr"
 import { en } from "@payloadcms/translations/languages/en"
 
 import { locales, defaultLocale } from "./i18n/locales"
-import { env } from "./lib/env"
+import { env, clientEnv } from "./lib/env"
 import { jobsRunAccess } from "./lib/jobs-access"
 
 // Module collections — W1-02 populates these
@@ -138,6 +138,21 @@ export default buildConfig({
       },
     }),
   ],
+
+  // -------------------------------------------------------------------------
+  // G-2 (W4-03c): restrict Payload cookie auth to same-origin requests.
+  // Without this, config.csrf=[] and Payload accepts cookie auth from ANY Origin.
+  // SameSite=Lax provides a first layer, but on a Shopify-subdomain deployment
+  // the store's scripts are same-site and could drive Payload REST with the
+  // customer/staff cookie. NEXT_PUBLIC_SITE_URL is validated in env.ts.
+  //
+  // Only enable CSRF enforcement on HTTPS deployments. When the site URL is
+  // plain HTTP (CI: http://localhost:3000, local dev), Payload's extractJWT
+  // rejects cookie auth from non-browser clients (no Origin / Sec-Fetch-Site)
+  // which breaks integration tests and E2E runs. SameSite=Lax still provides
+  // the cross-site layer in that environment.
+  // -------------------------------------------------------------------------
+  csrf: clientEnv.NEXT_PUBLIC_SITE_URL?.startsWith("https://") ? [clientEnv.NEXT_PUBLIC_SITE_URL] : [],
 
   // -------------------------------------------------------------------------
   // Secret

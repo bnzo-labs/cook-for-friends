@@ -6,6 +6,27 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-11-22 — W4-12 CI regression fix (backend-engineer, Sonnet 4.6)
+**Done** — Fixed two regression groups introduced by the W4-12 security commits that broke PR #49 CI.
+
+**G-1 (E2E 401s):** `auth.cookies.secure` was `NODE_ENV==="production"` → CI runs `next start` (NODE_ENV=production) over `http://localhost:3000` → browser refused Secure cookie. Fix: `secure = NEXT_PUBLIC_SITE_URL.startsWith("https://")`. Same change applied to `customers.ts`. Unit test updated to match URL-scheme check.
+
+**G-2 (integration 401s):** `csrf: [NEXT_PUBLIC_SITE_URL]` with `http://localhost:3000` caused Payload's `extractJWT` to reject non-browser cookie auth (no Origin / Sec-Fetch-Site headers on test clients) → `JWTAuthentication` for staff returned null user. Fix: `csrf: siteUrl?.startsWith("https://") ? [siteUrl] : []`. Also guarded against `NEXT_PUBLIC_SKIP_ENV_VALIDATION=1` returning `undefined` with optional chaining (`?.`).
+
+**A-1 revert:** Initial fix added `previousDoc.status === "cancelled" → skip` guard per W4-03c recommendation, but the existing integration test at `session-cancel.test.ts:196` and docstring prove re-saves while already cancelled must re-queue (idempotent resume). Guard removed; unit test corrected.
+
+**CI result (run 45031548542):** Secret scan ✓ · Lint/Typecheck/Test/Build ✓ · Integration ✓ · E2E Playwright ✓ · Lighthouse FAIL (known flaky perf on /fr/cours /en/courses — also fails on main, not a regression). PR #49 not merged.
+
+**Files changed:**
+- `apps/web/src/modules/identity/collections/users.ts` — G-1 secure flag
+- `apps/web/src/modules/identity/collections/customers.ts` — G-1 secure flag
+- `apps/web/src/payload.config.ts` — G-2 csrf + optional chaining
+- `apps/web/src/modules/identity/__tests__/access.test.ts` — G-1 unit test
+- `apps/web/src/modules/catalog/collections/sessions.ts` — A-1 revert
+- `apps/web/src/modules/catalog/__tests__/validators.test.ts` — A-1 unit test corrected
+
+---
+
 ## 2026-11-13 — W3-13 fix H-1: material files hidden from public `media` reads (backend-engineer, Opus)
 **Done** — `media.access.read` non-staff = images AND `id not_in` ids referenced by `materials.file` (`catalog/server/material-media.ts`; empty list skips the clause; 30 s in-process cache, dropped by `materials` afterChange/afterDelete; lookup failure → deny + log). Covers `GET /api/media` and `/api/media/file/*` (`checkFileAccess` uses the same access). No schema change. PoC `w3-media-material-leak.test.ts` green without `.fails` (+ customer, list, file-path, invalidation cases); unit tests `catalog/__tests__/material-media.test.ts`.
 **Blocked** — none. Material images on staging/prod were public until deploy (no key change needed: access is per request).
@@ -76,6 +97,20 @@ Planning only. Briefs `tasks/W4-00`, `W4-01`, `W4-02`, `W4-03a/b/c`, `W4-04`, `W
 **Risks:** W3-10 CRITICAL/HIGH fixes delay W4-03b and the whole second chain; Lighthouse variance on GitHub runners (median of 3, mobile); Payload admin / Mux player may need extra CSP origins (e2e violation listener catches them); `@sentry/nextjs` × Next 16.3.8/Turbopack compat (W4-00 checks peers, W4-04 proves build); Stripe sandbox Products accumulate (W4-01 archives in `afterAll`).
 
 **Next step:** Erick reviews plan → when W3-11 merges: W4-00 + W4-05; when W3-10 (+ fixes) merges: W4-03b.
+
+---
+
+## 2026-11-22 — W4-12 CI regression fix: cookie secure + csrf scheme-based gate (backend-engineer, Sonnet)
+**Done** — Fixed two regressions introduced by W4-12 that caused PR #49 CI red.
+
+**G-1 root cause:** `auth.cookies.secure = NODE_ENV === "production"` in users.ts (and customers.ts). CI runs `next start` (NODE_ENV=production) over `http://localhost:3000`. The `Secure` flag on the cookie prevents browsers from sending it over HTTP → E2E staff CSV tests got 401. Fix: `secure = NEXT_PUBLIC_SITE_URL.startsWith("https://")` — false in CI/dev, true in production.
+
+**G-2 root cause:** `csrf: [NEXT_PUBLIC_SITE_URL]` in payload.config.ts. With csrf non-empty, Payload's `extractJWT` rejects cookie auth when neither `Origin` nor `Sec-Fetch-Site` header is present. Integration tests call `payload.auth({ headers: { cookie: ... } })` without those headers (non-browser clients). Customer auth was unaffected because `magicLinkStrategy` reads the cookie directly without the CSRF check; only the standard `JWTAuthentication` (staff/users) goes through `extractJWT`. Fix: `csrf = siteUrl.startsWith("https://") ? [siteUrl] : []` — empty in CI/dev.
+
+Files changed: `users.ts`, `customers.ts`, `payload.config.ts`, `identity/__tests__/access.test.ts` (G-1 unit test updated to URL-scheme assertion). Merged origin/main (commit a79861d). PR #49 CI run: https://github.com/bnzo-labs/cook-for-friends/actions/runs/45026082305
+
+**Blocked** — none.
+**Next step** — Wait for CI run 45026082305 to complete; merge PR #49 when green.
 
 ---
 
