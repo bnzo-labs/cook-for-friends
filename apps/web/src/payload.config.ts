@@ -152,7 +152,7 @@ export default buildConfig({
   // which breaks integration tests and E2E runs. SameSite=Lax still provides
   // the cross-site layer in that environment.
   // -------------------------------------------------------------------------
-  csrf: clientEnv.NEXT_PUBLIC_SITE_URL.startsWith("https://") ? [clientEnv.NEXT_PUBLIC_SITE_URL] : [],
+  csrf: clientEnv.NEXT_PUBLIC_SITE_URL?.startsWith("https://") ? [clientEnv.NEXT_PUBLIC_SITE_URL] : [],
 
   // -------------------------------------------------------------------------
   // Secret
