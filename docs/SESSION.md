@@ -6,6 +6,13 @@ Newest first. Each entry: what was done, what is blocked, next step.
 
 ---
 
+## 2026-11-27 — Status sync (orchestrator)
+**Done** — Repo audit vs `main` (479ffd2). Main unchanged since 2026-11-22: #48 W4-06 runbook, #50 W4-15 Lighthouse best-of-5 gate, #49 W4-12 security fixes all merged. Task statuses corrected to `complete` (all PRs verified merged on main): W2-09 (#8), W2-10 (#10), W2-11 (#13), W3-01b (#29), W3-04 (#22), W3-06 (#19), W3-11 (#31), W4-05 (#33). Header updated (was "Current wave: 2").
+**Open** — Wave 5 storefront redesign added 2026-11-22 (brand angle, conversion architecture, tokens, rebuild, video scroll, QA); no task briefs yet, blocked on client brand guidelines + footage (D4). Founder staging testing pending. `wip/w2-12-staging-fixtures` (staging fixture script) pushed 2026-11-27, unmerged. A-1 resume-trigger decision still with Erick.
+**Next step** — Erick: staging testing → brand guidelines → Wave 5 briefs → W4-06 approval.
+
+---
+
 ## 2026-11-22 — W4-12 CI regression fix (backend-engineer, Sonnet 4.6)
 **Done** — Fixed two regression groups introduced by the W4-12 security commits that broke PR #49 CI.
 
