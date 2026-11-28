@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-11
-status: pending
+status: complete
 wave: 3
 batch: 3d
 module: quality

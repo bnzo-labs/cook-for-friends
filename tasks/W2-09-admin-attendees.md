@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-09
-status: in-review
+status: complete
 wave: 2
 module: commerce (attendees) + admin-ext
 agent: backend-engineer

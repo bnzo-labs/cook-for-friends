@@ -2,7 +2,7 @@
 
 Newest first. Each entry: what was done, what is blocked, next step.
 
-**Current wave:** 2 — Commerce core (plan approved 2026-10-19, revised for D9 multi-seat; batch 2a running) · **Gate:** Wave 0 approved 2026-10-11; Wave 1 complete 2026-10-18
+**Current wave:** 4 done (prod deploy W4-06 gated) · 5 planned — Storefront redesign & brand (blocked on brand guidelines) · **Gate:** W4-06 production deploy = Erick approval, after Wave 5 + founder staging testing
 
 ---
 

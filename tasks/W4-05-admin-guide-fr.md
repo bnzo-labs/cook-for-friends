@@ -1,7 +1,7 @@
 ---
 type: task
 id: W4-05
-status: pending
+status: complete
 wave: 4
 batch: 4a
 module: docs

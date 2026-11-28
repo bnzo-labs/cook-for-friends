@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-11
-status: blocked
+status: complete
 wave: 2
 module: review (commerce, access, identity rate limit, notifications)
 agent: security-reviewer

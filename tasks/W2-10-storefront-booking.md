@@ -1,7 +1,7 @@
 ---
 type: task
 id: W2-10
-status: pending
+status: complete
 wave: 2
 module: storefront
 agent: frontend-architect

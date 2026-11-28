@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-06
-status: pending
+status: complete
 wave: 3
 batch: 3a
 module: storefront + portal (PWA files)
