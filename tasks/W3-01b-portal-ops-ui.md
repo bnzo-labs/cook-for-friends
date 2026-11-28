@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-01b
-status: pending-ci
+status: complete
 wave: 3
 batch: 3c
 module: portal + storefront (waitlist CTA)

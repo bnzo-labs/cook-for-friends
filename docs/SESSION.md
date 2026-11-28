@@ -2,7 +2,14 @@
 
 Newest first. Each entry: what was done, what is blocked, next step.
 
-**Current wave:** 2 — Commerce core (plan approved 2026-10-19, revised for D9 multi-seat; batch 2a running) · **Gate:** Wave 0 approved 2026-10-11; Wave 1 complete 2026-10-18
+**Current wave:** 4 done (prod deploy W4-06 gated) · 5 planned — Storefront redesign & brand (blocked on brand guidelines) · **Gate:** W4-06 production deploy = Erick approval, after Wave 5 + founder staging testing
+
+---
+
+## 2026-11-27 — Status sync (orchestrator)
+**Done** — Repo audit vs `main` (479ffd2). Main unchanged since 2026-11-22: #48 W4-06 runbook, #50 W4-15 Lighthouse best-of-5 gate, #49 W4-12 security fixes all merged. Task statuses corrected to `complete` (all PRs verified merged on main): W2-09 (#8), W2-10 (#10), W2-11 (#13), W3-01b (#29), W3-04 (#22), W3-06 (#19), W3-11 (#31), W4-05 (#33). Header updated (was "Current wave: 2").
+**Open** — Wave 5 storefront redesign added 2026-11-22 (brand angle, conversion architecture, tokens, rebuild, video scroll, QA); no task briefs yet, blocked on client brand guidelines + footage (D4). Founder staging testing pending. `wip/w2-12-staging-fixtures` (staging fixture script) pushed 2026-11-27, unmerged. A-1 resume-trigger decision still with Erick.
+**Next step** — Erick: staging testing → brand guidelines → Wave 5 briefs → W4-06 approval.
 
 ---
 

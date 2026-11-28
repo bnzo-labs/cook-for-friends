@@ -1,7 +1,7 @@
 ---
 type: task
 id: W3-04
-status: in-review
+status: complete
 wave: 3
 batch: 3b
 module: learning (comments sub-barrel)
